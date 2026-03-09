@@ -39,9 +39,14 @@ dependencies:
   firebase_auth: ^6.2.0
   webview_flutter: ^4.13.1
   flutter_ai_toolkit: ^1.0.0
+  firebase_ai: ^3.9.0
+  firebase_app_check: ^0.4.1+5
+  provider: ^6.1.5+1
 
 dev_dependencies:
   flutter_test:
+    sdk: flutter
+  integration_test:
     sdk: flutter
 
   # The "flutter_lints" package below contains a set of recommended lints to
@@ -50,6 +55,8 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
+  fake_cloud_firestore: ^4.0.1
+  mocktail: ^1.0.4
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec

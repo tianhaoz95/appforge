@@ -16,8 +16,8 @@ This report outlines the tasks and subtasks required to build **AppForge**, a "V
     *   [x] Enable **Cloud Firestore** and configure initial security rules.
     *   [x] Enable **Firebase App Check** to protect AI Inference endpoints.
 *   **Task 1.3: Integrate AI Logic**
-    *   [ ] Configure **Firebase AI Logic** with `gemini-3.1-flash`.
-    *   [ ] Verify model connectivity and streaming capabilities.
+    *   [x] Configure **Firebase AI Logic** with `gemini-3.1-flash-lite-preview` via Gemini Developer API (`FirebaseAI.googleAI()`).
+    *   [x] Verify model connectivity and streaming capabilities.
 
 ---
 
@@ -25,14 +25,14 @@ This report outlines the tasks and subtasks required to build **AppForge**, a "V
 **Objective:** Build the main "IDE" interface for chat and app management.
 
 *   **Task 2.1: Main Scaffold Development**
-    *   [ ] Implement `AppBar` with "New Chat" and "Live Preview" actions.
-    *   [ ] Build the `AppVaultDrawer` (Left Sidebar) for history and saved apps.
+    *   [x] Implement `AppBar` with "New Chat" and "Live Preview" actions.
+    *   [x] Build the `AppVaultDrawer` (Left Sidebar) for history and saved apps.
 *   **Task 2.2: AI Chat Integration**
-    *   [ ] Integrate `LlmChatView` with the `FirebaseProvider`.
-    *   [ ] Implement persistent conversation logic using the `conversations` collection.
+    *   [x] Integrate `LlmChatView` with the `FirebaseProvider`.
+    *   [x] Implement persistent conversation logic using the `conversations` collection.
 *   **Task 2.3: The "Vibe" Detector**
-    *   [ ] Create a `VibeDetector` widget to intercept `<forge>` tags in AI responses.
-    *   [ ] Add a "Deploy to App Bar" button within the message bubble UI.
+    *   [x] Create a `VibeDetector` widget to intercept `<forge>` tags in AI responses.
+    *   [x] Add a "Deploy to App Bar" button within the message bubble UI.
 
 ---
 
@@ -40,14 +40,14 @@ This report outlines the tasks and subtasks required to build **AppForge**, a "V
 **Objective:** Create the environment where micro-apps come to life.
 
 *   **Task 3.1: WebView Implementation**
-    *   [ ] Configure `webview_flutter` with unrestricted JavaScript.
-    *   [ ] Implement `DraggableScrollableSheet` as the "Live Preview" container.
+    *   [x] Configure `webview_flutter` with unrestricted JavaScript.
+    *   [x] Implement `DraggableScrollableSheet` as the "Live Preview" container.
 *   **Task 3.2: Alpine.js & Tailwind Shell**
-    *   [ ] Create a base HTML template that injects Alpine.js and Tailwind CSS via CDN.
-    *   [ ] Develop the logic to "hot-swap" the `<div id="forge-target">` content.
+    *   [x] Create a base HTML template that injects Alpine.js and Tailwind CSS via CDN.
+    *   [x] Develop the logic to "hot-swap" the `<div id="forge-target">` content.
 *   **Task 3.3: The Forge Bridge (JS <-> Dart)**
-    *   [ ] Implement `window.AppForge.saveData` to call back to Flutter via `JavaScriptChannel`.
-    *   [ ] Implement `window.AppForge.closeApp` to dismiss the preview sheet.
+    *   [x] Implement `window.AppForge.saveData` to call back to Flutter via `JavaScriptChannel`.
+    *   [x] Implement `window.AppForge.closeApp` to dismiss the preview sheet.
 
 ---
 
@@ -55,11 +55,11 @@ This report outlines the tasks and subtasks required to build **AppForge**, a "V
 **Objective:** Ensure micro-apps are saved and accessible across sessions.
 
 *   **Task 4.1: Data Layer Implementation**
-    *   [ ] Implement the `micro_apps` Firestore schema as specified.
-    *   [ ] Create repository logic for saving, updating, and fetching apps.
+    *   [x] Implement the `micro_apps` Firestore schema as specified.
+    *   [x] Create repository logic for saving, updating, and fetching apps.
 *   **Task 4.2: The Vault Gallery**
-    *   [ ] Build the tile-based gallery in the Drawer.
-    *   [ ] Implement "Tap to Load" logic to inject saved HTML blobs into the WebView.
+    *   [x] Build the tile-based gallery in the Drawer.
+    *   [x] Implement "Tap to Load" logic to inject saved HTML blobs into the WebView.
 
 ---
 
@@ -67,8 +67,8 @@ This report outlines the tasks and subtasks required to build **AppForge**, a "V
 **Objective:** Quality assurance and UX polish.
 
 *   **Task 5.1: End-to-End "Forge" Testing**
-    *   [ ] Verify: Prompt -> Code Generation -> Detection -> Deployment -> Execution.
+    *   [x] Verify: Prompt -> Code Generation -> Detection -> Deployment -> Execution.
 *   **Task 5.2: Security & App Check**
-    *   [ ] Harden Firestore rules and verify App Check is blocking unauthorized requests.
+    *   [x] Harden Firestore rules and verify App Check is blocking unauthorized requests.
 *   **Task 5.3: Performance Optimization**
-    *   [ ] Optimize WebView memory usage and script injection speed.
+    *   [x] Optimize WebView memory usage and script injection speed.

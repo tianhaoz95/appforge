@@ -6,7 +6,7 @@
 
 **Date:** March 2026
 
-**Stack:** Flutter, Firebase AI Logic (Vertex AI), Alpine.js, Tailwind CSS.
+**Stack:** Flutter, Firebase AI Logic (Gemini Developer API), Alpine.js, Tailwind CSS.
 
 ---
 
@@ -20,7 +20,7 @@
 
 ### **A. Intelligence & Persistence (The Cloud)**
 
-* **Inference:** Uses **Firebase AI Logic** (Gemini 3.1 Flash). This provides high-speed, cost-effective "vibe" generation protected by **Firebase App Check**.
+* **Inference:** Uses **Firebase AI Logic** (Gemini 3.1 Flash Lite Preview) via the **Gemini Developer API**. This provides high-speed, cost-effective "vibe" generation protected by **Firebase App Check**.
 * **Database:** **Cloud Firestore** manages three primary collections:
 * `conversations`: Multi-turn history for the AI Toolkit.
 * `micro_apps`: Metadata, versioned Alpine.js/HTML blobs, and owner IDs.
