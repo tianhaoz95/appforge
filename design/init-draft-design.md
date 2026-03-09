@@ -1,93 +1,137 @@
 ## **Product Design Document: AppForge**
 
-**Version:** 1.0 (March 2026)
+**Project Name:** AppForge
 
-**Status:** Initial Draft
+**Author:** AI Collaborator
 
-**Core Stack:** Flutter (3.4x), Firebase (Vertex AI + Firestore), Alpine.js, Snowglobe (Rust-based Edge Inference).
+**Date:** March 2026
+
+**Stack:** Flutter, Firebase AI Logic (Vertex AI), Alpine.js, Tailwind CSS.
 
 ---
 
 ## **1. Executive Summary**
 
-**AppForge** is a dual-purpose development and productivity platform that enables "Vibe Coding." It combines a native **Flutter** conversational interface with a lightweight **Alpine.js** micro-app runtime. Users can describe a utility or tool in natural language, and AppForge generates, stores, and executes that tool as a persistent micro-app within the same interface.
+**AppForge** is a "Vibe Coding" platform that turns natural language into functional, persistent micro-apps. By combining the **Flutter AI Toolkit** for high-fidelity chat with a **Firebase-backed cloud architecture**, users can "forge" utilities (calculators, dashboards, interactive forms) that are instantly rendered via **Alpine.js** and saved to a cross-device **App Vault**.
 
 ---
 
-## **2. Design Philosophy**
+## **2. System Architecture**
 
-* **Zero-Build Reactivity:** Use Alpine.js to eliminate the need for JS compilation, ensuring that LLM-generated UIs are functional within milliseconds of streaming.
-* **Conversational Logic:** The primary interaction is a chat. The AI is not just a responder but a "Forge" that hammers out functional UI.
-* **Edge-First Performance:** Leveraging the user's **Snowglobe** engine for local inference while using Firebase for cross-device synchronization and cloud-fallback.
+### **A. Intelligence & Persistence (The Cloud)**
 
----
+* **Inference:** Uses **Firebase AI Logic** (Gemini 3.1 Flash). This provides high-speed, cost-effective "vibe" generation protected by **Firebase App Check**.
+* **Database:** **Cloud Firestore** manages three primary collections:
+* `conversations`: Multi-turn history for the AI Toolkit.
+* `micro_apps`: Metadata, versioned Alpine.js/HTML blobs, and owner IDs.
+* `user_profiles`: Preferences and pinned apps.
 
-## **3. Architecture & Tech Stack**
 
-### **A. Frontend (Flutter)**
 
-* **Framework:** Flutter 3.41+ with **Impeller** rendering for 120 FPS fluid interactions.
-* **UI Toolkit:** **Flutter AI Toolkit** (`LlmChatView`) for the core conversation interface.
-* **State Management:** **Riverpod** for handling asynchronous streams from both Firebase and the local Snowglobe Rust core.
-* **Native Bridge:** `flutter_rust_bridge` to connect the UI to high-performance inference logic.
+### **B. Runtime Layer (The Execution)**
 
-### **B. Backend (Firebase)**
-
-* **AI Engine:** **Firebase Vertex AI Logic** using `gemini-3.1-flash` for rapid UI generation.
-* **Database:** **Cloud Firestore** for storing chat threads and the `HTML/JS` blobs of forged micro-apps.
-* **Security:** **Firebase App Check** to protect the API endpoints from unauthorized inference calls.
-
-### **C. The Vibe Runtime (Alpine.js)**
-
-* **Engine:** `webview_flutter` or `flutter_inappwebview`.
-* **Bridge:** Two-way communication using `JavascriptChannels` to allow Alpine.js micro-apps to call Flutter/Rust functions (e.g., `window.AppForge.runInference()`).
+* **Host:** `webview_flutter` running an **unrestricted JavaScript** environment.
+* **UI Framework:** **Alpine.js** (loaded via CDN) for no-build reactivity.
+* **Styling:** **Tailwind CSS** (Play CDN) to allow the LLM to style components using standard classes.
 
 ---
 
-## **4. Detailed UI/UX Specification**
+## **3. Detailed UI Design**
 
-### **The Main Screen (The Forge)**
+### **A. Main Screen: The Forge Interface**
 
-A three-pane design optimized for productivity.
+The UI follows a classic "Productivity IDE" layout built entirely in Flutter.
 
-| Component | Description |
-| --- | --- |
-| **Left Sidebar (Drawer)** | **Chat History:** List of active and archived sessions. <br>
+* **App Bar:**
+* **New Chat (Icon):** Resets the `LlmProvider` to start a fresh forging session.
+* **Live Preview (Rocket Icon):** Slides up a `DraggableScrollableSheet` containing the WebView. This allows users to keep the chat open while interacting with the forged app.
 
-<br> **App Vault:** A grid of cards showing icons for "Forged" apps (e.g., *Property Tax Calc*, *NPU Visualizer*). |
-| **Center Panel (Chat)** | Built with `LlmChatView`. Streams the conversation. If a code block containing `x-data` (Alpine) is detected, a **"Launch App"** button appears over the message. |
-| **App Bar** | **New Chat:** Resets the LLM provider state. <br>
 
-<br> **Preview Toggle:** A rocket icon that slides up the WebView to overlay the current forged app. |
+* **Left Sidebar (The Vault):**
+* **Recent Chats:** Chronological list of AI interactions.
+* **Forged Apps:** A tile-based gallery of saved micro-apps. Tapping a tile injects that specific code blob into the WebView.
 
----
 
-## **5. Feature Modules**
+* **Center Stage (Chat):**
+* Powered by `LlmChatView`.
+* **Custom Interceptor:** When the AI streams code wrapped in `<forge>...</forge>` tags, the UI displays a **"Deploy to App Bar"** button in the message bubble.
 
-### **I. The Conversational Forge**
 
-* **Function:** The user provides a prompt (e.g., *"Make a dashboard for my OnePlus Open hardware stats"*).
-* **AI Output:** The LLM returns a specialized JSON object containing the Alpine.js HTML.
-* **Processing:** Flutter extracts the code, saves it to a local `shelf` server directory, and updates the App Bar "Preview" button.
-
-### **II. Hardware Grounding (Snowglobe Integration)**
-
-* AppForge exposes a `window.Snowglobe` object to the Alpine environment.
-* **Example Choice:** Micro-apps can call `Snowglobe.getNpuUsage()` to get real-time metrics from the local Snapdragon chip, bypassing the cloud for privacy and speed.
 
 ---
 
-## **6. Visual Design Choices**
+## **4. Data Schema & Integration**
 
-* **Primary Palette:** "Glacier White" (#F0F8FF) and "Obsidian" (#0B0E14) with "NPU Cyan" (#00E5FF) accents.
-* **Typography:** **JetBrains Mono** for code fragments; **Inter** for the conversation.
-* **Glassmorphism:** The WebView uses a slightly blurred `BackdropFilter` so the forged apps feel integrated into the Flutter environment.
+### **Firestore Schema: `micro_apps**`
+
+```json
+{
+  "appId": "uuid_123",
+  "name": "NPU Hardware Monitor",
+  "ownerId": "firebase_user_abc",
+  "version": 1.2,
+  "html_blob": "",
+  "created_at": "2026-03-08T17:10:00Z",
+  "icon": "speed"
+}
+
+```
+
+### **The Forge Bridge (Flutter to Alpine)**
+
+AppForge uses a global JS object to allow the micro-app to talk back to the Firebase/Flutter layer.
+
+```javascript
+window.AppForge = {
+  saveData: (key, val) => { /* Calls Flutter channel to update Firestore */ },
+  closeApp: () => { /* Tells Flutter to hide the WebView sheet */ }
+};
+
+```
 
 ---
 
-## **7. Roadmap**
+## **5. Technical Implementation: Step-by-Step**
 
-1. **Phase 1:** Basic Chat integration with Firebase Vertex AI.
-2. **Phase 2:** Alpine.js injection via local `shelf` server.
-3. **Phase 3:** Persistent "App Vault" in Firestore for saving generated UIs.
-4. **Phase 4:** Full Snowglobe/Rust hardware bridge for edge-native micro-apps.
+### **Step 1: The Flutter Scaffold**
+
+```dart
+Scaffold(
+  appBar: AppBar(
+    title: const Text('AppForge'),
+    actions: [
+      IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
+      IconButton(icon: const Icon(Icons.rocket_launch), onPressed: _togglePreview),
+    ],
+  ),
+  drawer: AppVaultDrawer(), // Sidebar for history and saved apps
+  body: LlmChatView(
+    provider: FirebaseProvider(
+      model: FirebaseAI.instance.generativeModel(model: 'gemini-3.1-flash'),
+    ),
+    // Custom widget to detect and "forge" the Alpine code
+    responseBuilder: (context, message) => VibeDetector(message: message),
+  ),
+);
+
+```
+
+### **Step 2: The Alpine Injection**
+
+When a "vibe" is deployed, the WebView loads a standard shell:
+
+```html
+<script src="https://cdn.tailwindcss.com"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+<div id="forge-target">
+  </div>
+
+```
+
+---
+
+## **6. Key Benefits of AppForge**
+
+1. **Instant Deployment:** No `npm install`, no `flutter build`. Code runs the second the LLM finishes typing.
+2. **Persistent Utility:** Tools built in the chat aren't ephemeral; they are saved to the Vault for long-term use.
+3. **Low Overhead:** By using Alpine.js instead of React, the "forged" apps consume minimal memory on the device.
