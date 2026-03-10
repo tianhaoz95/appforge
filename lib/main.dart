@@ -8,18 +8,13 @@ import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
 import 'widgets/preview_sheet.dart';
 import 'repositories/micro_app_repository.dart';
+import 'providers/fallback_llm_provider.dart';
+import 'providers/hybrid_inference_manager.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  runApp(
-    Provider(
-      create: (_) => MicroAppRepository(),
-      child: const MyApp(),
-    ),
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(Provider(create: (_) => MicroAppRepository(), child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -56,11 +51,42 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
     _initializeAI();
   }
 
-  void _initializeAI() {
-    final model = FirebaseAI.googleAI().generativeModel(
+  void _initializeAI() async {
+    const systemPrompt = 'You are AppForge AI. You help users "forge" micro-apps. '
+        'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
+        'you MUST wrap it inside <forge>...</forge> tags. '
+        'Example: <forge><div class="p-4">Hello</div></forge>. '
+        'Do not use other markdown blocks for the micro-app code itself. '
+        'Use Tailwind CSS for styling and Alpine.js for reactivity. '
+        'The micro-apps should be self-contained and visually appealing.';
+
+    // Check on-device model status
+    try {
+      final status = await HybridInferenceManager.checkModelStatus();
+      debugPrint('On-device AI status: $status');
+      // If downloadable, we start it, but in a real app, you might want to show a progress bar
+      if (status == 'DOWNLOADABLE') {
+        debugPrint('Starting on-device model download...');
+        HybridInferenceManager.downloadModel();
+      }
+    } catch (e) {
+      debugPrint('Failed to check hybrid status: $e');
+    }
+
+    final primaryModel = FirebaseAI.googleAI().generativeModel(
       model: 'gemini-3.1-flash-lite-preview',
+      systemInstruction: Content.system(systemPrompt),
     );
-    _provider = FirebaseProvider(model: model);
+
+    final secondaryModel = FirebaseAI.googleAI().generativeModel(
+      model: 'gemini-2.0-flash',
+      systemInstruction: Content.system(systemPrompt),
+    );
+
+    _provider = FallbackLlmProvider(
+      primary: FirebaseProvider(model: primaryModel),
+      secondary: FirebaseProvider(model: secondaryModel),
+    );
   }
 
   void _createNewForge() {
@@ -77,9 +103,9 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
         _showPreview = !_showPreview;
       });
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('No app forged yet!')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('No app forged yet!')));
     }
   }
 
@@ -112,17 +138,13 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
           ),
         ],
       ),
-      drawer: AppVaultDrawer(
-        onAppSelected: _onAppSelectedFromVault,
-      ),
+      drawer: AppVaultDrawer(onAppSelected: _onAppSelectedFromVault),
       body: Stack(
         children: [
           LlmChatView(
             provider: _provider,
-            responseBuilder: (context, message) => VibeDetector(
-              message: message,
-              onDeploy: _onDeploy,
-            ),
+            responseBuilder: (context, message) =>
+                VibeDetector(message: message, onDeploy: _onDeploy),
           ),
           if (_showPreview && _activeForgeCode != null)
             PreviewSheet(

@@ -16,8 +16,9 @@ This report outlines the tasks and subtasks required to build **AppForge**, a "V
     *   [x] Enable **Cloud Firestore** and configure initial security rules.
     *   [x] Enable **Firebase App Check** to protect AI Inference endpoints.
 *   **Task 1.3: Integrate AI Logic**
-    *   [x] Configure **Firebase AI Logic** with `gemini-3.1-flash-lite-preview` via Gemini Developer API (`FirebaseAI.googleAI()`).
-    *   [x] Verify model connectivity and streaming capabilities.
+    *   [x] Configure **Firebase AI Logic** with `gemini-3.1-flash-lite-preview` via Gemini Developer API.
+    *   [x] Implement `FallbackLlmProvider` to gracefully handle "High Demand" (503) errors by switching to `gemini-2.0-flash`.
+    *   [x] Verify model connectivity and fallback logic.
 
 ---
 

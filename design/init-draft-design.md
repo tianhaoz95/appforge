@@ -20,7 +20,8 @@
 
 ### **A. Intelligence & Persistence (The Cloud)**
 
-* **Inference:** Uses **Firebase AI Logic** (Gemini 3.1 Flash Lite Preview) via the **Gemini Developer API**. This provides high-speed, cost-effective "vibe" generation protected by **Firebase App Check**.
+* **Inference:** Uses **Firebase AI Logic** (Gemini 3.1 Flash-Lite Preview) via the **Gemini Developer API**. 
+    * **Robustness:** Implements a **Fallback Provider** that automatically switches to **Gemini 2.0 Flash** if the primary preview model is under high demand (503/Overloaded errors).
 * **Database:** **Cloud Firestore** manages three primary collections:
 * `conversations`: Multi-turn history for the AI Toolkit.
 * `micro_apps`: Metadata, versioned Alpine.js/HTML blobs, and owner IDs.
