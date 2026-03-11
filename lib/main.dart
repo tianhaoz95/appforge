@@ -10,6 +10,7 @@ import 'widgets/vibe_detector.dart';
 import 'widgets/preview_sheet.dart';
 import 'repositories/micro_app_repository.dart';
 import 'repositories/conversation_repository.dart';
+import 'repositories/micro_app_data_repository.dart';
 import 'repositories/local_database.dart';
 import 'providers/fallback_llm_provider.dart';
 import 'providers/hybrid_inference_manager.dart';
@@ -27,6 +28,7 @@ void main() async {
     MultiProvider(
       providers: [
         Provider(create: (_) => MicroAppRepository(dbHelper: dbHelper)),
+        Provider(create: (_) => MicroAppDataRepository(dbHelper: dbHelper)),
         Provider(create: (_) => ConversationRepository(dbHelper: dbHelper)),
         ChangeNotifierProvider(create: (_) => AuthProvider()), // Kept for potential UI needs, but not for auth
       ],
@@ -61,6 +63,7 @@ class AppForgeHomePage extends StatefulWidget {
 class _AppForgeHomePageState extends State<AppForgeHomePage> {
   LlmProvider? _provider;
   String? _activeForgeCode;
+  String? _activeAppId;
   bool _showPreview = false;
   String _currentConversationId = const Uuid().v4();
   String _conversationTitle = 'New Conversation';
@@ -78,7 +81,19 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
         'Example: <forge><div class="p-4">Hello</div></forge>. '
         'Do not use other markdown blocks for the micro-app code itself. '
         'Use Tailwind CSS for styling and Alpine.js for reactivity. '
-        'The micro-apps should be self-contained and visually appealing.';
+        'The micro-apps should be self-contained and visually appealing. '
+        '\n\nNEW CAPABILITY: Local Storage API. '
+        'You can use the `window.AppForge` bridge to persist data locally. '
+        'Methods: '
+        '- `window.AppForge.saveData(key, value)`: Returns a Promise. '
+        '- `window.AppForge.getData(key)`: Returns a Promise that resolves to the value. '
+        '- `window.AppForge.deleteData(key)`: Returns a Promise. '
+        '- `window.AppForge.listAll()`: Returns a Promise that resolves to an object of all keys/values. '
+        '- `window.AppForge.closeApp()`: Closes the micro-app preview. '
+        '\nExample of Alpine.js integration: '
+        'x-data="{ items: [], newItem: \'\' }" '
+        'x-init="items = await window.AppForge.getData(\'items\') || []" '
+        '@submit.prevent="items.push(newItem); await window.AppForge.saveData(\'items\', items); newItem = \'\'"';
 
     // Check on-device model status
     try {
@@ -172,13 +187,17 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
       final repository = context.read<MicroAppRepository>();
       const userId = 'local-user';
 
-      await repository.saveApp({
+      final appId = await repository.saveApp({
         'ownerId': userId,
         'conversationId': _currentConversationId,
         'name': 'Forged App', // In a real app, this would be generated from the AI response
         'html_blob': code,
         'version': '1.0.0',
         'icon': 'rocket',
+      });
+
+      setState(() {
+        _activeAppId = appId;
       });
 
       if (mounted) {
@@ -196,12 +215,14 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
 
   void _onAppSelectedFromVault(Map<String, dynamic> app) async {
     final conversationId = app['conversationId'];
+    final appId = app['appId'];
     if (conversationId != null) {
       final repository = context.read<ConversationRepository>();
       final history = await repository.getConversation(conversationId);
       
       setState(() {
         _activeForgeCode = app['html_blob'];
+        _activeAppId = appId;
         _showPreview = true;
         _currentConversationId = conversationId;
         _conversationTitle = app['name'] ?? 'Forged App';
@@ -212,6 +233,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
     } else {
       setState(() {
         _activeForgeCode = app['html_blob'];
+        _activeAppId = appId;
         _showPreview = true;
       });
     }
@@ -271,9 +293,10 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
                 if (_showPreview && _activeForgeCode != null)
                   PreviewSheet(
                     code: _activeForgeCode!,
+                    appId: _activeAppId ?? 'unknown',
                     onClose: () => setState(() => _showPreview = false),
                     onSaveData: (key, value) {
-                      // TODO: Store app data back to Firestore
+                      // Handled by the internal bridge now
                     },
                   ),
               ],

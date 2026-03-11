@@ -1,6 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:provider/provider.dart';
 import 'package:appforge/widgets/preview_sheet.dart';
+import 'package:appforge/repositories/micro_app_data_repository.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockMicroAppDataRepository extends Mock implements MicroAppDataRepository {}
 
 void main() {
   setUpAll(() {
@@ -8,9 +13,17 @@ void main() {
   });
 
   testWidgets('PreviewSheet shows content and close button', (WidgetTester tester) async {
-    await tester.pumpWidget(const MaterialApp(
+    final mockRepo = MockMicroAppDataRepository();
+    
+    await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: PreviewSheet(code: '<h1>Hello</h1>'),
+        body: Provider<MicroAppDataRepository>.value(
+          value: mockRepo,
+          child: const PreviewSheet(
+            code: '<h1>Hello</h1>',
+            appId: 'test-app',
+          ),
+        ),
       ),
     ));
 

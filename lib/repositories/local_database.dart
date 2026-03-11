@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:meta/meta.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 import 'package:path_provider/path_provider.dart';
@@ -6,10 +7,17 @@ import 'package:path_provider/path_provider.dart';
 class LocalDatabase {
   static final LocalDatabase _instance = LocalDatabase._internal();
   static Database? _database;
+  static String? _testPath;
 
   LocalDatabase._internal();
 
   factory LocalDatabase() => _instance;
+
+  @visibleForTesting
+  static void setTestPath(String path) {
+    _testPath = path;
+    _database = null;
+  }
 
   Future<Database> get database async {
     if (_database != null) return _database!;
@@ -18,12 +26,17 @@ class LocalDatabase {
   }
 
   Future<Database> _initDatabase() async {
-    final directory = await getApplicationDocumentsDirectory();
-    final path = join(directory.path, 'appforge.db');
+    final String path;
+    if (_testPath != null) {
+      path = _testPath!;
+    } else {
+      final directory = await getApplicationDocumentsDirectory();
+      path = join(directory.path, 'appforge.db');
+    }
 
     return await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -42,6 +55,17 @@ class LocalDatabase {
       } catch (e) {
         // Column might already exist
       }
+    }
+    if (oldVersion < 3) {
+      await db.execute('''
+        CREATE TABLE micro_app_data (
+          appId TEXT,
+          key TEXT,
+          value TEXT,
+          updated_at INTEGER,
+          PRIMARY KEY (appId, key)
+        )
+      ''');
     }
   }
 
@@ -65,6 +89,16 @@ class LocalDatabase {
         title TEXT,
         history TEXT,
         updated_at INTEGER
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE micro_app_data (
+        appId TEXT,
+        key TEXT,
+        value TEXT,
+        updated_at INTEGER,
+        PRIMARY KEY (appId, key)
       )
     ''');
   }

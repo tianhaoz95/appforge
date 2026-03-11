@@ -1,9 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import '../repositories/micro_app_data_repository.dart';
 
 class PreviewSheet extends StatefulWidget {
   final String code;
+  final String appId;
   final VoidCallback? onClose;
   final Function(String key, dynamic value)? onSaveData;
   
@@ -12,15 +15,16 @@ class PreviewSheet extends StatefulWidget {
   const PreviewSheet({
     super.key, 
     required this.code, 
+    required this.appId,
     this.onClose,
     this.onSaveData,
   });
 
   @override
-  State<PreviewSheet> createState() => _PreviewSheetState();
+  State<PreviewSheet> createState() => PreviewSheetState();
 }
 
-class _PreviewSheetState extends State<PreviewSheet> {
+class PreviewSheetState extends State<PreviewSheet> {
   WebViewController? _controller;
 
   @override
@@ -36,32 +40,60 @@ class _PreviewSheetState extends State<PreviewSheet> {
         ..setBackgroundColor(Colors.transparent) // Optimization for rendering
         ..addJavaScriptChannel(
           'AppForgeChannel',
-          onMessageReceived: (JavaScriptMessage message) {
-            try {
-              final data = jsonDecode(message.message);
-              final action = data['action'];
-              if (action == 'saveData') {
-                widget.onSaveData?.call(data['key'], data['value']);
-              } else if (action == 'closeApp') {
-                if (widget.onClose != null) {
-                  widget.onClose?.call();
-                } else {
-                  Navigator.pop(context);
-                }
-              }
-            } catch (e) {
-              debugPrint('Error decoding AppForgeChannel message: $e');
-            }
-          },
+          onMessageReceived: (JavaScriptMessage message) => handleMessage(message.message),
         )
         ..loadHtmlString(_buildHtmlShell(widget.code));
+    }
+  }
+
+  @visibleForTesting
+  Future<void> handleMessage(String message) async {
+    try {
+      final data = jsonDecode(message);
+      final action = data['action'];
+      final requestId = data['requestId'];
+      final repository = context.read<MicroAppDataRepository>();
+
+      if (action == 'saveData') {
+        final key = data['key'];
+        final value = data['value'];
+        await repository.saveData(widget.appId, key, value);
+        _sendResponse(requestId, {'success': true});
+        widget.onSaveData?.call(key, value);
+      } else if (action == 'getData') {
+        final key = data['key'];
+        final value = await repository.getData(widget.appId, key);
+        _sendResponse(requestId, {'value': value});
+      } else if (action == 'deleteData') {
+        final key = data['key'];
+        await repository.deleteData(widget.appId, key);
+        _sendResponse(requestId, {'success': true});
+      } else if (action == 'listAll') {
+        final allData = await repository.listAll(widget.appId);
+        _sendResponse(requestId, {'data': allData});
+      } else if (action == 'closeApp') {
+        if (widget.onClose != null) {
+          widget.onClose?.call();
+        } else {
+          Navigator.pop(context);
+        }
+      }
+    } catch (e) {
+      debugPrint('Error decoding AppForgeChannel message: $e');
+    }
+  }
+
+  void _sendResponse(String? requestId, Map<String, dynamic> response) {
+    if (requestId != null) {
+      final jsonResponse = jsonEncode(response);
+      _controller?.runJavaScript('window.AppForge._handleResponse("$requestId", $jsonResponse)');
     }
   }
 
   @override
   void didUpdateWidget(PreviewSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.code != widget.code) {
+    if (oldWidget.code != widget.code || oldWidget.appId != widget.appId) {
       _controller?.loadHtmlString(_buildHtmlShell(widget.code));
     }
   }
@@ -87,20 +119,38 @@ class _PreviewSheetState extends State<PreviewSheet> {
     $code
   </div>
   <script>
-    window.AppForge = {
-      saveData: (key, val) => { 
-        AppForgeChannel.postMessage(JSON.stringify({
-          action: 'saveData',
-          key: key,
-          value: val
-        }));
-      },
-      closeApp: () => {
-        AppForgeChannel.postMessage(JSON.stringify({
-          action: 'closeApp'
-        }));
-      }
-    };
+    (function() {
+      const pendingRequests = new Map();
+      
+      window.AppForge = {
+        _handleResponse: (requestId, response) => {
+          if (pendingRequests.has(requestId)) {
+            pendingRequests.get(requestId)(response);
+            pendingRequests.delete(requestId);
+          }
+        },
+        _sendRequest: (action, params) => {
+          const requestId = Math.random().toString(36).substring(2, 11);
+          return new Promise((resolve) => {
+            pendingRequests.set(requestId, resolve);
+            AppForgeChannel.postMessage(JSON.stringify({
+              action,
+              requestId,
+              ...params
+            }));
+          });
+        },
+        saveData: (key, val) => window.AppForge._sendRequest('saveData', { key, value: val }),
+        getData: (key) => window.AppForge._sendRequest('getData', { key }).then(r => r.value),
+        deleteData: (key) => window.AppForge._sendRequest('deleteData', { key }),
+        listAll: () => window.AppForge._sendRequest('listAll', {}).then(r => r.data),
+        closeApp: () => {
+          AppForgeChannel.postMessage(JSON.stringify({
+            action: 'closeApp'
+          }));
+        }
+      };
+    })();
   </script>
 </body>
 </html>
