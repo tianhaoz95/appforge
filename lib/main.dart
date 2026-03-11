@@ -8,20 +8,26 @@ import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
 import 'widgets/preview_sheet.dart';
 import 'repositories/micro_app_repository.dart';
+import 'repositories/conversation_repository.dart';
+import 'repositories/local_database.dart';
 import 'providers/fallback_llm_provider.dart';
 import 'providers/hybrid_inference_manager.dart';
 import 'providers/auth_provider.dart';
-import 'screens/login_screen.dart';
 import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Keep Firebase for AI if needed, but we could also move it later
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  
+  final dbHelper = LocalDatabase();
+  
   runApp(
     MultiProvider(
       providers: [
-        Provider(create: (_) => MicroAppRepository()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        Provider(create: (_) => MicroAppRepository(dbHelper: dbHelper)),
+        Provider(create: (_) => ConversationRepository(dbHelper: dbHelper)),
+        ChangeNotifierProvider(create: (_) => AuthProvider()), // Kept for potential UI needs, but not for auth
       ],
       child: const MyApp(),
     ),
@@ -39,15 +45,7 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
         useMaterial3: true,
       ),
-      home: Consumer<AuthProvider>(
-        builder: (context, auth, _) {
-          if (auth.isAuthenticated) {
-            return const AppForgeHomePage();
-          } else {
-            return const LoginScreen();
-          }
-        },
-      ),
+      home: const AppForgeHomePage(),
     );
   }
 }
@@ -137,11 +135,10 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
       _showPreview = true;
     });
 
-    // Automatically save app to Firestore
+    // Automatically save app locally
     try {
-      final auth = context.read<AuthProvider>();
       final repository = context.read<MicroAppRepository>();
-      final userId = auth.user?.uid ?? 'anonymous';
+      const userId = 'local-user';
 
       await repository.saveApp({
         'ownerId': userId,
@@ -154,7 +151,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('App forged and saved to vault!'),
+            content: Text('App forged and saved locally!'),
             duration: Duration(seconds: 2),
           ),
         );

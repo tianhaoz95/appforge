@@ -1,26 +1,43 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+import 'local_database.dart';
+import 'package:sqflite/sqflite.dart';
 
 class ConversationRepository {
-  final FirebaseFirestore _firestore;
+  final LocalDatabase _dbHelper;
 
-  ConversationRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  ConversationRepository({LocalDatabase? dbHelper})
+      : _dbHelper = dbHelper ?? LocalDatabase();
 
   Future<void> saveConversation(String conversationId, List<ChatMessage> history) async {
+    final db = await _dbHelper.database;
     final messages = history.map((m) => m.toJson()).toList();
-    await _firestore.collection('conversations').doc(conversationId).set({
-      'history': messages,
-      'updated_at': FieldValue.serverTimestamp(),
-    });
+    
+    await db.insert(
+      'conversations',
+      {
+        'conversationId': conversationId,
+        'history': jsonEncode(messages),
+        'updated_at': DateTime.now().millisecondsSinceEpoch,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
   }
 
   Future<List<ChatMessage>> getConversation(String conversationId) async {
-    final doc = await _firestore.collection('conversations').doc(conversationId).get();
-    if (!doc.exists) return [];
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'conversations',
+      where: 'conversationId = ?',
+      whereArgs: [conversationId],
+    );
 
-    final data = doc.data()!;
-    final history = (data['history'] as List<dynamic>)
+    if (maps.isEmpty) return [];
+
+    final data = maps.first;
+    final historyJson = jsonDecode(data['history'] as String) as List<dynamic>;
+    
+    final history = historyJson
         .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
         .toList();
     

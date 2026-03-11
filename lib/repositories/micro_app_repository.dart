@@ -1,37 +1,57 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
+import 'package:sqflite/sqflite.dart';
+import 'local_database.dart';
 
 class MicroAppRepository {
-  final FirebaseFirestore _firestore;
+  final LocalDatabase _dbHelper;
   final _uuid = const Uuid();
 
-  MicroAppRepository({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+  MicroAppRepository({LocalDatabase? dbHelper})
+      : _dbHelper = dbHelper ?? LocalDatabase();
 
   Future<String> saveApp(Map<String, dynamic> appData) async {
     final appId = appData['appId'] ?? _uuid.v4();
+    final db = await _dbHelper.database;
+    
     final data = {
-      ...appData,
       'appId': appId,
-      'created_at': appData['created_at'] ?? FieldValue.serverTimestamp(),
+      'ownerId': appData['ownerId'] ?? 'local-user',
+      'name': appData['name'],
+      'html_blob': appData['html_blob'],
+      'version': appData['version'],
+      'icon': appData['icon'],
+      'created_at': DateTime.now().millisecondsSinceEpoch,
     };
 
-    await _firestore.collection('micro_apps').doc(appId).set(data);
+    await db.insert(
+      'micro_apps',
+      data,
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
     return appId;
   }
 
   Future<Map<String, dynamic>?> getApp(String appId) async {
-    final doc = await _firestore.collection('micro_apps').doc(appId).get();
-    return doc.data();
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'micro_apps',
+      where: 'appId = ?',
+      whereArgs: [appId],
+    );
+
+    if (maps.isEmpty) return null;
+    return maps.first;
   }
 
   Future<List<Map<String, dynamic>>> getAppsForOwner(String ownerId) async {
-    final query = await _firestore
-        .collection('micro_apps')
-        .where('ownerId', isEqualTo: ownerId)
-        .orderBy('created_at', descending: true)
-        .get();
+    final db = await _dbHelper.database;
+    final List<Map<String, dynamic>> maps = await db.query(
+      'micro_apps',
+      where: 'ownerId = ?',
+      whereArgs: [ownerId],
+      orderBy: 'created_at DESC',
+    );
 
-    return query.docs.map((doc) => doc.data()).toList();
+    return maps;
   }
 }
