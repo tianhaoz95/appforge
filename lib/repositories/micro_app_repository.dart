@@ -16,6 +16,7 @@ class MicroAppRepository {
     final data = {
       'appId': appId,
       'ownerId': appData['ownerId'] ?? 'local-user',
+      'conversationId': appData['conversationId'],
       'name': appData['name'],
       'html_blob': appData['html_blob'],
       'version': appData['version'],

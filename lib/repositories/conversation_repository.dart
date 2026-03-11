@@ -9,7 +9,7 @@ class ConversationRepository {
   ConversationRepository({LocalDatabase? dbHelper})
       : _dbHelper = dbHelper ?? LocalDatabase();
 
-  Future<void> saveConversation(String conversationId, List<ChatMessage> history) async {
+  Future<void> saveConversation(String conversationId, String title, List<ChatMessage> history) async {
     final db = await _dbHelper.database;
     final messages = history.map((m) => m.toJson()).toList();
     
@@ -17,10 +17,19 @@ class ConversationRepository {
       'conversations',
       {
         'conversationId': conversationId,
+        'title': title,
         'history': jsonEncode(messages),
         'updated_at': DateTime.now().millisecondsSinceEpoch,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> getConversations() async {
+    final db = await _dbHelper.database;
+    return await db.query(
+      'conversations',
+      orderBy: 'updated_at DESC',
     );
   }
 

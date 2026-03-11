@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:provider/provider.dart';
+import 'package:uuid/uuid.dart';
 import 'firebase_options.dart';
 import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
@@ -61,6 +62,8 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
   LlmProvider? _provider;
   String? _activeForgeCode;
   bool _showPreview = false;
+  String _currentConversationId = const Uuid().v4();
+  String _conversationTitle = 'New Conversation';
 
   @override
   void initState() {
@@ -101,20 +104,49 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
       systemInstruction: Content.system(systemPrompt),
     );
 
+    final provider = FallbackLlmProvider(
+      primary: FirebaseProvider(model: primaryModel),
+      secondary: FirebaseProvider(model: secondaryModel),
+    );
+
+    provider.addListener(_onHistoryChanged);
+
     setState(() {
-      _provider = FallbackLlmProvider(
-        primary: FirebaseProvider(model: primaryModel),
-        secondary: FirebaseProvider(model: secondaryModel),
-      );
+      _provider = provider;
     });
+  }
+
+  void _onHistoryChanged() {
+    if (_provider == null) return;
+    final history = _provider!.history;
+    if (history.isEmpty) return;
+
+    // Update title from first user message if still "New Conversation"
+    if (_conversationTitle == 'New Conversation' && history.isNotEmpty) {
+      final firstUserMessage = history.firstWhere(
+        (m) => m.origin == MessageOrigin.user,
+        orElse: () => history.first,
+      );
+      final text = firstUserMessage.text ?? 'Untitled';
+      _conversationTitle = text.length > 30
+          ? '${text.substring(0, 27)}...'
+          : text;
+    }
+
+    final repository = context.read<ConversationRepository>();
+    repository.saveConversation(_currentConversationId, _conversationTitle, history.toList());
   }
 
   void _createNewForge() {
     setState(() {
       _activeForgeCode = null;
       _showPreview = false;
+      _currentConversationId = const Uuid().v4();
+      _conversationTitle = 'New Conversation';
+      if (_provider != null) {
+        _provider!.history = [];
+      }
     });
-    // TODO: Clear chat history if needed
   }
 
   void _togglePreview() {
@@ -142,6 +174,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
 
       await repository.saveApp({
         'ownerId': userId,
+        'conversationId': _currentConversationId,
         'name': 'Forged App', // In a real app, this would be generated from the AI response
         'html_blob': code,
         'version': '1.0.0',
@@ -161,10 +194,41 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
     }
   }
 
-  void _onAppSelectedFromVault(Map<String, dynamic> app) {
+  void _onAppSelectedFromVault(Map<String, dynamic> app) async {
+    final conversationId = app['conversationId'];
+    if (conversationId != null) {
+      final repository = context.read<ConversationRepository>();
+      final history = await repository.getConversation(conversationId);
+      
+      setState(() {
+        _activeForgeCode = app['html_blob'];
+        _showPreview = true;
+        _currentConversationId = conversationId;
+        _conversationTitle = app['name'] ?? 'Forged App';
+        if (_provider != null) {
+          _provider!.history = history;
+        }
+      });
+    } else {
+      setState(() {
+        _activeForgeCode = app['html_blob'];
+        _showPreview = true;
+      });
+    }
+  }
+
+  void _onConversationSelected(String conversationId, String title) async {
+    final repository = context.read<ConversationRepository>();
+    final history = await repository.getConversation(conversationId);
+
     setState(() {
-      _activeForgeCode = app['html_blob'];
-      _showPreview = true;
+      _currentConversationId = conversationId;
+      _conversationTitle = title;
+      _activeForgeCode = null; // Don't show preview until deployed again or we could find the latest forge in history
+      _showPreview = false;
+      if (_provider != null) {
+        _provider!.history = history;
+      }
     });
   }
 
@@ -191,7 +255,10 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
           ),
         ],
       ),
-      drawer: AppVaultDrawer(onAppSelected: _onAppSelectedFromVault),
+      drawer: AppVaultDrawer(
+        onAppSelected: _onAppSelectedFromVault,
+        onConversationSelected: _onConversationSelected,
+      ),
       body: _provider == null
           ? const Center(child: CircularProgressIndicator())
           : Stack(

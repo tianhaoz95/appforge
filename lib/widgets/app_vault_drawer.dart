@@ -1,15 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../repositories/micro_app_repository.dart';
+import '../repositories/conversation_repository.dart';
 
 class AppVaultDrawer extends StatelessWidget {
   final Function(Map<String, dynamic> app)? onAppSelected;
+  final Function(String conversationId, String title)? onConversationSelected;
 
-  const AppVaultDrawer({super.key, this.onAppSelected});
+  const AppVaultDrawer({super.key, this.onAppSelected, this.onConversationSelected});
 
   @override
   Widget build(BuildContext context) {
-    final repository = Provider.of<MicroAppRepository>(context);
+    final appRepository = Provider.of<MicroAppRepository>(context);
+    final convRepository = Provider.of<ConversationRepository>(context);
     const userId = 'local-user';
 
     return Drawer(
@@ -48,7 +51,29 @@ class AppVaultDrawer extends StatelessWidget {
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
           ),
-          // TODO: Add list of recent chats
+          FutureBuilder<List<Map<String, dynamic>>>(
+            future: convRepository.getConversations(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox.shrink();
+              }
+              final convs = snapshot.data ?? [];
+              if (convs.isEmpty) {
+                return const ListTile(title: Text('No history yet.', style: TextStyle(fontSize: 12)));
+              }
+              return Column(
+                children: convs.take(5).map((conv) => ListTile(
+                  dense: true,
+                  leading: const Icon(Icons.chat_bubble_outline, size: 20),
+                  title: Text(conv['title'] ?? 'Untitled Chat', maxLines: 1, overflow: TextOverflow.ellipsis),
+                  onTap: () {
+                    onConversationSelected?.call(conv['conversationId'], conv['title'] ?? 'Untitled Chat');
+                    Navigator.pop(context);
+                  },
+                )).toList(),
+              );
+            },
+          ),
           const Divider(),
           const ListTile(
             title: Text(
@@ -57,7 +82,7 @@ class AppVaultDrawer extends StatelessWidget {
             ),
           ),
           FutureBuilder<List<Map<String, dynamic>>>(
-            future: repository.getAppsForOwner(userId),
+            future: appRepository.getAppsForOwner(userId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());

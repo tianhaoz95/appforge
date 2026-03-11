@@ -26,11 +26,13 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
 
   @override
   Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
+    notifyListeners(); // Notify when starting to capture user's message
     try {
       final stream = _primaryProvider.sendMessageStream(prompt, attachments: attachments);
       await for (final chunk in stream) {
         yield chunk;
       }
+      notifyListeners(); // Notify when finished to capture AI's response
     } catch (e) {
       final errorStr = e.toString().toLowerCase();
       if ((errorStr.contains('high demand') || errorStr.contains('503') || errorStr.contains('overloaded')) && !_isUsingFallback) {
@@ -43,6 +45,7 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
         await for (final chunk in stream) {
           yield chunk;
         }
+        notifyListeners(); // Notify when finished to capture AI's response
       } else {
         rethrow;
       }
