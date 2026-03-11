@@ -63,9 +63,10 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
     // Check on-device model status
     try {
       final status = await HybridInferenceManager.checkModelStatus();
-      debugPrint('On-device AI status: $status');
+      final statusString = status.toString();
+      debugPrint('On-device AI status: $statusString');
       // If downloadable, we start it, but in a real app, you might want to show a progress bar
-      if (status == 'DOWNLOADABLE') {
+      if (statusString == 'DOWNLOADABLE') {
         debugPrint('Starting on-device model download...');
         HybridInferenceManager.downloadModel();
       }

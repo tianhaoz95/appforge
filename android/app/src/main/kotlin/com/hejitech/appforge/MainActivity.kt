@@ -1,5 +1,5 @@
 @file:OptIn(com.google.firebase.ai.type.PublicPreviewAPI::class)
-package com.example.appforge
+package com.hejitech.appforge
 
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.embedding.engine.FlutterEngine
@@ -17,7 +17,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.collect
 
 class MainActivity : FlutterActivity() {
-    private val CHANNEL = "com.example.appforge/hybrid_inference"
+    private val CHANNEL = "com.hejitech.appforge/hybrid_inference"
     private val scope = CoroutineScope(Dispatchers.Main)
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {

@@ -64,7 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '146390824855',
     projectId: 'appforge-app',
     storageBucket: 'appforge-app.firebasestorage.app',
-    iosBundleId: 'com.example.appforge',
+    iosBundleId: 'com.hejitech.appforge',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
@@ -73,7 +73,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '146390824855',
     projectId: 'appforge-app',
     storageBucket: 'appforge-app.firebasestorage.app',
-    iosBundleId: 'com.example.appforge',
+    iosBundleId: 'com.hejitech.appforge',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(

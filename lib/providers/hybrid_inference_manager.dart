@@ -15,7 +15,7 @@ class HybridInferenceResult {
 }
 
 class HybridInferenceManager {
-  static const _channel = MethodChannel('com.example.appforge/hybrid_inference');
+  static const _channel = MethodChannel('com.hejitech.appforge/hybrid_inference');
 
   static Future<String> checkModelStatus() async {
     return await _channel.invokeMethod('checkModelStatus');
