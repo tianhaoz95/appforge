@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyCoWgkc8PMh76gNglrs2fsvPZHty_o4La0',
-    appId: '1:146390824855:android:7ab0ac52a2c76597a436d2',
+    appId: '1:146390824855:android:34ecddc19ce2738da436d2',
     messagingSenderId: '146390824855',
     projectId: 'appforge-app',
     storageBucket: 'appforge-app.firebasestorage.app',
@@ -60,7 +60,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyBpCrTfMOJCDQZUgMgYFHn-_mdJ0uOyAYQ',
-    appId: '1:146390824855:ios:6a6067462fc5656fa436d2',
+    appId: '1:146390824855:ios:7b47c7b97f885417a436d2',
     messagingSenderId: '146390824855',
     projectId: 'appforge-app',
     storageBucket: 'appforge-app.firebasestorage.app',
@@ -69,7 +69,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions macos = FirebaseOptions(
     apiKey: 'AIzaSyBpCrTfMOJCDQZUgMgYFHn-_mdJ0uOyAYQ',
-    appId: '1:146390824855:ios:6a6067462fc5656fa436d2',
+    appId: '1:146390824855:ios:7b47c7b97f885417a436d2',
     messagingSenderId: '146390824855',
     projectId: 'appforge-app',
     storageBucket: 'appforge-app.firebasestorage.app',
@@ -85,4 +85,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'appforge-app.firebasestorage.app',
     measurementId: 'G-YYS51D03B7',
   );
+
 }
