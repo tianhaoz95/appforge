@@ -41,7 +41,7 @@ class AppForgeHomePage extends StatefulWidget {
 }
 
 class _AppForgeHomePageState extends State<AppForgeHomePage> {
-  late final LlmProvider _provider;
+  LlmProvider? _provider;
   String? _activeForgeCode;
   bool _showPreview = false;
 
@@ -83,10 +83,12 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
       systemInstruction: Content.system(systemPrompt),
     );
 
-    _provider = FallbackLlmProvider(
-      primary: FirebaseProvider(model: primaryModel),
-      secondary: FirebaseProvider(model: secondaryModel),
-    );
+    setState(() {
+      _provider = FallbackLlmProvider(
+        primary: FirebaseProvider(model: primaryModel),
+        secondary: FirebaseProvider(model: secondaryModel),
+      );
+    });
   }
 
   void _createNewForge() {
@@ -139,23 +141,25 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
         ],
       ),
       drawer: AppVaultDrawer(onAppSelected: _onAppSelectedFromVault),
-      body: Stack(
-        children: [
-          LlmChatView(
-            provider: _provider,
-            responseBuilder: (context, message) =>
-                VibeDetector(message: message, onDeploy: _onDeploy),
-          ),
-          if (_showPreview && _activeForgeCode != null)
-            PreviewSheet(
-              code: _activeForgeCode!,
-              onClose: () => setState(() => _showPreview = false),
-              onSaveData: (key, value) {
-                // TODO: Store app data back to Firestore
-              },
+      body: _provider == null
+          ? const Center(child: CircularProgressIndicator())
+          : Stack(
+              children: [
+                LlmChatView(
+                  provider: _provider!,
+                  responseBuilder: (context, message) =>
+                      VibeDetector(message: message, onDeploy: _onDeploy),
+                ),
+                if (_showPreview && _activeForgeCode != null)
+                  PreviewSheet(
+                    code: _activeForgeCode!,
+                    onClose: () => setState(() => _showPreview = false),
+                    onSaveData: (key, value) {
+                      // TODO: Store app data back to Firestore
+                    },
+                  ),
+              ],
             ),
-        ],
-      ),
     );
   }
 }
