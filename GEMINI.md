@@ -45,6 +45,26 @@ To get started with development or to run the project:
 
 ---
 
+## Deployment to Firebase App Distribution
+Follow these steps to deploy a new version to Firebase App Distribution:
+
+1.  **Boost Version:** Before building, increase the version name and build number in `pubspec.yaml` (e.g., `1.1.2+5` becomes `1.1.3+6`).
+2.  **Build APK:**
+    ```bash
+    flutter build apk
+    ```
+3.  **Distribute:**
+    Load the required App IDs from your environment with `source .env` (to load `FIREBASE_ANDROID_APP_ID`) and run:
+    ```bash
+    firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
+         --app $FIREBASE_ANDROID_APP_ID \
+         --release-notes "Detailed description of the current feature or improvement" \
+         --groups "dev"
+    ```
+    *Note: Always replace the release notes with a clear, specific description of the changes being released.*
+
+---
+
 ## Development Conventions
 - **App ID / Package Name:** `com.hejitech.appforge`
 - **AI Response Format:** AI is instructed via a system prompt to wrap micro-app code (HTML/Alpine.js/Tailwind) inside `<forge>...</forge>` tags.
