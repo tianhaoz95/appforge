@@ -10,11 +10,22 @@ import 'widgets/preview_sheet.dart';
 import 'repositories/micro_app_repository.dart';
 import 'providers/fallback_llm_provider.dart';
 import 'providers/hybrid_inference_manager.dart';
+import 'providers/auth_provider.dart';
+import 'screens/login_screen.dart';
+import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(Provider(create: (_) => MicroAppRepository(), child: const MyApp()));
+  runApp(
+    MultiProvider(
+      providers: [
+        Provider(create: (_) => MicroAppRepository()),
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -28,7 +39,15 @@ class MyApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
         useMaterial3: true,
       ),
-      home: const AppForgeHomePage(),
+      home: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (auth.isAuthenticated) {
+            return const AppForgeHomePage();
+          } else {
+            return const LoginScreen();
+          }
+        },
+      ),
     );
   }
 }
@@ -112,12 +131,37 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
     }
   }
 
-  void _onDeploy(String code) {
+  void _onDeploy(String code) async {
     setState(() {
       _activeForgeCode = code;
       _showPreview = true;
     });
-    // TODO: Automatically save app metadata to Firestore
+
+    // Automatically save app to Firestore
+    try {
+      final auth = context.read<AuthProvider>();
+      final repository = context.read<MicroAppRepository>();
+      final userId = auth.user?.uid ?? 'anonymous';
+
+      await repository.saveApp({
+        'ownerId': userId,
+        'name': 'Forged App', // In a real app, this would be generated from the AI response
+        'html_blob': code,
+        'version': '1.0.0',
+        'icon': 'rocket',
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('App forged and saved to vault!'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to save app: $e');
+    }
   }
 
   void _onAppSelectedFromVault(Map<String, dynamic> app) {
@@ -138,6 +182,15 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
             icon: const Icon(Icons.rocket_launch),
             onPressed: _togglePreview,
             color: _activeForgeCode != null ? Colors.orange : null,
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+            },
           ),
         ],
       ),

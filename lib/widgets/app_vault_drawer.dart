@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../repositories/micro_app_repository.dart';
+import '../providers/auth_provider.dart';
 
 class AppVaultDrawer extends StatelessWidget {
   final Function(Map<String, dynamic> app)? onAppSelected;
@@ -10,21 +11,39 @@ class AppVaultDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final repository = Provider.of<MicroAppRepository>(context);
+    final auth = Provider.of<AuthProvider>(context);
+    final userId = auth.user?.uid ?? 'anonymous';
 
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
         children: [
-          const DrawerHeader(
-            decoration: BoxDecoration(
+          DrawerHeader(
+            decoration: const BoxDecoration(
               color: Colors.blueGrey,
             ),
-            child: Text(
-              'AppVault',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 24,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'AppVault',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                  ),
+                ),
+                if (auth.user != null) ...[
+                  const Spacer(),
+                  Text(
+                    auth.user?.displayName ?? 'Welcome!',
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                  Text(
+                    auth.user?.email ?? '',
+                    style: const TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ],
             ),
           ),
           const ListTile(
@@ -42,7 +61,7 @@ class AppVaultDrawer extends StatelessWidget {
             ),
           ),
           FutureBuilder<List<Map<String, dynamic>>>(
-            future: repository.getAppsForOwner('anonymous'), // TODO: Use real ownerId
+            future: repository.getAppsForOwner(userId),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
