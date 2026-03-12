@@ -164,17 +164,32 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               if (convs.isEmpty) {
                 return const ListTile(title: Text('No history yet.', style: TextStyle(fontSize: 12)));
               }
+
+              final recent = convs.take(3).toList();
+              final older = convs.skip(3).toList();
+
               return Column(
-                children: convs.take(5).map((conv) => ListTile(
-                  dense: true,
-                  leading: const Icon(Icons.chat_bubble_outline, size: 20),
-                  title: Text(conv['title'] ?? 'Untitled Chat', maxLines: 1, overflow: TextOverflow.ellipsis),
-                  onTap: () {
-                    widget.onConversationSelected?.call(conv['conversationId'], conv['title'] ?? 'Untitled Chat');
-                    Navigator.pop(context);
-                  },
-                  onLongPress: () => _confirmDeleteConversation(conv),
-                )).toList(),
+                children: [
+                  ...recent.map((conv) => _buildConversationTile(conv)),
+                  if (older.isNotEmpty)
+                    Theme(
+                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                      child: ExpansionTile(
+                        dense: true,
+                        visualDensity: VisualDensity.compact,
+                        title: Text(
+                          'Older Chats (${older.length})',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                            color: Colors.blueGrey[400],
+                          ),
+                        ),
+                        leading: const Icon(Icons.history, size: 18),
+                        children: older.map((conv) => _buildConversationTile(conv)).toList(),
+                      ),
+                    ),
+                ],
               );
             },
           ),
@@ -214,6 +229,26 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildConversationTile(Map<String, dynamic> conv) {
+    return ListTile(
+      dense: true,
+      leading: const Icon(Icons.chat_bubble_outline, size: 20),
+      title: Text(
+        conv['title'] ?? 'Untitled Chat',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: () {
+        widget.onConversationSelected?.call(
+          conv['conversationId'],
+          conv['title'] ?? 'Untitled Chat',
+        );
+        Navigator.pop(context);
+      },
+      onLongPress: () => _confirmDeleteConversation(conv),
     );
   }
 
