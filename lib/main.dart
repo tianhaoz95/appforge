@@ -68,6 +68,8 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
   bool _showPreview = false;
   String _currentConversationId = const Uuid().v4();
   String _conversationTitle = 'New Conversation';
+  String? _enhancementCode;
+  String? _enhancementDesign;
 
   @override
   void initState() {
@@ -75,8 +77,8 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     _initializeAI();
   }
 
-  void _initializeAI() async {
-    const systemPrompt = 'You are MicroForge AI. You help users "forge" micro-apps. '
+  void _initializeAI({String? enhancementCode, String? enhancementDesign}) async {
+    String systemPrompt = 'You are MicroForge AI. You help users "forge" micro-apps. '
         'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
         'you MUST wrap it inside <forge>...</forge> tags. '
         'Example: <forge><div class="p-4">Hello</div></forge>. '
@@ -102,6 +104,13 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'x-data="{ items: [], newItem: \'\' }" '
         'x-init="items = await window.MicroForge.getData(\'items\') || []" '
         '@submit.prevent="items.push(newItem); await window.MicroForge.saveData(\'items\', items); newItem = \'\'"';
+
+    if (enhancementCode != null) {
+      systemPrompt += '\n\nCONTEXT FOR ENHANCEMENT:\n'
+          'You are currently enhancing an existing micro-app.\n'
+          'Current Implementation:\n<forge>$enhancementCode</forge>\n\n'
+          'Design Document:\n<design>${enhancementDesign ?? 'No design document provided.'}</design>';
+    }
 
     // Check on-device model status
     try {
@@ -136,6 +145,8 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     setState(() {
       _provider = provider;
+      _enhancementCode = enhancementCode;
+      _enhancementDesign = enhancementDesign;
     });
   }
 
@@ -157,7 +168,13 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
 
     final repository = context.read<ConversationRepository>();
-    repository.saveConversation(_currentConversationId, _conversationTitle, history.toList());
+    repository.saveConversation(
+      _currentConversationId,
+      _conversationTitle,
+      history.toList(),
+      enhancementCode: _enhancementCode,
+      enhancementDesign: _enhancementDesign,
+    );
   }
 
   void _createNewForge() {
@@ -166,10 +183,13 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _showPreview = false;
       _currentConversationId = const Uuid().v4();
       _conversationTitle = 'New Conversation';
+      _enhancementCode = null;
+      _enhancementDesign = null;
       if (_provider != null) {
         _provider!.history = [];
       }
     });
+    _initializeAI();
   }
 
   void _togglePreview() {
@@ -188,28 +208,31 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     if (_activeForgeCode == null) return;
 
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
-    final contextPrompt = "Context: I am working on a micro-app named '$name'.\n\n"
-        "Current Implementation:\n<forge>${_activeForgeCode}</forge>\n\n"
-        "Design Document:\n<design>${_activeDesignDoc ?? 'No design document provided.'}</design>\n\n"
-        "I want to enhance this app. Please help me based on my next instructions.";
+    final codeToEnhance = _activeForgeCode!;
+    final designToEnhance = _activeDesignDoc;
 
     setState(() {
       _showPreview = false;
       _currentConversationId = const Uuid().v4();
       _conversationTitle = 'Enhance $name';
+      _enhancementCode = codeToEnhance;
+      _enhancementDesign = designToEnhance;
+    });
+
+    _initializeAI(enhancementCode: codeToEnhance, enhancementDesign: designToEnhance);
+
+    // Give it a moment for AI to be ready with new provider
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (_provider != null) {
-        _provider!.history = [
-          ChatMessage(
-            origin: MessageOrigin.user,
-            text: contextPrompt,
-            attachments: const [],
-          ),
-          ChatMessage(
-            origin: MessageOrigin.llm,
-            text: "I've loaded your app '$name'. How would you like to enhance it?",
-            attachments: const [],
-          ),
-        ];
+        setState(() {
+          _provider!.history = [
+            ChatMessage(
+              origin: MessageOrigin.llm,
+              text: "I've loaded your app '$name'. How would you like to enhance it?",
+              attachments: const [],
+            ),
+          ];
+        });
       }
     });
 
@@ -262,8 +285,8 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final appId = app['appId'];
     if (conversationId != null) {
       final repository = context.read<ConversationRepository>();
-      final history = await repository.getConversation(conversationId);
-      
+      final data = await repository.getConversation(conversationId);
+
       setState(() {
         _activeForgeCode = app['html_blob'];
         _activeDesignDoc = app['design_doc'];
@@ -271,8 +294,20 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _showPreview = true;
         _currentConversationId = conversationId;
         _conversationTitle = app['name'] ?? 'Forged App';
+        _enhancementCode = data.enhancementCode;
+        _enhancementDesign = data.enhancementDesign;
+      });
+
+      _initializeAI(
+        enhancementCode: data.enhancementCode,
+        enhancementDesign: data.enhancementDesign,
+      );
+
+      Future.delayed(const Duration(milliseconds: 100), () {
         if (_provider != null) {
-          _provider!.history = history;
+          setState(() {
+            _provider!.history = data.history;
+          });
         }
       });
     } else {
@@ -287,17 +322,91 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
   void _onConversationSelected(String conversationId, String title) async {
     final repository = context.read<ConversationRepository>();
-    final history = await repository.getConversation(conversationId);
+    final data = await repository.getConversation(conversationId);
 
     setState(() {
       _currentConversationId = conversationId;
       _conversationTitle = title;
       _activeForgeCode = null; // Don't show preview until deployed again or we could find the latest forge in history
       _showPreview = false;
+      _enhancementCode = data.enhancementCode;
+      _enhancementDesign = data.enhancementDesign;
+    });
+
+    _initializeAI(
+      enhancementCode: data.enhancementCode,
+      enhancementDesign: data.enhancementDesign,
+    );
+
+    Future.delayed(const Duration(milliseconds: 100), () {
       if (_provider != null) {
-        _provider!.history = history;
+        setState(() {
+          _provider!.history = data.history;
+        });
       }
     });
+  }
+
+  void _showContextDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (context) => DraggableScrollableSheet(
+        initialChildSize: 0.7,
+        minChildSize: 0.5,
+        maxChildSize: 0.9,
+        expand: false,
+        builder: (context, scrollController) => SingleChildScrollView(
+          controller: scrollController,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Original Code', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.all(8),
+                color: Colors.grey[200],
+                child: SelectableText(
+                  _enhancementCode ?? '',
+                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ),
+              const SizedBox(height: 24),
+              Text('Design Document', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              Text(_enhancementDesign ?? 'No design document provided.'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEnhancementIndicator() {
+    if (_enhancementCode == null) return const SizedBox.shrink();
+
+    return Container(
+      width: double.infinity,
+      color: Colors.blueGrey[50],
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.auto_awesome, size: 20, color: Colors.indigo),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Text(
+              'Micro app code and design are included. You can start customizing.',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ),
+          TextButton(
+            onPressed: _showContextDialog,
+            child: const Text('VIEW'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -329,24 +438,31 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       ),
       body: _provider == null
           ? const Center(child: CircularProgressIndicator())
-          : Stack(
+          : Column(
               children: [
-                LlmChatView(
-                  provider: _provider!,
-                  responseBuilder: (context, message) =>
-                      VibeDetector(message: message, onDeploy: _onDeploy),
-                ),
-                if (_showPreview && _activeForgeCode != null)
-                  PreviewSheet(
-                    code: _activeForgeCode!,
-                    designDoc: _activeDesignDoc,
-                    appId: _activeAppId ?? 'unknown',
-                    onClose: () => setState(() => _showPreview = false),
-                    onEnhance: _onEnhance,
-                    onSaveData: (key, value) {
-                      // Handled by the internal bridge now
-                    },
+                _buildEnhancementIndicator(),
+                Expanded(
+                  child: Stack(
+                    children: [
+                      LlmChatView(
+                        provider: _provider!,
+                        responseBuilder: (context, message) =>
+                            VibeDetector(message: message, onDeploy: _onDeploy),
+                      ),
+                      if (_showPreview && _activeForgeCode != null)
+                        PreviewSheet(
+                          code: _activeForgeCode!,
+                          designDoc: _activeDesignDoc,
+                          appId: _activeAppId ?? 'unknown',
+                          onClose: () => setState(() => _showPreview = false),
+                          onEnhance: _onEnhance,
+                          onSaveData: (key, value) {
+                            // Handled by the internal bridge now
+                          },
+                        ),
+                    ],
                   ),
+                ),
               ],
             ),
     );
