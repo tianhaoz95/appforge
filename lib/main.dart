@@ -315,7 +315,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final repository = context.read<MicroAppRepository>();
     final app = await repository.getApp(appId);
     if (app != null) {
-      _onAppSelectedFromVault(app);
+      _loadApp(app, switchConversation: false);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -325,10 +325,10 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void _onAppSelectedFromVault(Map<String, dynamic> app) async {
+  void _loadApp(Map<String, dynamic> app, {bool switchConversation = true}) async {
     final conversationId = app['conversationId'];
     final appId = app['appId'];
-    if (conversationId != null) {
+    if (conversationId != null && switchConversation) {
       final repository = context.read<ConversationRepository>();
       final data = await repository.getConversation(conversationId);
 
@@ -470,7 +470,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         ],
       ),
       drawer: AppVaultDrawer(
-        onAppSelected: _onAppSelectedFromVault,
+        onAppSelected: _loadApp,
         onConversationSelected: _onConversationSelected,
       ),
       body: _provider == null
