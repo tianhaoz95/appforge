@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -103,6 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
+    final settingsProvider = context.watch<SettingsProvider>();
     final user = authProvider.user;
     final theme = Theme.of(context);
 
@@ -124,6 +126,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 32),
                 _buildSectionHeader('Preferences'),
                 const SizedBox(height: 12),
+                _buildPreferenceItem(
+                  icon: Icons.lightbulb_outline,
+                  title: 'Suggest Existing Apps',
+                  subtitle: 'AI will look for similar apps before forging new ones',
+                  trailing: Switch(
+                    value: settingsProvider.suggestExistingApps,
+                    onChanged: (v) => settingsProvider.setSuggestExistingApps(v),
+                  ),
+                ),
                 _buildPreferenceItem(
                   icon: Icons.dark_mode_outlined,
                   title: 'Dark Mode',
@@ -237,12 +248,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget _buildPreferenceItem({
     required IconData icon,
     required String title,
+    String? subtitle,
     required Widget trailing,
   }) {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: Icon(icon, color: Colors.blueGrey[700]),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
       trailing: trailing,
     );
   }

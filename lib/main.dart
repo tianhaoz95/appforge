@@ -15,6 +15,7 @@ import 'repositories/local_database.dart';
 import 'providers/fallback_llm_provider.dart';
 import 'providers/hybrid_inference_manager.dart';
 import 'providers/auth_provider.dart';
+import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
 
 void main() async {
@@ -27,6 +28,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
+        ChangeNotifierProvider(create: (_) => SettingsProvider()),
         Provider(create: (_) => MicroAppRepository(dbHelper: dbHelper)),
         Provider(create: (_) => MicroAppDataRepository(dbHelper: dbHelper)),
         Provider(create: (_) => ConversationRepository(dbHelper: dbHelper)),
@@ -77,7 +79,11 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     _initializeAI();
   }
 
-  void _initializeAI({String? enhancementCode, String? enhancementDesign}) async {
+  void _initializeAI({
+    String? enhancementCode,
+    String? enhancementDesign,
+    List<ChatMessage>? history,
+  }) async {
     String systemPrompt = 'You are MicroForge AI. You help users "forge" micro-apps. '
         'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
         'you MUST wrap it inside <forge>...</forge> tags. '
@@ -112,6 +118,9 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
           'Design Document:\n<design>${enhancementDesign ?? 'No design document provided.'}</design>';
     }
 
+    final settings = context.read<SettingsProvider>();
+    final repository = context.read<MicroAppRepository>();
+
     // Check on-device model status
     try {
       final status = await HybridInferenceManager.checkModelStatus();
@@ -124,6 +133,21 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       }
     } catch (e) {
       debugPrint('Failed to check hybrid status: $e');
+    }
+
+    if (settings.suggestExistingApps) {
+      final apps = await repository.getAppsForOwner('local-user');
+      if (apps.isNotEmpty) {
+        systemPrompt += '\n\nPREVIOUSLY DEPLOYED MICRO-APPS:\n';
+        for (final app in apps) {
+          final name = app['name'] ?? 'Unnamed App';
+          final design = app['design_doc'] ?? 'No description available.';
+          systemPrompt += '- **$name**: $design\n';
+        }
+        systemPrompt += '\nWhen the user asks to build something, you SHOULD FIRST check if any of the existing apps above can fulfill their request. '
+            'If so, suggest the existing app(s) and explain how they might help. '
+            'ONLY proceed to forging a NEW micro-app if the user explicitly requests a new one or if none of the existing apps are suitable.';
+      }
     }
 
     final primaryModel = FirebaseAI.googleAI().generativeModel(
@@ -142,6 +166,10 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
 
     provider.addListener(_onHistoryChanged);
+
+    if (history != null) {
+      provider.history = history;
+    }
 
     setState(() {
       _provider = provider;
@@ -301,15 +329,8 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _initializeAI(
         enhancementCode: data.enhancementCode,
         enhancementDesign: data.enhancementDesign,
+        history: data.history.toList(),
       );
-
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_provider != null) {
-          setState(() {
-            _provider!.history = data.history;
-          });
-        }
-      });
     } else {
       setState(() {
         _activeForgeCode = app['html_blob'];
@@ -336,15 +357,8 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     _initializeAI(
       enhancementCode: data.enhancementCode,
       enhancementDesign: data.enhancementDesign,
+      history: data.history.toList(),
     );
-
-    Future.delayed(const Duration(milliseconds: 100), () {
-      if (_provider != null) {
-        setState(() {
-          _provider!.history = data.history;
-        });
-      }
-    });
   }
 
   void _showContextDialog() {
@@ -423,10 +437,16 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
           ),
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final currentHistory = _provider?.history.toList();
+              await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (context) => const SettingsScreen()),
+              );
+              _initializeAI(
+                enhancementCode: _enhancementCode,
+                enhancementDesign: _enhancementDesign,
+                history: currentHistory,
               );
             },
           ),
