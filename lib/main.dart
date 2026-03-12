@@ -184,6 +184,40 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
     }
   }
 
+  void _onEnhance() {
+    if (_activeForgeCode == null) return;
+
+    final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
+    final contextPrompt = "Context: I am working on a micro-app named '$name'.\n\n"
+        "Current Implementation:\n<forge>${_activeForgeCode}</forge>\n\n"
+        "Design Document:\n<design>${_activeDesignDoc ?? 'No design document provided.'}</design>\n\n"
+        "I want to enhance this app. Please help me based on my next instructions.";
+
+    setState(() {
+      _showPreview = false;
+      _currentConversationId = const Uuid().v4();
+      _conversationTitle = 'Enhance $name';
+      if (_provider != null) {
+        _provider!.history = [
+          ChatMessage(
+            origin: MessageOrigin.user,
+            text: contextPrompt,
+            attachments: const [],
+          ),
+          ChatMessage(
+            origin: MessageOrigin.llm,
+            text: "I've loaded your app '$name'. How would you like to enhance it?",
+            attachments: const [],
+          ),
+        ];
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Starting new conversation to enhance $name...')),
+    );
+  }
+
   void _onDeploy(String code, String? name, String? designDoc) async {
     setState(() {
       _activeForgeCode = code;
@@ -308,6 +342,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
                     designDoc: _activeDesignDoc,
                     appId: _activeAppId ?? 'unknown',
                     onClose: () => setState(() => _showPreview = false),
+                    onEnhance: _onEnhance,
                     onSaveData: (key, value) {
                       // Handled by the internal bridge now
                     },

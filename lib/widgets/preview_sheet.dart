@@ -10,6 +10,7 @@ class PreviewSheet extends StatefulWidget {
   final String? designDoc;
   final String appId;
   final VoidCallback? onClose;
+  final VoidCallback? onEnhance;
   final Function(String key, dynamic value)? onSaveData;
   
   static bool skipWebViewForTesting = false;
@@ -20,6 +21,7 @@ class PreviewSheet extends StatefulWidget {
     this.designDoc,
     required this.appId,
     this.onClose,
+    this.onEnhance,
     this.onSaveData,
   });
 
@@ -241,6 +243,12 @@ class PreviewSheetState extends State<PreviewSheet> {
                     ),
                     Row(
                       children: [
+                        if (widget.onEnhance != null)
+                          TextButton.icon(
+                            icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
+                            label: const Text('Enhance', style: TextStyle(color: Colors.indigo)),
+                            onPressed: widget.onEnhance,
+                          ),
                         if (widget.designDoc != null && widget.designDoc!.isNotEmpty)
                           TextButton.icon(
                             icon: const Icon(Icons.description_outlined, size: 18),

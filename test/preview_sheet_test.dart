@@ -61,4 +61,34 @@ void main() {
     expect(find.text('My Design'), findsOneWidget);
     expect(find.text('This is a test design.'), findsOneWidget);
   });
+
+  testWidgets('PreviewSheet shows Enhance button when onEnhance is provided', (WidgetTester tester) async {
+    final mockRepo = MockMicroAppDataRepository();
+    bool enhanceTapped = false;
+    
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: Provider<MicroAppDataRepository>.value(
+          value: mockRepo,
+          child: PreviewSheet(
+            code: '<h1>Hello</h1>',
+            appId: 'test-app',
+            onEnhance: () {
+              enhanceTapped = true;
+            },
+          ),
+        ),
+      ),
+    ));
+
+    expect(find.text('Enhance'), findsOneWidget);
+    expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
+
+    // Tap the Enhance button
+    await tester.tap(find.text('Enhance'));
+    await tester.pump();
+
+    // Verify callback triggered
+    expect(enhanceTapped, isTrue);
+  });
 }
