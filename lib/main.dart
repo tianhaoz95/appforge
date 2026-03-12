@@ -89,6 +89,9 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     String? enhancementDesign,
     List<ChatMessage>? history,
   }) async {
+    final settings = context.read<SettingsProvider>();
+    final repository = context.read<MicroAppRepository>();
+
     String systemPrompt = 'You are MicroForge AI. You help users "forge" micro-apps. '
         'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
         'you MUST wrap it inside <forge>...</forge> tags. '
@@ -114,8 +117,14 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'Use `promptAi` to build AI-powered features within your micro-apps. '
         '- `window.MicroForge.pickFiles(options)`: Returns a Promise that resolves to a list of file objects. '
         'Options: `{ multiple: true/false, type: "any"/"image"/"video"/"audio"/"media"/"custom", extensions: ["pdf", "doc"] }`. '
-        'File object: `{ name, size, extension, bytes (base64) }`. '
-        '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
+        'File object: `{ name, size, extension, bytes (base64) }`. ';
+
+    if (settings.allowGeolocation) {
+      systemPrompt += '- `window.MicroForge.getLocation()`: Returns a Promise that resolves to a location object. '
+          'Location object: `{ latitude, longitude, altitude, accuracy, speed, heading, timestamp }`. ';
+    }
+
+    systemPrompt += '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
         '\nExample of Alpine.js AI integration: '
         'x-data="{ input: \'\', response: \'\', loading: false }" '
         '@submit.prevent="loading = true; response = await window.MicroForge.promptAi(input, \'You are a helpful assistant.\'); loading = false"'
@@ -123,15 +132,18 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'x-data="{ files: [] }" '
         '@click="files = await window.MicroForge.pickFiles({ multiple: true, type: \'image\' })"';
 
+    if (settings.allowGeolocation) {
+      systemPrompt += '\nExample of Alpine.js Geolocation: '
+          'x-data="{ loc: null, loading: false }" '
+          '@click="loading = true; loc = await window.MicroForge.getLocation(); loading = false"';
+    }
+
     if (enhancementCode != null) {
       systemPrompt += '\n\nCONTEXT FOR ENHANCEMENT:\n'
           'You are currently enhancing an existing micro-app.\n'
           'Current Implementation:\n<forge>$enhancementCode</forge>\n\n'
           'Design Document:\n<design>${enhancementDesign ?? 'No design document provided.'}</design>';
     }
-
-    final settings = context.read<SettingsProvider>();
-    final repository = context.read<MicroAppRepository>();
 
     // Check on-device model status
     try {

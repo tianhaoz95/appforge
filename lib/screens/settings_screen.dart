@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:geolocator/geolocator.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 
@@ -133,6 +134,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: Switch(
                     value: settingsProvider.suggestExistingApps,
                     onChanged: (v) => settingsProvider.setSuggestExistingApps(v),
+                  ),
+                ),
+                _buildPreferenceItem(
+                  icon: Icons.location_on_outlined,
+                  title: 'Allow Geolocation',
+                  subtitle: 'Enable geolocation access for your micro-apps',
+                  trailing: Switch(
+                    value: settingsProvider.allowGeolocation,
+                    onChanged: (v) async {
+                      if (v) {
+                        final permission = await Geolocator.requestPermission();
+                        if (permission == LocationPermission.denied ||
+                            permission == LocationPermission.deniedForever) {
+                          if (!context.mounted) return;
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Location permission denied'),
+                              backgroundColor: Colors.redAccent,
+                            ),
+                          );
+                          return;
+                        }
+                      }
+                      settingsProvider.setAllowGeolocation(v);
+                    },
                   ),
                 ),
                 const SizedBox(height: 32),

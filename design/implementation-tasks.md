@@ -48,6 +48,7 @@ This report outlines the tasks and subtasks required to build **MicroForge**, a 
     *   [x] Develop the logic to "hot-swap" the `<div id="forge-target">` content.
 *   **Task 3.3: The Forge Bridge (JS <-> Dart)**
     *   [x] Implement `window.MicroForge.saveData` to call back to Flutter via `JavaScriptChannel`.
+    *   [x] Implement `window.MicroForge.getLocation` to expose Flutter geolocation to micro-apps.
     *   [x] Implement `window.MicroForge.closeApp` to dismiss the preview sheet.
 
 ---

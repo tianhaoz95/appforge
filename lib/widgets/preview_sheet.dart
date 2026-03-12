@@ -7,7 +7,9 @@ import 'package:webview_flutter/webview_flutter.dart';
 import 'package:feedback/feedback.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:file_picker/file_picker.dart';
+import 'package:geolocator/geolocator.dart';
 import '../repositories/micro_app_data_repository.dart';
+import '../providers/settings_provider.dart';
 
 class PreviewSheet extends StatefulWidget {
   final String code;
@@ -213,6 +215,43 @@ class PreviewSheetState extends State<PreviewSheet> {
         } else {
           _sendResponse(requestId, {'files': []});
         }
+      } else if (action == 'getLocation') {
+        final settings = context.read<SettingsProvider>();
+        if (!settings.allowGeolocation) {
+          _sendResponse(requestId, {'error': 'Geolocation is disabled in settings.'});
+          return;
+        }
+
+        bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+        if (!serviceEnabled) {
+          _sendResponse(requestId, {'error': 'Location services are disabled.'});
+          return;
+        }
+
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+          if (permission == LocationPermission.denied) {
+            _sendResponse(requestId, {'error': 'Location permissions are denied.'});
+            return;
+          }
+        }
+
+        if (permission == LocationPermission.deniedForever) {
+          _sendResponse(requestId, {'error': 'Location permissions are permanently denied, we cannot request permissions.'});
+          return;
+        }
+
+        Position position = await Geolocator.getCurrentPosition();
+        _sendResponse(requestId, {
+          'latitude': position.latitude,
+          'longitude': position.longitude,
+          'altitude': position.altitude,
+          'accuracy': position.accuracy,
+          'speed': position.speed,
+          'heading': position.heading,
+          'timestamp': position.timestamp.toIso8601String(),
+        });
       } else if (action == 'closeApp') {
         if (widget.onClose != null) {
           widget.onClose?.call();
@@ -302,6 +341,7 @@ class PreviewSheetState extends State<PreviewSheet> {
         listAll: () => window.MicroForge._sendRequest('listAll', {}).then(r => r.data),
         promptAi: (prompt, systemInstruction) => window.MicroForge._sendRequest('promptAi', { prompt, systemInstruction }).then(r => r.text),
         pickFiles: (options = {}) => window.MicroForge._sendRequest('pickFiles', options).then(r => r.files),
+        ${context.read<SettingsProvider>().allowGeolocation ? "getLocation: () => window.MicroForge._sendRequest('getLocation', {})," : ""}
         closeApp: () => {
           MicroForgeChannel.postMessage(JSON.stringify({
             action: 'closeApp'
