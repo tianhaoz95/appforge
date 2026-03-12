@@ -430,41 +430,41 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('MicroForge'),
-        actions: [
-          IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            onPressed: () async {
-              final currentHistory = _provider?.history.toList();
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const SettingsScreen()),
-              );
-              _initializeAI(
-                enhancementCode: _enhancementCode,
-                enhancementDesign: _enhancementDesign,
-                history: currentHistory,
-              );
-            },
+    return Stack(
+      children: [
+        Scaffold(
+          appBar: AppBar(
+            title: const Text('MicroForge'),
+            actions: [
+              IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                onPressed: () async {
+                  final currentHistory = _provider?.history.toList();
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                  );
+                  _initializeAI(
+                    enhancementCode: _enhancementCode,
+                    enhancementDesign: _enhancementDesign,
+                    history: currentHistory,
+                  );
+                },
+              ),
+            ],
           ),
-        ],
-      ),
-      drawer: AppVaultDrawer(
-        onAppSelected: _loadApp,
-        onConversationSelected: _onConversationSelected,
-      ),
-      body: _provider == null
-          ? const Center(child: CircularProgressIndicator())
-          : Column(
-              children: [
-                _buildEnhancementIndicator(),
-                Expanded(
-                  child: Stack(
-                    children: [
-                      LlmChatView(
+          drawer: AppVaultDrawer(
+            onAppSelected: _loadApp,
+            onConversationSelected: _onConversationSelected,
+          ),
+          body: _provider == null
+              ? const Center(child: CircularProgressIndicator())
+              : Column(
+                  children: [
+                    _buildEnhancementIndicator(),
+                    Expanded(
+                      child: LlmChatView(
                         provider: _provider!,
                         responseBuilder: (context, message) => VibeDetector(
                           message: message,
@@ -472,22 +472,22 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
                           onOpenApp: _onOpenApp,
                         ),
                       ),
-                      if (_showPreview && _activeForgeCode != null)
-                        PreviewSheet(
-                          code: _activeForgeCode!,
-                          designDoc: _activeDesignDoc,
-                          appId: _activeAppId ?? 'unknown',
-                          onClose: () => setState(() => _showPreview = false),
-                          onEnhance: _onEnhance,
-                          onSaveData: (key, value) {
-                            // Handled by the internal bridge now
-                          },
-                        ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+        ),
+        if (_showPreview && _activeForgeCode != null)
+          PreviewSheet(
+            code: _activeForgeCode!,
+            designDoc: _activeDesignDoc,
+            appId: _activeAppId ?? 'unknown',
+            onClose: () => setState(() => _showPreview = false),
+            onEnhance: _onEnhance,
+            onSaveData: (key, value) {
+              // Handled by the internal bridge now
+            },
+          ),
+      ],
     );
   }
 }

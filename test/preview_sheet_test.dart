@@ -28,7 +28,6 @@ void main() {
     ));
 
     expect(find.byType(DraggableScrollableSheet), findsOneWidget);
-    expect(find.text('App Preview'), findsOneWidget);
     expect(find.byIcon(Icons.close), findsOneWidget);
   });
 

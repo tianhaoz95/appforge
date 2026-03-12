@@ -68,7 +68,6 @@ void main() {
 
     // 3. Verify PreviewSheet is shown
     expect(find.byType(PreviewSheet), findsOneWidget);
-    expect(find.text('App Preview'), findsOneWidget);
     expect(deployedCode, '<h1>Hello</h1>');
   });
 }

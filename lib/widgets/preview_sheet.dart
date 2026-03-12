@@ -31,11 +31,41 @@ class PreviewSheet extends StatefulWidget {
 
 class PreviewSheetState extends State<PreviewSheet> {
   WebViewController? _controller;
+  final DraggableScrollableController _sheetController = DraggableScrollableController();
+  double _currentExtent = 0.9;
 
   @override
   void initState() {
     super.initState();
     _initController();
+    _sheetController.addListener(_onSheetChanged);
+  }
+
+  @override
+  void dispose() {
+    _sheetController.removeListener(_onSheetChanged);
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  void _onSheetChanged() {
+    if (_sheetController.isAttached) {
+      setState(() {
+        _currentExtent = _sheetController.size;
+      });
+    }
+  }
+
+  void _toggleFullScreen() {
+    if (_sheetController.isAttached) {
+      // Toggle between full screen (1.0) and normal height (0.9)
+      final targetSize = _currentExtent > 0.95 ? 0.9 : 1.0;
+      _sheetController.animateTo(
+        targetSize,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
   }
 
   void _initController() {
@@ -206,75 +236,106 @@ class PreviewSheetState extends State<PreviewSheet> {
 
   @override
   Widget build(BuildContext context) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.9,
-      minChildSize: 0.5,
-      maxChildSize: 1.0,
-      builder: (context, scrollController) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-            boxShadow: [
-              BoxShadow(blurRadius: 10, color: Colors.black26, offset: Offset(0, -2)),
-            ],
-          ),
-          child: Column(
-            children: [
-              // Grab handle for DraggableScrollableSheet
-              Container(
-                width: 40,
-                height: 4,
-                margin: const EdgeInsets.symmetric(vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.grey[300],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Container(
-                height: 40,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      'App Preview',
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                    ),
-                    Row(
+    return NotificationListener<DraggableScrollableNotification>(
+      onNotification: (notification) {
+        if (notification.extent <= 0.05) {
+          widget.onClose?.call();
+          return true;
+        }
+        return false;
+      },
+      child: DraggableScrollableSheet(
+        controller: _sheetController,
+        initialChildSize: 0.9,
+        minChildSize: 0.0,
+        maxChildSize: 1.0,
+        snap: true,
+        snapSizes: const [0.0, 0.9, 1.0],
+        builder: (context, scrollController) {
+          final isFullScreen = _currentExtent > 0.95;
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: isFullScreen 
+                  ? null 
+                  : const BorderRadius.vertical(top: Radius.circular(16)),
+              boxShadow: [
+                BoxShadow(blurRadius: 10, color: Colors.black26, offset: const Offset(0, -2)),
+              ],
+            ),
+            child: SafeArea(
+              top: isFullScreen,
+              bottom: false,
+              child: Column(
+                children: [
+                  // Top handle and header are wrapped in SingleChildScrollView to make them draggable
+                  SingleChildScrollView(
+                    controller: scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
                       children: [
-                        if (widget.onEnhance != null)
-                          TextButton.icon(
-                            icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
-                            label: const Text('Enhance', style: TextStyle(color: Colors.indigo)),
-                            onPressed: widget.onEnhance,
+                        // Grab handle
+                        Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                        if (widget.designDoc != null && widget.designDoc!.isNotEmpty)
-                          TextButton.icon(
-                            icon: const Icon(Icons.description_outlined, size: 18),
-                            label: const Text('Design'),
-                            onPressed: () => _showDesignDoc(context),
+                        ),
+                        Container(
+                          height: 40,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const SizedBox.shrink(),
+                              Row(
+                                children: [
+                                  if (widget.onEnhance != null)
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
+                                      label: const Text('Enhance', style: TextStyle(color: Colors.indigo)),
+                                      onPressed: widget.onEnhance,
+                                    ),
+                                  if (widget.designDoc != null && widget.designDoc!.isNotEmpty)
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.description_outlined, size: 18),
+                                      label: const Text('Design'),
+                                      onPressed: () => _showDesignDoc(context),
+                                    ),
+                                  if (isFullScreen)
+                                    IconButton(
+                                      icon: const Icon(Icons.fullscreen_exit),
+                                      iconSize: 20,
+                                      onPressed: _toggleFullScreen,
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close),
+                                    iconSize: 20,
+                                    onPressed: widget.onClose ?? () => Navigator.pop(context),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        IconButton(
-                          icon: const Icon(Icons.close),
-                          iconSize: 20,
-                          onPressed: widget.onClose ?? () => Navigator.pop(context),
                         ),
                       ],
                     ),
-                  ],
-                ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: _controller != null 
+                        ? WebViewWidget(controller: _controller!)
+                        : const Center(child: Text('WebView Placeholder')),
+                  ),
+                ],
               ),
-              const Divider(height: 1),
-              Expanded(
-                child: _controller != null 
-                    ? WebViewWidget(controller: _controller!)
-                    : const Center(child: Text('WebView Placeholder')),
-              ),
-            ],
-          ),
-        );
-      },
+            ),
+          );
+        },
+      ),
     );
   }
 }

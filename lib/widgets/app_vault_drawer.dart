@@ -109,27 +109,50 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         padding: EdgeInsets.zero,
         children: [
           DrawerHeader(
-            decoration: const BoxDecoration(
-              color: Colors.blueGrey,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blueGrey[800]!, Colors.blueGrey[600]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
             ),
+            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'AppVault',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 24,
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Image.asset(
+                        'brand/logo.png',
+                        height: 32,
+                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.auto_awesome_motion, size: 32, color: Colors.indigo),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    const Text(
+                      'AppVault',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
-                const Spacer(),
+                const SizedBox(height: 12),
                 const Text(
-                  'Local Mode',
-                  style: TextStyle(color: Colors.white70),
+                  'Local Mode (Offline)',
+                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 13),
                 ),
                 const Text(
-                  'No Firebase Connection',
-                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                  'Your forges are saved locally.',
+                  style: TextStyle(color: Colors.white54, fontSize: 11),
                 ),
               ],
             ),
