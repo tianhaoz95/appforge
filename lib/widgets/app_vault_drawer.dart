@@ -145,15 +145,6 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                     ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                const Text(
-                  'Local Mode (Offline)',
-                  style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w500, fontSize: 13),
-                ),
-                const Text(
-                  'Your forges are saved locally.',
-                  style: TextStyle(color: Colors.white54, fontSize: 11),
-                ),
               ],
             ),
           ),
