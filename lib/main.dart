@@ -351,7 +351,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final repository = context.read<MicroAppRepository>();
     final app = await repository.getApp(appId);
     if (app != null) {
-      _loadApp(app, switchConversation: false);
+      _loadApp(app);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -361,7 +361,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void _loadApp(Map<String, dynamic> app, {bool switchConversation = true}) async {
+  void _loadApp(Map<String, dynamic> app, {bool switchConversation = false}) async {
     final conversationId = app['conversationId'];
     final appId = app['appId'];
     if (conversationId != null && switchConversation) {
