@@ -523,13 +523,51 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
                   children: [
                     _buildEnhancementIndicator(),
                     Expanded(
-                      child: LlmChatView(
-                        provider: _provider!,
-                        responseBuilder: (context, message) => VibeDetector(
-                          message: message,
-                          onDeploy: _onDeploy,
-                          onOpenApp: _onOpenApp,
-                        ),
+                      child: ListenableBuilder(
+                        listenable: _provider!,
+                        builder: (context, _) {
+                          return Stack(
+                            children: [
+                              LlmChatView(
+                                provider: _provider!,
+                                responseBuilder: (context, message) => VibeDetector(
+                                  message: message,
+                                  onDeploy: _onDeploy,
+                                  onOpenApp: _onOpenApp,
+                                ),
+                              ),
+                              if (_provider!.history.isEmpty)
+                                IgnorePointer(
+                                  child: Center(
+                                    child: Consumer<AuthProvider>(
+                                      builder: (context, auth, _) {
+                                        final name = auth.user?.displayName ?? 'there';
+                                        return Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            Text(
+                                              'Hello! $name,',
+                                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                                    color: Colors.blueGrey[700],
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                            ),
+                                            const SizedBox(height: 8),
+                                            Text(
+                                              "let's build an app!",
+                                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                                    color: Colors.blueGrey[400],
+                                                  ),
+                                            ),
+                                          ],
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ],
