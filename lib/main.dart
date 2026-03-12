@@ -79,7 +79,14 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
         'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
         'you MUST wrap it inside <forge>...</forge> tags. '
         'Example: <forge><div class="p-4">Hello</div></forge>. '
-        'Do not use other markdown blocks for the micro-app code itself. '
+        'Additionally, for every micro-app you forge, you MUST also provide: '
+        '1. A concise name wrapped in <name>...</name> tags. '
+        '2. A brief design document in Markdown wrapped in <design>...</design> tags. '
+        '\nExample: '
+        '<name>Task Master</name> '
+        '<design># Task Master\nA simple todo app with local persistence.</design> '
+        '<forge><div class="p-4">...</div></forge> '
+        '\n\nDo not use other markdown blocks for the micro-app code itself. '
         'Use Tailwind CSS for styling and Alpine.js for reactivity. '
         'The micro-apps should be self-contained and visually appealing. '
         '\n\nNEW CAPABILITY: Local Storage API. '
@@ -176,7 +183,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
     }
   }
 
-  void _onDeploy(String code) async {
+  void _onDeploy(String code, String? name, String? designDoc) async {
     setState(() {
       _activeForgeCode = code;
       _showPreview = true;
@@ -190,8 +197,9 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
       final appId = await repository.saveApp({
         'ownerId': userId,
         'conversationId': _currentConversationId,
-        'name': 'Forged App', // In a real app, this would be generated from the AI response
+        'name': name ?? 'Forged App',
         'html_blob': code,
+        'design_doc': designDoc,
         'version': '1.0.0',
         'icon': 'rocket',
       });
@@ -202,9 +210,9 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('App forged and saved locally!'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text('${name ?? 'App'} forged and saved locally!'),
+            duration: const Duration(seconds: 2),
           ),
         );
       }

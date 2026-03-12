@@ -36,7 +36,7 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 3,
+      version: 4,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -67,6 +67,13 @@ class LocalDatabase {
         )
       ''');
     }
+    if (oldVersion < 4) {
+      try {
+        await db.execute('ALTER TABLE micro_apps ADD COLUMN design_doc TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -77,6 +84,7 @@ class LocalDatabase {
         conversationId TEXT,
         name TEXT,
         html_blob TEXT,
+        design_doc TEXT,
         version TEXT,
         icon TEXT,
         created_at INTEGER

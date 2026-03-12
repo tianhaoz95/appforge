@@ -4,7 +4,7 @@ import 'package:appforge/widgets/vibe_detector.dart';
 
 void main() {
   testWidgets('VibeDetector shows deploy button when <forge> tags present', (WidgetTester tester) async {
-    const message = 'Hello! <forge>alert("Hello")</forge> This is your app.';
+    const message = 'Hello! <name>My App</name> <forge>alert("Hello")</forge> This is your app.';
     
     await tester.pumpWidget(const MaterialApp(
       home: Scaffold(
@@ -12,7 +12,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('Deploy to App Bar'), findsOneWidget);
+    expect(find.text('Deploy My App'), findsOneWidget);
     // Markdown might split texts, so we check for fragments or use find.byType
     expect(find.textContaining('Hello!'), findsOneWidget);
     expect(find.textContaining('This is your app.'), findsOneWidget);
@@ -28,6 +28,7 @@ void main() {
     ));
 
     expect(find.text('Deploy to App Bar'), findsNothing);
+    expect(find.text('Deploy My App'), findsNothing);
     expect(find.textContaining('Just a regular message.'), findsOneWidget);
   });
 }

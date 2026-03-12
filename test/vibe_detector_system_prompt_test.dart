@@ -19,7 +19,7 @@ Hope you like it!
       home: Scaffold(
         body: VibeDetector(
           message: message,
-          onDeploy: (code) => capturedCode = code,
+          onDeploy: (code, name, designDoc) => capturedCode = code,
         ),
       ),
     ));
