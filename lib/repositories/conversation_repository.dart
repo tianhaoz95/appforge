@@ -52,4 +52,13 @@ class ConversationRepository {
     
     return history;
   }
+
+  Future<void> deleteConversation(String conversationId) async {
+    final db = await _dbHelper.database;
+    await db.delete(
+      'conversations',
+      where: 'conversationId = ?',
+      whereArgs: [conversationId],
+    );
+  }
 }

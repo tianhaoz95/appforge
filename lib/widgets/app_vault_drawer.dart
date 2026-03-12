@@ -75,6 +75,33 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     }
   }
 
+  Future<void> _confirmDeleteConversation(Map<String, dynamic> conv) async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Conversation?'),
+        content: Text('Are you sure you want to delete "${conv['title'] ?? 'Untitled Chat'}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      final convRepository = Provider.of<ConversationRepository>(context, listen: false);
+      await convRepository.deleteConversation(conv['conversationId']);
+      _refreshConvs();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Drawer(
@@ -132,6 +159,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                     widget.onConversationSelected?.call(conv['conversationId'], conv['title'] ?? 'Untitled Chat');
                     Navigator.pop(context);
                   },
+                  onLongPress: () => _confirmDeleteConversation(conv),
                 )).toList(),
               );
             },

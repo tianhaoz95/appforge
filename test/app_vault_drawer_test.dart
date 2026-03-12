@@ -93,4 +93,47 @@ void main() {
     // Verify repository call
     verify(() => mockAppRepository.deleteApp('1')).called(1);
   });
+
+  testWidgets('AppVaultDrawer shows delete dialog on long press and deletes conversation', (WidgetTester tester) async {
+    final conv = {'conversationId': 'c1', 'title': 'Deletable Chat', 'updated_at': 12345};
+    
+    when(() => mockAppRepository.getAppsForOwner(any()))
+        .thenAnswer((_) async => []);
+    when(() => mockConvRepository.getConversations())
+        .thenAnswer((_) async => [conv]);
+    when(() => mockConvRepository.deleteConversation(any())).thenAnswer((_) async {});
+
+    await tester.pumpWidget(MaterialApp(
+      home: MultiProvider(
+        providers: [
+          Provider<MicroAppRepository>.value(value: mockAppRepository),
+          Provider<ConversationRepository>.value(value: mockConvRepository),
+        ],
+        child: const Scaffold(
+          drawer: AppVaultDrawer(),
+          body: Center(child: Text('Body')),
+        ),
+      ),
+    ));
+
+    // Open drawer
+    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+    scaffoldState.openDrawer();
+    await tester.pumpAndSettle();
+
+    // Long press on conversation
+    await tester.longPress(find.text('Deletable Chat'));
+    await tester.pumpAndSettle();
+
+    // Check dialog
+    expect(find.text('Delete Conversation?'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+
+    // Tap delete
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    // Verify repository call
+    verify(() => mockConvRepository.deleteConversation('c1')).called(1);
+  });
 }
