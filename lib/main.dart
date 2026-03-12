@@ -140,13 +140,16 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       if (apps.isNotEmpty) {
         systemPrompt += '\n\nPREVIOUSLY DEPLOYED MICRO-APPS:\n';
         for (final app in apps) {
+          final id = app['appId'];
           final name = app['name'] ?? 'Unnamed App';
           final design = app['design_doc'] ?? 'No description available.';
-          systemPrompt += '- **$name**: $design\n';
+          systemPrompt += '- **$name** (ID: $id): $design\n';
         }
         systemPrompt += '\nWhen the user asks to build something, you SHOULD FIRST check if any of the existing apps above can fulfill their request. '
             'If so, suggest the existing app(s) and explain how they might help. '
-            'ONLY proceed to forging a NEW micro-app if the user explicitly requests a new one or if none of the existing apps are suitable.';
+            'When suggesting an existing app, you MUST wrap its ID and name in <suggest_app id="APP_ID">APP_NAME</suggest_app> tags. '
+            'Example: "You already have a Task Master app that might work for this: <suggest_app id="123">Task Master</suggest_app>" '
+            '\nONLY proceed to forging a NEW micro-app if the user explicitly requests a new one or if none of the existing apps are suitable.';
       }
     }
 
@@ -308,6 +311,20 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
+  void _onOpenApp(String appId) async {
+    final repository = context.read<MicroAppRepository>();
+    final app = await repository.getApp(appId);
+    if (app != null) {
+      _onAppSelectedFromVault(app);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('App not found!')),
+        );
+      }
+    }
+  }
+
   void _onAppSelectedFromVault(Map<String, dynamic> app) async {
     final conversationId = app['conversationId'];
     final appId = app['appId'];
@@ -466,8 +483,11 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
                     children: [
                       LlmChatView(
                         provider: _provider!,
-                        responseBuilder: (context, message) =>
-                            VibeDetector(message: message, onDeploy: _onDeploy),
+                        responseBuilder: (context, message) => VibeDetector(
+                          message: message,
+                          onDeploy: _onDeploy,
+                          onOpenApp: _onOpenApp,
+                        ),
                       ),
                       if (_showPreview && _activeForgeCode != null)
                         PreviewSheet(

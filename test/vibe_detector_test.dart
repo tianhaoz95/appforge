@@ -31,4 +31,24 @@ void main() {
     expect(find.text('Deploy My App'), findsNothing);
     expect(find.textContaining('Just a regular message.'), findsOneWidget);
   });
+
+  testWidgets('VibeDetector shows open button when <suggest_app> tags present', (WidgetTester tester) async {
+    const message = 'You already have an app for this: <suggest_app id="test-id">My Existing App</suggest_app>';
+    String? openedAppId;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: VibeDetector(
+          message: message,
+          onOpenApp: (appId) => openedAppId = appId,
+        ),
+      ),
+    ));
+
+    expect(find.text('Open My Existing App'), findsOneWidget);
+    expect(find.textContaining('You already have an app for this:'), findsOneWidget);
+
+    await tester.tap(find.text('Open My Existing App'));
+    expect(openedAppId, 'test-id');
+  });
 }
