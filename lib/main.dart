@@ -103,18 +103,19 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         '\n\nDo not use other markdown blocks for the micro-app code itself. '
         'Use Tailwind CSS for styling and Alpine.js for reactivity. '
         'The micro-apps should be self-contained and visually appealing. '
-        '\n\nNEW CAPABILITY: Local Storage API. '
-        'You can use the `window.MicroForge` bridge to persist data locally. '
+        '\n\nNEW CAPABILITY: MicroForge Bridge API. '
+        'You can use the `window.MicroForge` bridge to persist data locally and call AI. '
         'Methods: '
         '- `window.MicroForge.saveData(key, value)`: Returns a Promise. '
         '- `window.MicroForge.getData(key)`: Returns a Promise that resolves to the value. '
         '- `window.MicroForge.deleteData(key)`: Returns a Promise. '
         '- `window.MicroForge.listAll()`: Returns a Promise that resolves to an object of all keys/values. '
+        '- `window.MicroForge.promptAi(prompt, systemInstruction)`: Returns a Promise that resolves to the AI response text. '
+        'Use `promptAi` to build AI-powered features within your micro-apps. '
         '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
-        '\nExample of Alpine.js integration: '
-        'x-data="{ items: [], newItem: \'\' }" '
-        'x-init="items = await window.MicroForge.getData(\'items\') || []" '
-        '@submit.prevent="items.push(newItem); await window.MicroForge.saveData(\'items\', items); newItem = \'\'"';
+        '\nExample of Alpine.js AI integration: '
+        'x-data="{ input: \'\', response: \'\', loading: false }" '
+        '@submit.prevent="loading = true; response = await window.MicroForge.promptAi(input, \'You are a helpful assistant.\'); loading = false"';
 
     if (enhancementCode != null) {
       systemPrompt += '\n\nCONTEXT FOR ENHANCEMENT:\n'

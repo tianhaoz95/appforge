@@ -5,6 +5,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:feedback/feedback.dart';
+import 'package:firebase_ai/firebase_ai.dart';
 import '../repositories/micro_app_data_repository.dart';
 
 class PreviewSheet extends StatefulWidget {
@@ -127,6 +128,30 @@ class PreviewSheetState extends State<PreviewSheet> {
     );
   }
 
+  Future<String> _promptAi(String prompt, {String? systemInstruction}) async {
+    final primaryModel = FirebaseAI.googleAI().generativeModel(
+      model: 'gemini-3.1-flash-lite-preview',
+      systemInstruction: systemInstruction != null ? Content.system(systemInstruction) : null,
+    );
+
+    try {
+      final response = await primaryModel.generateContent([Content.text(prompt)]);
+      return response.text ?? 'No response';
+    } catch (e) {
+      final errorStr = e.toString().toLowerCase();
+      if ((errorStr.contains('high demand') || errorStr.contains('503') || errorStr.contains('overloaded'))) {
+        debugPrint('Micro-app AI fallback triggered...');
+        final secondaryModel = FirebaseAI.googleAI().generativeModel(
+          model: 'gemini-2.0-flash',
+          systemInstruction: systemInstruction != null ? Content.system(systemInstruction) : null,
+        );
+        final response = await secondaryModel.generateContent([Content.text(prompt)]);
+        return response.text ?? 'No response';
+      }
+      rethrow;
+    }
+  }
+
   @visibleForTesting
   Future<void> handleMessage(String message) async {
     try {
@@ -152,6 +177,11 @@ class PreviewSheetState extends State<PreviewSheet> {
       } else if (action == 'listAll') {
         final allData = await repository.listAll(widget.appId);
         _sendResponse(requestId, {'data': allData});
+      } else if (action == 'promptAi') {
+        final prompt = data['prompt'];
+        final systemInstruction = data['systemInstruction'];
+        final response = await _promptAi(prompt, systemInstruction: systemInstruction);
+        _sendResponse(requestId, {'text': response});
       } else if (action == 'closeApp') {
         if (widget.onClose != null) {
           widget.onClose?.call();
@@ -161,6 +191,14 @@ class PreviewSheetState extends State<PreviewSheet> {
       }
     } catch (e) {
       debugPrint('Error decoding MicroForgeChannel message: $e');
+      if (e is! FormatException) {
+        // If it's not a JSON error, it might be an AI error, send it back if requestId exists
+        final data = jsonDecode(message);
+        final requestId = data['requestId'];
+        if (requestId != null) {
+          _sendResponse(requestId, {'error': e.toString()});
+        }
+      }
     }
   }
 
@@ -212,8 +250,14 @@ class PreviewSheetState extends State<PreviewSheet> {
         },
         _sendRequest: (action, params) => {
           const requestId = Math.random().toString(36).substring(2, 11);
-          return new Promise((resolve) => {
-            pendingRequests.set(requestId, resolve);
+          return new Promise((resolve, reject) => {
+            pendingRequests.set(requestId, (response) => {
+              if (response.error) {
+                reject(new Error(response.error));
+              } else {
+                resolve(response);
+              }
+            });
             MicroForgeChannel.postMessage(JSON.stringify({
               action,
               requestId,
@@ -225,6 +269,7 @@ class PreviewSheetState extends State<PreviewSheet> {
         getData: (key) => window.MicroForge._sendRequest('getData', { key }).then(r => r.value),
         deleteData: (key) => window.MicroForge._sendRequest('deleteData', { key }),
         listAll: () => window.MicroForge._sendRequest('listAll', {}).then(r => r.data),
+        promptAi: (prompt, systemInstruction) => window.MicroForge._sendRequest('promptAi', { prompt, systemInstruction }).then(r => r.text),
         closeApp: () => {
           MicroForgeChannel.postMessage(JSON.stringify({
             action: 'closeApp'
