@@ -27,7 +27,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('Deploy to App Bar'), findsNothing);
+    expect(find.text('Deploy App'), findsNothing);
     expect(find.text('Deploy My App'), findsNothing);
     expect(find.textContaining('Just a regular message.'), findsOneWidget);
   });

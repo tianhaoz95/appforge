@@ -224,18 +224,6 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     _initializeAI();
   }
 
-  void _togglePreview() {
-    if (_activeForgeCode != null) {
-      setState(() {
-        _showPreview = !_showPreview;
-      });
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('No app forged yet!')));
-    }
-  }
-
   void _onEnhance() {
     if (_activeForgeCode == null) return;
 
@@ -447,11 +435,6 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         title: const Text('MicroForge'),
         actions: [
           IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
-          IconButton(
-            icon: const Icon(Icons.rocket_launch),
-            onPressed: _togglePreview,
-            color: _activeForgeCode != null ? Colors.orange : null,
-          ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () async {

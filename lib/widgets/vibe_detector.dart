@@ -45,7 +45,7 @@ class VibeDetector extends StatelessWidget {
             ElevatedButton.icon(
               onPressed: () => onDeploy?.call(forgeCode ?? '', name, designDoc),
               icon: const Icon(Icons.rocket_launch),
-              label: Text(name != null ? 'Deploy $name' : 'Deploy to App Bar'),
+              label: Text(name != null ? 'Deploy $name' : 'Deploy App'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.orangeAccent,
                 foregroundColor: Colors.black,
