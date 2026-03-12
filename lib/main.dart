@@ -63,6 +63,7 @@ class AppForgeHomePage extends StatefulWidget {
 class _AppForgeHomePageState extends State<AppForgeHomePage> {
   LlmProvider? _provider;
   String? _activeForgeCode;
+  String? _activeDesignDoc;
   String? _activeAppId;
   bool _showPreview = false;
   String _currentConversationId = const Uuid().v4();
@@ -186,6 +187,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
   void _onDeploy(String code, String? name, String? designDoc) async {
     setState(() {
       _activeForgeCode = code;
+      _activeDesignDoc = designDoc;
       _showPreview = true;
     });
 
@@ -230,6 +232,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
       
       setState(() {
         _activeForgeCode = app['html_blob'];
+        _activeDesignDoc = app['design_doc'];
         _activeAppId = appId;
         _showPreview = true;
         _currentConversationId = conversationId;
@@ -241,6 +244,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
     } else {
       setState(() {
         _activeForgeCode = app['html_blob'];
+        _activeDesignDoc = app['design_doc'];
         _activeAppId = appId;
         _showPreview = true;
       });
@@ -301,6 +305,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
                 if (_showPreview && _activeForgeCode != null)
                   PreviewSheet(
                     code: _activeForgeCode!,
+                    designDoc: _activeDesignDoc,
                     appId: _activeAppId ?? 'unknown',
                     onClose: () => setState(() => _showPreview = false),
                     onSaveData: (key, value) {

@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import '../repositories/micro_app_data_repository.dart';
 
 class PreviewSheet extends StatefulWidget {
   final String code;
+  final String? designDoc;
   final String appId;
   final VoidCallback? onClose;
   final Function(String key, dynamic value)? onSaveData;
@@ -15,6 +17,7 @@ class PreviewSheet extends StatefulWidget {
   const PreviewSheet({
     super.key, 
     required this.code, 
+    this.designDoc,
     required this.appId,
     this.onClose,
     this.onSaveData,
@@ -44,6 +47,48 @@ class PreviewSheetState extends State<PreviewSheet> {
         )
         ..loadHtmlString(_buildHtmlShell(widget.code));
     }
+  }
+
+  void _showDesignDoc(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.8,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Design Document',
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: MarkdownBody(
+                  data: widget.designDoc ?? 'No design documentation provided.',
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   @visibleForTesting
@@ -194,10 +239,20 @@ class PreviewSheetState extends State<PreviewSheet> {
                       'App Preview',
                       style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      iconSize: 20,
-                      onPressed: widget.onClose ?? () => Navigator.pop(context),
+                    Row(
+                      children: [
+                        if (widget.designDoc != null && widget.designDoc!.isNotEmpty)
+                          TextButton.icon(
+                            icon: const Icon(Icons.description_outlined, size: 18),
+                            label: const Text('Design'),
+                            onPressed: () => _showDesignDoc(context),
+                          ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          iconSize: 20,
+                          onPressed: widget.onClose ?? () => Navigator.pop(context),
+                        ),
+                      ],
                     ),
                   ],
                 ),
