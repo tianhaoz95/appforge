@@ -44,7 +44,7 @@ class PreviewSheetState extends State<PreviewSheet> {
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(Colors.transparent) // Optimization for rendering
         ..addJavaScriptChannel(
-          'AppForgeChannel',
+          'MicroForgeChannel',
           onMessageReceived: (JavaScriptMessage message) => handleMessage(message.message),
         )
         ..loadHtmlString(_buildHtmlShell(widget.code));
@@ -126,14 +126,14 @@ class PreviewSheetState extends State<PreviewSheet> {
         }
       }
     } catch (e) {
-      debugPrint('Error decoding AppForgeChannel message: $e');
+      debugPrint('Error decoding MicroForgeChannel message: $e');
     }
   }
 
   void _sendResponse(String? requestId, Map<String, dynamic> response) {
     if (requestId != null) {
       final jsonResponse = jsonEncode(response);
-      _controller?.runJavaScript('window.AppForge._handleResponse("$requestId", $jsonResponse)');
+      _controller?.runJavaScript('window.MicroForge._handleResponse("$requestId", $jsonResponse)');
     }
   }
 
@@ -169,7 +169,7 @@ class PreviewSheetState extends State<PreviewSheet> {
     (function() {
       const pendingRequests = new Map();
       
-      window.AppForge = {
+      window.MicroForge = {
         _handleResponse: (requestId, response) => {
           if (pendingRequests.has(requestId)) {
             pendingRequests.get(requestId)(response);
@@ -180,19 +180,19 @@ class PreviewSheetState extends State<PreviewSheet> {
           const requestId = Math.random().toString(36).substring(2, 11);
           return new Promise((resolve) => {
             pendingRequests.set(requestId, resolve);
-            AppForgeChannel.postMessage(JSON.stringify({
+            MicroForgeChannel.postMessage(JSON.stringify({
               action,
               requestId,
               ...params
             }));
           });
         },
-        saveData: (key, val) => window.AppForge._sendRequest('saveData', { key, value: val }),
-        getData: (key) => window.AppForge._sendRequest('getData', { key }).then(r => r.value),
-        deleteData: (key) => window.AppForge._sendRequest('deleteData', { key }),
-        listAll: () => window.AppForge._sendRequest('listAll', {}).then(r => r.data),
+        saveData: (key, val) => window.MicroForge._sendRequest('saveData', { key, value: val }),
+        getData: (key) => window.MicroForge._sendRequest('getData', { key }).then(r => r.value),
+        deleteData: (key) => window.MicroForge._sendRequest('deleteData', { key }),
+        listAll: () => window.MicroForge._sendRequest('listAll', {}).then(r => r.data),
         closeApp: () => {
-          AppForgeChannel.postMessage(JSON.stringify({
+          MicroForgeChannel.postMessage(JSON.stringify({
             action: 'closeApp'
           }));
         }

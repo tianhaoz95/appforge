@@ -1,7 +1,7 @@
-# GEMINI.md - AppForge Context
+# GEMINI.md - MicroForge Context
 
 ## Project Overview
-**AppForge** is a "Vibe Coding" platform built with Flutter that enables users to "forge" functional micro-apps using natural language via Gemini AI. The project leverages the **Flutter AI Toolkit** for a high-fidelity chat interface and a **Firebase-backed architecture** for persistence and intelligence.
+**MicroForge** is a "Vibe Coding" platform built with Flutter that enables users to "forge" functional micro-apps using natural language via Gemini AI. The project leverages the **Flutter AI Toolkit** for a high-fidelity chat interface and a **Firebase-backed architecture** for persistence and intelligence.
 
 ### Key Technologies
 - **Frontend:** Flutter (Dart)
@@ -68,7 +68,7 @@ Follow these steps to deploy a new version to Firebase App Distribution:
 ## Development Conventions
 - **App ID / Package Name:** `com.hejitech.appforge`
 - **AI Response Format:** AI is instructed via a system prompt to wrap micro-app code (HTML/Alpine.js/Tailwind) inside `<forge>...</forge>` tags.
-- **Interoperability:** The micro-apps can communicate back to the Flutter layer using a `window.AppForge` JavaScript bridge (e.g., `saveData`, `closeApp`).
+- **Interoperability:** The micro-apps can communicate back to the Flutter layer using a `window.MicroForge` JavaScript bridge (e.g., `saveData`, `closeApp`).
 - **Error Handling:** Use the `FallbackLlmProvider` to gracefully handle transient AI model failures.
 - **On-Device AI:** Check model status before attempting on-device operations.
 - **Firebase Configuration:** Firebase is initialized in `lib/main.dart` using `DefaultFirebaseOptions` from `lib/firebase_options.dart`.

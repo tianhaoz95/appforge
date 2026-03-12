@@ -1,6 +1,6 @@
-## **Product Design Document: AppForge**
+## **Product Design Document: MicroForge**
 
-**Project Name:** AppForge
+**Project Name:** MicroForge
 
 **Author:** AI Collaborator
 
@@ -12,7 +12,7 @@
 
 ## **1. Executive Summary**
 
-**AppForge** is a "Vibe Coding" platform that turns natural language into functional, persistent micro-apps. By combining the **Flutter AI Toolkit** for high-fidelity chat with a **Firebase-backed cloud architecture**, users can "forge" utilities (calculators, dashboards, interactive forms) that are instantly rendered via **Alpine.js** and saved to a cross-device **App Vault**.
+**MicroForge** is a "Vibe Coding" platform that turns natural language into functional, persistent micro-apps. By combining the **Flutter AI Toolkit** for high-fidelity chat with a **Firebase-backed cloud architecture**, users can "forge" utilities (calculators, dashboards, interactive forms) that are instantly rendered via **Alpine.js** and saved to a cross-device **App Vault**.
 
 ---
 
@@ -80,10 +80,10 @@ The UI follows a classic "Productivity IDE" layout built entirely in Flutter.
 
 ### **The Forge Bridge (Flutter to Alpine)**
 
-AppForge uses a global JS object to allow the micro-app to talk back to the Firebase/Flutter layer.
+MicroForge uses a global JS object to allow the micro-app to talk back to the Firebase/Flutter layer.
 
 ```javascript
-window.AppForge = {
+window.MicroForge = {
   saveData: (key, val) => { /* Calls Flutter channel to update Firestore */ },
   closeApp: () => { /* Tells Flutter to hide the WebView sheet */ }
 };
@@ -99,7 +99,7 @@ window.AppForge = {
 ```dart
 Scaffold(
   appBar: AppBar(
-    title: const Text('AppForge'),
+    title: const Text('MicroForge'),
     actions: [
       IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
       IconButton(icon: const Icon(Icons.rocket_launch), onPressed: _togglePreview),
@@ -131,7 +131,7 @@ When a "vibe" is deployed, the WebView loads a standard shell:
 
 ---
 
-## **6. Key Benefits of AppForge**
+## **6. Key Benefits of MicroForge**
 
 1. **Instant Deployment:** No `npm install`, no `flutter build`. Code runs the second the LLM finishes typing.
 2. **Persistent Utility:** Tools built in the chat aren't ephemeral; they are saved to the Vault for long-term use.

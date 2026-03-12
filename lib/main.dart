@@ -43,24 +43,24 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AppForge',
+      title: 'MicroForge',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
         useMaterial3: true,
       ),
-      home: const AppForgeHomePage(),
+      home: const MicroForgeHomePage(),
     );
   }
 }
 
-class AppForgeHomePage extends StatefulWidget {
-  const AppForgeHomePage({super.key});
+class MicroForgeHomePage extends StatefulWidget {
+  const MicroForgeHomePage({super.key});
 
   @override
-  State<AppForgeHomePage> createState() => _AppForgeHomePageState();
+  State<MicroForgeHomePage> createState() => _MicroForgeHomePageState();
 }
 
-class _AppForgeHomePageState extends State<AppForgeHomePage> {
+class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
   LlmProvider? _provider;
   String? _activeForgeCode;
   String? _activeDesignDoc;
@@ -76,7 +76,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
   }
 
   void _initializeAI() async {
-    const systemPrompt = 'You are AppForge AI. You help users "forge" micro-apps. '
+    const systemPrompt = 'You are MicroForge AI. You help users "forge" micro-apps. '
         'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
         'you MUST wrap it inside <forge>...</forge> tags. '
         'Example: <forge><div class="p-4">Hello</div></forge>. '
@@ -91,17 +91,17 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
         'Use Tailwind CSS for styling and Alpine.js for reactivity. '
         'The micro-apps should be self-contained and visually appealing. '
         '\n\nNEW CAPABILITY: Local Storage API. '
-        'You can use the `window.AppForge` bridge to persist data locally. '
+        'You can use the `window.MicroForge` bridge to persist data locally. '
         'Methods: '
-        '- `window.AppForge.saveData(key, value)`: Returns a Promise. '
-        '- `window.AppForge.getData(key)`: Returns a Promise that resolves to the value. '
-        '- `window.AppForge.deleteData(key)`: Returns a Promise. '
-        '- `window.AppForge.listAll()`: Returns a Promise that resolves to an object of all keys/values. '
-        '- `window.AppForge.closeApp()`: Closes the micro-app preview. '
+        '- `window.MicroForge.saveData(key, value)`: Returns a Promise. '
+        '- `window.MicroForge.getData(key)`: Returns a Promise that resolves to the value. '
+        '- `window.MicroForge.deleteData(key)`: Returns a Promise. '
+        '- `window.MicroForge.listAll()`: Returns a Promise that resolves to an object of all keys/values. '
+        '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
         '\nExample of Alpine.js integration: '
         'x-data="{ items: [], newItem: \'\' }" '
-        'x-init="items = await window.AppForge.getData(\'items\') || []" '
-        '@submit.prevent="items.push(newItem); await window.AppForge.saveData(\'items\', items); newItem = \'\'"';
+        'x-init="items = await window.MicroForge.getData(\'items\') || []" '
+        '@submit.prevent="items.push(newItem); await window.MicroForge.saveData(\'items\', items); newItem = \'\'"';
 
     // Check on-device model status
     try {
@@ -304,7 +304,7 @@ class _AppForgeHomePageState extends State<AppForgeHomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('AppForge'),
+        title: const Text('MicroForge'),
         actions: [
           IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
           IconButton(

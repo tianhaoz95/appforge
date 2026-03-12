@@ -1,6 +1,6 @@
-# AppForge: Implementation Task Report
+# MicroForge: Implementation Task Report
 
-This report outlines the tasks and subtasks required to build **AppForge**, a "Vibe Coding" platform, based on the `init-draft-design.md` specification.
+This report outlines the tasks and subtasks required to build **MicroForge**, a "Vibe Coding" platform, based on the `init-draft-design.md` specification.
 
 ---
 
@@ -47,8 +47,8 @@ This report outlines the tasks and subtasks required to build **AppForge**, a "V
     *   [x] Create a base HTML template that injects Alpine.js and Tailwind CSS via CDN.
     *   [x] Develop the logic to "hot-swap" the `<div id="forge-target">` content.
 *   **Task 3.3: The Forge Bridge (JS <-> Dart)**
-    *   [x] Implement `window.AppForge.saveData` to call back to Flutter via `JavaScriptChannel`.
-    *   [x] Implement `window.AppForge.closeApp` to dismiss the preview sheet.
+    *   [x] Implement `window.MicroForge.saveData` to call back to Flutter via `JavaScriptChannel`.
+    *   [x] Implement `window.MicroForge.closeApp` to dismiss the preview sheet.
 
 ---
 

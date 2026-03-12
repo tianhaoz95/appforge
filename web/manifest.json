@@ -1,6 +1,6 @@
 {
-    "name": "appforge",
-    "short_name": "appforge",
+    "name": "MicroForge",
+    "short_name": "MicroForge",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
