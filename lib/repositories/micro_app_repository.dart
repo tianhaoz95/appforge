@@ -56,4 +56,20 @@ class MicroAppRepository {
 
     return maps;
   }
+
+  Future<void> deleteApp(String appId) async {
+    final db = await _dbHelper.database;
+    await db.transaction((txn) async {
+      await txn.delete(
+        'micro_apps',
+        where: 'appId = ?',
+        whereArgs: [appId],
+      );
+      await txn.delete(
+        'micro_app_data',
+        where: 'appId = ?',
+        whereArgs: [appId],
+      );
+    });
+  }
 }

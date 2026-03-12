@@ -50,4 +50,47 @@ void main() {
     expect(find.text('App 1'), findsOneWidget);
     expect(find.text('App 2'), findsOneWidget);
   });
+
+  testWidgets('AppVaultDrawer shows delete dialog on long press and deletes app', (WidgetTester tester) async {
+    final app = {'appId': '1', 'name': 'Deletable App', 'icon': 'rocket', 'version': '1.0.0'};
+    
+    when(() => mockAppRepository.getAppsForOwner(any()))
+        .thenAnswer((_) async => [app]);
+    when(() => mockConvRepository.getConversations())
+        .thenAnswer((_) async => []);
+    when(() => mockAppRepository.deleteApp(any())).thenAnswer((_) async {});
+
+    await tester.pumpWidget(MaterialApp(
+      home: MultiProvider(
+        providers: [
+          Provider<MicroAppRepository>.value(value: mockAppRepository),
+          Provider<ConversationRepository>.value(value: mockConvRepository),
+        ],
+        child: const Scaffold(
+          drawer: AppVaultDrawer(),
+          body: Center(child: Text('Body')),
+        ),
+      ),
+    ));
+
+    // Open drawer
+    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+    scaffoldState.openDrawer();
+    await tester.pumpAndSettle();
+
+    // Long press on app
+    await tester.longPress(find.text('Deletable App'));
+    await tester.pumpAndSettle();
+
+    // Check dialog
+    expect(find.text('Delete Micro App?'), findsOneWidget);
+    expect(find.text('Delete'), findsOneWidget);
+
+    // Tap delete
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    // Verify repository call
+    verify(() => mockAppRepository.deleteApp('1')).called(1);
+  });
 }

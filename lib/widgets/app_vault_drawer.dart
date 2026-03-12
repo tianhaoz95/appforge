@@ -3,18 +3,80 @@ import 'package:provider/provider.dart';
 import '../repositories/micro_app_repository.dart';
 import '../repositories/conversation_repository.dart';
 
-class AppVaultDrawer extends StatelessWidget {
+class AppVaultDrawer extends StatefulWidget {
   final Function(Map<String, dynamic> app)? onAppSelected;
   final Function(String conversationId, String title)? onConversationSelected;
 
   const AppVaultDrawer({super.key, this.onAppSelected, this.onConversationSelected});
 
   @override
-  Widget build(BuildContext context) {
-    final appRepository = Provider.of<MicroAppRepository>(context);
-    final convRepository = Provider.of<ConversationRepository>(context);
-    const userId = 'local-user';
+  State<AppVaultDrawer> createState() => _AppVaultDrawerState();
+}
 
+class _AppVaultDrawerState extends State<AppVaultDrawer> {
+  late Future<List<Map<String, dynamic>>> _appsFuture;
+  late Future<List<Map<String, dynamic>>> _convsFuture;
+  static const userId = 'local-user';
+
+  @override
+  void initState() {
+    super.initState();
+    // In order to use Provider.of in initState, we'd need listen: false,
+    // but the future should be initialized using the repositories.
+    // However, build() is where we have access to context easily.
+    // We can initialize them in didChangeDependencies.
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _refreshApps();
+    _refreshConvs();
+  }
+
+  void _refreshApps() {
+    final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
+    setState(() {
+      _appsFuture = appRepository.getAppsForOwner(userId);
+    });
+  }
+
+  void _refreshConvs() {
+    final convRepository = Provider.of<ConversationRepository>(context, listen: false);
+    setState(() {
+      _convsFuture = convRepository.getConversations();
+    });
+  }
+
+  Future<void> _confirmDelete(Map<String, dynamic> app) async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Micro App?'),
+        content: Text('Are you sure you want to delete "${app['name']}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true) {
+      final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
+      await appRepository.deleteApp(app['appId']);
+      _refreshApps();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -52,9 +114,9 @@ class AppVaultDrawer extends StatelessWidget {
             ),
           ),
           FutureBuilder<List<Map<String, dynamic>>>(
-            future: convRepository.getConversations(),
+            future: _convsFuture,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                 return const SizedBox.shrink();
               }
               final convs = snapshot.data ?? [];
@@ -67,7 +129,7 @@ class AppVaultDrawer extends StatelessWidget {
                   leading: const Icon(Icons.chat_bubble_outline, size: 20),
                   title: Text(conv['title'] ?? 'Untitled Chat', maxLines: 1, overflow: TextOverflow.ellipsis),
                   onTap: () {
-                    onConversationSelected?.call(conv['conversationId'], conv['title'] ?? 'Untitled Chat');
+                    widget.onConversationSelected?.call(conv['conversationId'], conv['title'] ?? 'Untitled Chat');
                     Navigator.pop(context);
                   },
                 )).toList(),
@@ -82,9 +144,9 @@ class AppVaultDrawer extends StatelessWidget {
             ),
           ),
           FutureBuilder<List<Map<String, dynamic>>>(
-            future: appRepository.getAppsForOwner(userId),
+            future: _appsFuture,
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
+              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
                 return const Center(child: CircularProgressIndicator());
               }
               if (snapshot.hasError) {
@@ -100,9 +162,10 @@ class AppVaultDrawer extends StatelessWidget {
                   title: Text(app['name'] ?? 'Unnamed App'),
                   subtitle: Text('v${app['version']}'),
                   onTap: () {
-                    onAppSelected?.call(app);
+                    widget.onAppSelected?.call(app);
                     Navigator.pop(context);
                   },
+                  onLongPress: () => _confirmDelete(app),
                 )).toList(),
               );
             },
