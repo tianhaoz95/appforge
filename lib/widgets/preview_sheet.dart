@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:feedback/feedback.dart';
 import 'package:firebase_ai/firebase_ai.dart';
+import 'package:file_picker/file_picker.dart';
 import '../repositories/micro_app_data_repository.dart';
 
 class PreviewSheet extends StatefulWidget {
@@ -182,6 +183,36 @@ class PreviewSheetState extends State<PreviewSheet> {
         final systemInstruction = data['systemInstruction'];
         final response = await _promptAi(prompt, systemInstruction: systemInstruction);
         _sendResponse(requestId, {'text': response});
+      } else if (action == 'pickFiles') {
+        final multiple = data['multiple'] ?? false;
+        final typeStr = data['type'] ?? 'any';
+        final extensions = (data['extensions'] as List?)?.map((e) => e.toString()).toList();
+        
+        FileType type = FileType.any;
+        if (typeStr == 'image') type = FileType.image;
+        if (typeStr == 'video') type = FileType.video;
+        if (typeStr == 'audio') type = FileType.audio;
+        if (typeStr == 'media') type = FileType.media;
+        if (typeStr == 'custom') type = FileType.custom;
+
+        final result = await FilePicker.platform.pickFiles(
+          allowMultiple: multiple,
+          type: type,
+          allowedExtensions: type == FileType.custom ? extensions : null,
+          withData: true,
+        );
+
+        if (result != null && result.files.isNotEmpty) {
+          final files = result.files.map((file) => {
+            'name': file.name,
+            'size': file.size,
+            'extension': file.extension,
+            'bytes': file.bytes != null ? base64Encode(file.bytes!) : null,
+          }).toList();
+          _sendResponse(requestId, {'files': files});
+        } else {
+          _sendResponse(requestId, {'files': []});
+        }
       } else if (action == 'closeApp') {
         if (widget.onClose != null) {
           widget.onClose?.call();
@@ -270,6 +301,7 @@ class PreviewSheetState extends State<PreviewSheet> {
         deleteData: (key) => window.MicroForge._sendRequest('deleteData', { key }),
         listAll: () => window.MicroForge._sendRequest('listAll', {}).then(r => r.data),
         promptAi: (prompt, systemInstruction) => window.MicroForge._sendRequest('promptAi', { prompt, systemInstruction }).then(r => r.text),
+        pickFiles: (options = {}) => window.MicroForge._sendRequest('pickFiles', options).then(r => r.files),
         closeApp: () => {
           MicroForgeChannel.postMessage(JSON.stringify({
             action: 'closeApp'

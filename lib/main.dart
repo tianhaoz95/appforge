@@ -112,10 +112,16 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         '- `window.MicroForge.listAll()`: Returns a Promise that resolves to an object of all keys/values. '
         '- `window.MicroForge.promptAi(prompt, systemInstruction)`: Returns a Promise that resolves to the AI response text. '
         'Use `promptAi` to build AI-powered features within your micro-apps. '
+        '- `window.MicroForge.pickFiles(options)`: Returns a Promise that resolves to a list of file objects. '
+        'Options: `{ multiple: true/false, type: "any"/"image"/"video"/"audio"/"media"/"custom", extensions: ["pdf", "doc"] }`. '
+        'File object: `{ name, size, extension, bytes (base64) }`. '
         '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
         '\nExample of Alpine.js AI integration: '
         'x-data="{ input: \'\', response: \'\', loading: false }" '
-        '@submit.prevent="loading = true; response = await window.MicroForge.promptAi(input, \'You are a helpful assistant.\'); loading = false"';
+        '@submit.prevent="loading = true; response = await window.MicroForge.promptAi(input, \'You are a helpful assistant.\'); loading = false"'
+        '\nExample of Alpine.js File Picking: '
+        'x-data="{ files: [] }" '
+        '@click="files = await window.MicroForge.pickFiles({ multiple: true, type: \'image\' })"';
 
     if (enhancementCode != null) {
       systemPrompt += '\n\nCONTEXT FOR ENHANCEMENT:\n'
