@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'firebase_options.dart';
@@ -395,18 +396,17 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
             children: [
               Text('Original Code', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.all(8),
-                color: Colors.grey[200],
-                child: SelectableText(
-                  _enhancementCode ?? '',
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
-                ),
+              MarkdownBody(
+                data: '```html\n${_enhancementCode ?? ''}\n```',
+                selectable: true,
               ),
               const SizedBox(height: 24),
               Text('Design Document', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 8),
-              Text(_enhancementDesign ?? 'No design document provided.'),
+              MarkdownBody(
+                data: _enhancementDesign ?? 'No design document provided.',
+                selectable: true,
+              ),
             ],
           ),
         ),
