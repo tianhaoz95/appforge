@@ -8,6 +8,8 @@ import 'package:feedback/feedback.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'dart:async';
 import '../repositories/micro_app_data_repository.dart';
 import '../providers/settings_provider.dart';
 
@@ -41,6 +43,7 @@ class PreviewSheetState extends State<PreviewSheet> {
   WebViewController? _controller;
   final DraggableScrollableController _sheetController = DraggableScrollableController();
   double _currentExtent = 0.9;
+  StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
 
   @override
   void initState() {
@@ -53,6 +56,7 @@ class PreviewSheetState extends State<PreviewSheet> {
   void dispose() {
     _sheetController.removeListener(_onSheetChanged);
     _sheetController.dispose();
+    _accelerometerSubscription?.cancel();
     super.dispose();
   }
 
@@ -252,6 +256,37 @@ class PreviewSheetState extends State<PreviewSheet> {
           'heading': position.heading,
           'timestamp': position.timestamp.toIso8601String(),
         });
+      } else if (action == 'getAccelerometer') {
+        final settings = context.read<SettingsProvider>();
+        if (!settings.allowAccelerometer) {
+          _sendResponse(requestId, {'error': 'Accelerometer is disabled in settings.'});
+          return;
+        }
+        late StreamSubscription<AccelerometerEvent> sub;
+        sub = accelerometerEventStream().listen((event) {
+          _sendResponse(requestId, {
+            'x': event.x,
+            'y': event.y,
+            'z': event.z,
+          });
+          sub.cancel();
+        });
+      } else if (action == 'watchAccelerometer') {
+        final settings = context.read<SettingsProvider>();
+        if (!settings.allowAccelerometer) {
+          _sendResponse(requestId, {'error': 'Accelerometer is disabled in settings.'});
+          return;
+        }
+        _accelerometerSubscription?.cancel();
+        _accelerometerSubscription = accelerometerEventStream().listen((event) {
+          final data = jsonEncode({'x': event.x, 'y': event.y, 'z': event.z});
+          _controller?.runJavaScript('if(window.onAccelerometerUpdate) window.onAccelerometerUpdate($data)');
+        });
+        _sendResponse(requestId, {'success': true});
+      } else if (action == 'stopAccelerometer') {
+        _accelerometerSubscription?.cancel();
+        _accelerometerSubscription = null;
+        _sendResponse(requestId, {'success': true});
       } else if (action == 'closeApp') {
         if (widget.onClose != null) {
           widget.onClose?.call();
@@ -342,6 +377,9 @@ class PreviewSheetState extends State<PreviewSheet> {
         promptAi: (prompt, systemInstruction) => window.MicroForge._sendRequest('promptAi', { prompt, systemInstruction }).then(r => r.text),
         pickFiles: (options = {}) => window.MicroForge._sendRequest('pickFiles', options).then(r => r.files),
         ${context.read<SettingsProvider>().allowGeolocation ? "getLocation: () => window.MicroForge._sendRequest('getLocation', {})," : ""}
+        ${context.read<SettingsProvider>().allowAccelerometer ? "getAccelerometer: () => window.MicroForge._sendRequest('getAccelerometer', {})," : ""}
+        ${context.read<SettingsProvider>().allowAccelerometer ? "watchAccelerometer: (callback) => { window.onAccelerometerUpdate = callback; return window.MicroForge._sendRequest('watchAccelerometer', {}); }," : ""}
+        ${context.read<SettingsProvider>().allowAccelerometer ? "stopAccelerometer: () => window.MicroForge._sendRequest('stopAccelerometer', {})," : ""}
         closeApp: () => {
           MicroForgeChannel.postMessage(JSON.stringify({
             action: 'closeApp'

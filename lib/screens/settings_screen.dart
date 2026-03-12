@@ -161,6 +161,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
+                _buildPreferenceItem(
+                  icon: Icons.vibration_outlined,
+                  title: 'Allow Accelerometer',
+                  subtitle: 'Enable motion and tilt data for your micro-apps',
+                  trailing: Switch(
+                    value: settingsProvider.allowAccelerometer,
+                    onChanged: (v) async {
+                      // Note: On most platforms, sensors_plus doesn't require explicit runtime permission
+                      // but some newer iOS/Android versions or Web might need it.
+                      // For now, we simply update the provider.
+                      settingsProvider.setAllowAccelerometer(v);
+                    },
+                  ),
+                ),
                 const SizedBox(height: 32),
                 _buildSectionHeader('Account'),
                 const SizedBox(height: 12),

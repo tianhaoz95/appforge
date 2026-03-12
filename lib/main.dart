@@ -124,6 +124,12 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
           'Location object: `{ latitude, longitude, altitude, accuracy, speed, heading, timestamp }`. ';
     }
 
+    if (settings.allowAccelerometer) {
+      systemPrompt += '- `window.MicroForge.getAccelerometer()`: Returns a Promise that resolves to an object `{ x, y, z }`. '
+          '- `window.MicroForge.watchAccelerometer(callback)`: Subscribes to accelerometer updates. The callback receives `{ x, y, z }`. '
+          '- `window.MicroForge.stopAccelerometer()`: Stops the accelerometer subscription. ';
+    }
+
     systemPrompt += '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
         '\nExample of Alpine.js AI integration: '
         'x-data="{ input: \'\', response: \'\', loading: false }" '
@@ -136,6 +142,12 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       systemPrompt += '\nExample of Alpine.js Geolocation: '
           'x-data="{ loc: null, loading: false }" '
           '@click="loading = true; loc = await window.MicroForge.getLocation(); loading = false"';
+    }
+
+    if (settings.allowAccelerometer) {
+      systemPrompt += '\nExample of Alpine.js Accelerometer: '
+          'x-data="{ x: 0, y: 0, z: 0 }" '
+          'x-init="window.MicroForge.watchAccelerometer(data => { x = data.x; y = data.y; z = data.z })"';
     }
 
     if (enhancementCode != null) {

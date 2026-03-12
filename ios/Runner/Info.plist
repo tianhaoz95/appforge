@@ -30,6 +30,8 @@
 	<string>MicroForge needs access to your location for forged apps that use geolocation features.</string>
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>MicroForge needs access to your location for forged apps that use geolocation features.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>MicroForge needs access to your motion sensors for forged apps that use accelerometer features.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>
