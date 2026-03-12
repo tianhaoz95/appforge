@@ -1,8 +1,10 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
+import 'package:feedback/feedback.dart';
 import '../repositories/micro_app_data_repository.dart';
 
 class PreviewSheet extends StatefulWidget {
@@ -11,6 +13,7 @@ class PreviewSheet extends StatefulWidget {
   final String appId;
   final VoidCallback? onClose;
   final VoidCallback? onEnhance;
+  final Function(String text, Uint8List screenshot)? onFeedback;
   final Function(String key, dynamic value)? onSaveData;
   
   static bool skipWebViewForTesting = false;
@@ -22,6 +25,7 @@ class PreviewSheet extends StatefulWidget {
     required this.appId,
     this.onClose,
     this.onEnhance,
+    this.onFeedback,
     this.onSaveData,
   });
 
@@ -298,6 +302,16 @@ class PreviewSheetState extends State<PreviewSheet> {
                                       icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
                                       label: const Text('Enhance', style: TextStyle(color: Colors.indigo)),
                                       onPressed: widget.onEnhance,
+                                    ),
+                                  if (widget.onFeedback != null)
+                                    TextButton.icon(
+                                      icon: const Icon(Icons.feedback_outlined, size: 18),
+                                      label: const Text('Feedback'),
+                                      onPressed: () {
+                                        BetterFeedback.of(context).show((feedback) {
+                                          widget.onFeedback?.call(feedback.text, feedback.screenshot);
+                                        });
+                                      },
                                     ),
                                   if (widget.designDoc != null && widget.designDoc!.isNotEmpty)
                                     TextButton.icon(

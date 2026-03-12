@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import 'package:appforge/widgets/preview_sheet.dart';
 import 'package:appforge/repositories/micro_app_data_repository.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:feedback/feedback.dart';
 
 class MockMicroAppDataRepository extends Mock implements MicroAppDataRepository {}
 
@@ -89,5 +90,36 @@ void main() {
 
     // Verify callback triggered
     expect(enhanceTapped, isTrue);
+  });
+
+  testWidgets('PreviewSheet shows Feedback button when onFeedback is provided', (WidgetTester tester) async {
+    final mockRepo = MockMicroAppDataRepository();
+    
+    await tester.pumpWidget(BetterFeedback(
+      child: MaterialApp(
+        home: Scaffold(
+          body: Provider<MicroAppDataRepository>.value(
+            value: mockRepo,
+            child: PreviewSheet(
+              code: '<h1>Hello</h1>',
+              appId: 'test-app',
+              onFeedback: (text, screenshot) {
+                // feedback triggered
+              },
+            ),
+          ),
+        ),
+      ),
+    ));
+
+    expect(find.text('Feedback'), findsOneWidget);
+    expect(find.byIcon(Icons.feedback_outlined), findsOneWidget);
+
+    // Tap the Feedback button
+    await tester.tap(find.text('Feedback'));
+    await tester.pumpAndSettle();
+
+    // BetterFeedback shows its UI, but it's hard to test the whole flow here.
+    // Just verifying it exists is a good start.
   });
 }

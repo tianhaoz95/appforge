@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'dart:typed_data';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
+import 'package:feedback/feedback.dart';
 import 'firebase_options.dart';
 import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
@@ -45,13 +47,15 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'MicroForge',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
-        useMaterial3: true,
+    return BetterFeedback(
+      child: MaterialApp(
+        title: 'MicroForge',
+        theme: ThemeData(
+          colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey),
+          useMaterial3: true,
+        ),
+        home: const MicroForgeHomePage(),
       ),
-      home: const MicroForgeHomePage(),
     );
   }
 }
@@ -258,6 +262,49 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text('Starting new conversation to enhance $name...')),
+    );
+  }
+
+  void _onFeedback(String text, Uint8List screenshot) {
+    if (_activeForgeCode == null) return;
+
+    final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
+    final codeToEnhance = _activeForgeCode!;
+    final designToEnhance = _activeDesignDoc;
+
+    setState(() {
+      _showPreview = false;
+      _currentConversationId = const Uuid().v4();
+      _conversationTitle = 'Feedback on $name';
+      _enhancementCode = codeToEnhance;
+      _enhancementDesign = designToEnhance;
+    });
+
+    _initializeAI(enhancementCode: codeToEnhance, enhancementDesign: designToEnhance);
+
+    // Give it a moment for AI to be ready with new provider
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_provider != null) {
+        setState(() {
+          _provider!.history = [
+            ChatMessage(
+              origin: MessageOrigin.user,
+              text: "I have some feedback for this app:\n\n$text",
+              attachments: [
+                ImageFileAttachment(
+                  name: 'feedback_screenshot.png',
+                  mimeType: 'image/png',
+                  bytes: screenshot,
+                ),
+              ],
+            ),
+          ];
+        });
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Starting new conversation with feedback for $name...')),
     );
   }
 
@@ -483,6 +530,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
             appId: _activeAppId ?? 'unknown',
             onClose: () => setState(() => _showPreview = false),
             onEnhance: _onEnhance,
+            onFeedback: _onFeedback,
             onSaveData: (key, value) {
               // Handled by the internal bridge now
             },
