@@ -135,16 +135,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (v) => settingsProvider.setSuggestExistingApps(v),
                   ),
                 ),
-                _buildPreferenceItem(
-                  icon: Icons.dark_mode_outlined,
-                  title: 'Dark Mode',
-                  trailing: Switch(value: false, onChanged: (v) {}),
-                ),
-                _buildPreferenceItem(
-                  icon: Icons.notifications_none,
-                  title: 'Notifications',
-                  trailing: Switch(value: true, onChanged: (v) {}),
-                ),
                 const SizedBox(height: 32),
                 _buildSectionHeader('Account'),
                 const SizedBox(height: 12),
