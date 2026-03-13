@@ -272,9 +272,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (_activeReleaseNotes != null && _activeReleaseNotes!.isNotEmpty) ...[
-            const Text(
+            Text(
               'Release Notes',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.indigo,
+                  ),
             ),
             const SizedBox(height: 8),
             Container(
@@ -286,7 +289,10 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
               ),
               child: Text(
                 _activeReleaseNotes!,
-                style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.black87),
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      fontStyle: FontStyle.italic,
+                      color: Colors.black87,
+                    ),
               ),
             ),
             const SizedBox(height: 24),
@@ -327,7 +333,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
         const Divider(height: 1),
         Expanded(
           child: _logs.isEmpty 
-            ? const Center(child: Text('No logs yet.', style: TextStyle(color: Colors.grey)))
+            ? Center(
+                child: Text(
+                  'No logs yet.', 
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                ),
+              )
             : ListView.builder(
                 padding: const EdgeInsets.all(16),
                 itemCount: _logs.length,
@@ -361,9 +372,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Frontend',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
           ),
           const SizedBox(height: 8),
           MarkdownBody(
@@ -373,9 +387,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Backend',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.indigo,
+                ),
           ),
           const SizedBox(height: 8),
           MarkdownBody(
@@ -777,7 +794,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                             items: _versions.map<DropdownMenuItem<String>>((Map<String, dynamic> v) {
                                               return DropdownMenuItem<String>(
                                                 value: v['version'],
-                                                child: Text('v${v['version']}'),
+                                                child: Text(
+                                                  'v${v['version']}',
+                                                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
                                               );
                                             }).toList(),
                                           ),
@@ -793,7 +815,10 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                         ),
                                         child: Text(
                                           'v$_currentVersion',
-                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.black87,
+                                          ),
                                         ),
                                       ),
                                     Flexible(
@@ -807,11 +832,35 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                               _tabController.animateTo(newValue);
                                             }
                                           },
-                                          items: const [
-                                            DropdownMenuItem(value: 0, child: Row(children: [Icon(Icons.apps, size: 18), SizedBox(width: 8), Text("App")])),
-                                            DropdownMenuItem(value: 1, child: Row(children: [Icon(Icons.description_outlined, size: 18), SizedBox(width: 8), Text("Design")])),
-                                            DropdownMenuItem(value: 2, child: Row(children: [Icon(Icons.code_outlined, size: 18), SizedBox(width: 8), Text("Code")])),
-                                            DropdownMenuItem(value: 3, child: Row(children: [Icon(Icons.terminal_outlined, size: 18), SizedBox(width: 8), Text("Logs")])),
+                                          items: [
+                                            DropdownMenuItem(
+                                                value: 0,
+                                                child: Row(children: [
+                                                  const Icon(Icons.apps, size: 18),
+                                                  const SizedBox(width: 8),
+                                                  Text("App", style: Theme.of(context).textTheme.bodyMedium)
+                                                ])),
+                                            DropdownMenuItem(
+                                                value: 1,
+                                                child: Row(children: [
+                                                  const Icon(Icons.description_outlined, size: 18),
+                                                  const SizedBox(width: 8),
+                                                  Text("Design", style: Theme.of(context).textTheme.bodyMedium)
+                                                ])),
+                                            DropdownMenuItem(
+                                                value: 2,
+                                                child: Row(children: [
+                                                  const Icon(Icons.code_outlined, size: 18),
+                                                  const SizedBox(width: 8),
+                                                  Text("Code", style: Theme.of(context).textTheme.bodyMedium)
+                                                ])),
+                                            DropdownMenuItem(
+                                                value: 3,
+                                                child: Row(children: [
+                                                  const Icon(Icons.terminal_outlined, size: 18),
+                                                  const SizedBox(width: 8),
+                                                  Text("Logs", style: Theme.of(context).textTheme.bodyMedium)
+                                                ])),
                                           ],
                                         ),
                                       ),
