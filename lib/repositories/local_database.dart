@@ -36,7 +36,7 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 6,
+      version: 7,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -90,6 +90,13 @@ class LocalDatabase {
         // Column might already exist
       }
     }
+    if (oldVersion < 7) {
+      try {
+        await db.execute('ALTER TABLE conversations ADD COLUMN enhancement_app_id TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -116,6 +123,7 @@ class LocalDatabase {
         enhancement_code TEXT,
         enhancement_backend TEXT,
         enhancement_design TEXT,
+        enhancement_app_id TEXT,
         updated_at INTEGER
       )
     ''');

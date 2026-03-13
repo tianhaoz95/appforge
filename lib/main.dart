@@ -92,6 +92,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String? _enhancementCode;
   String? _enhancementBackend;
   String? _enhancementDesign;
+  String? _enhancementAppId;
 
   @override
   void initState() {
@@ -103,6 +104,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     String? enhancementCode,
     String? enhancementBackend,
     String? enhancementDesign,
+    String? enhancementAppId,
     List<ChatMessage>? history,
   }) async {
     final settings = context.read<SettingsProvider>();
@@ -277,6 +279,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementCode = enhancementCode;
       _enhancementBackend = enhancementBackend;
       _enhancementDesign = enhancementDesign;
+      _enhancementAppId = enhancementAppId;
     });
   }
 
@@ -305,6 +308,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementCode: _enhancementCode,
       enhancementBackend: _enhancementBackend,
       enhancementDesign: _enhancementDesign,
+      enhancementAppId: _enhancementAppId,
     );
   }
 
@@ -318,6 +322,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementCode = null;
       _enhancementBackend = null;
       _enhancementDesign = null;
+      _enhancementAppId = null;
       if (_provider != null) {
         _provider!.history = [];
       }
@@ -332,6 +337,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final codeToEnhance = _activeForgeCode!;
     final backendToEnhance = _activeBackendCode;
     final designToEnhance = _activeDesignDoc;
+    final appIdToEnhance = _activeAppId;
 
     setState(() {
       _showPreview = false;
@@ -340,12 +346,14 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementCode = codeToEnhance;
       _enhancementBackend = backendToEnhance;
       _enhancementDesign = designToEnhance;
+      _enhancementAppId = appIdToEnhance;
     });
 
     _initializeAI(
       enhancementCode: codeToEnhance, 
       enhancementBackend: backendToEnhance,
       enhancementDesign: designToEnhance,
+      enhancementAppId: appIdToEnhance,
     );
 
     // Give it a moment for AI to be ready with new provider
@@ -417,6 +425,20 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
   }
 
+  String _bumpVersion(String? currentVersion) {
+    if (currentVersion == null || currentVersion.isEmpty) return '1.0.0';
+    final parts = currentVersion.split('.');
+    if (parts.length != 3) return '1.0.0';
+    try {
+      final major = int.parse(parts[0]);
+      final minor = int.parse(parts[1]);
+      final patch = int.parse(parts[2]);
+      return '$major.${minor + 1}.$patch';
+    } catch (e) {
+      return '1.0.0';
+    }
+  }
+
   void _onDeploy(String code, String? backendCode, String? name, String? designDoc) async {
     setState(() {
       _activeForgeCode = code;
@@ -430,14 +452,28 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       final repository = context.read<MicroAppRepository>();
       const userId = 'local-user';
 
+      String finalAppId = const Uuid().v4();
+      String finalName = name ?? 'Forged App';
+      String finalVersion = '1.0.0';
+
+      if (_enhancementAppId != null) {
+        final existingApp = await repository.getApp(_enhancementAppId!);
+        if (existingApp != null) {
+          finalAppId = _enhancementAppId!;
+          finalName = existingApp['name'] ?? finalName;
+          finalVersion = _bumpVersion(existingApp['version']);
+        }
+      }
+
       final appId = await repository.saveApp({
+        'appId': finalAppId,
         'ownerId': userId,
         'conversationId': _currentConversationId,
-        'name': name ?? 'Forged App',
+        'name': finalName,
         'html_blob': code,
         'backend_blob': backendCode,
         'design_doc': designDoc,
-        'version': '1.0.0',
+        'version': finalVersion,
         'icon': 'rocket',
       });
 
@@ -448,7 +484,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('${name ?? 'App'} forged and saved locally!'),
+            content: Text('$finalName (v$finalVersion) forged and saved locally!'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -490,12 +526,14 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _enhancementCode = data.enhancementCode;
         _enhancementBackend = data.enhancementBackend;
         _enhancementDesign = data.enhancementDesign;
+        _enhancementAppId = data.enhancementAppId;
       });
 
       _initializeAI(
         enhancementCode: data.enhancementCode,
         enhancementBackend: data.enhancementBackend,
         enhancementDesign: data.enhancementDesign,
+        enhancementAppId: data.enhancementAppId,
         history: data.history.toList(),
       );
     } else {
@@ -522,12 +560,14 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementCode = data.enhancementCode;
       _enhancementBackend = data.enhancementBackend;
       _enhancementDesign = data.enhancementDesign;
+      _enhancementAppId = data.enhancementAppId;
     });
 
     _initializeAI(
       enhancementCode: data.enhancementCode,
       enhancementBackend: data.enhancementBackend,
       enhancementDesign: data.enhancementDesign,
+      enhancementAppId: data.enhancementAppId,
       history: data.history.toList(),
     );
   }

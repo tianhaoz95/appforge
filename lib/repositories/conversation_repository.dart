@@ -8,12 +8,14 @@ class ConversationData {
   final String? enhancementCode;
   final String? enhancementBackend;
   final String? enhancementDesign;
+  final String? enhancementAppId;
 
   ConversationData({
     required this.history, 
     this.enhancementCode, 
     this.enhancementBackend,
     this.enhancementDesign,
+    this.enhancementAppId,
   });
 }
 
@@ -30,6 +32,7 @@ class ConversationRepository {
     String? enhancementCode,
     String? enhancementBackend,
     String? enhancementDesign,
+    String? enhancementAppId,
   }) async {
     final db = await _dbHelper.database;
     final messages = history.map((m) => m.toJson()).toList();
@@ -43,6 +46,7 @@ class ConversationRepository {
         'enhancement_code': enhancementCode,
         'enhancement_backend': enhancementBackend,
         'enhancement_design': enhancementDesign,
+        'enhancement_app_id': enhancementAppId,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -81,6 +85,7 @@ class ConversationRepository {
       enhancementCode: data['enhancement_code'] as String?,
       enhancementBackend: data['enhancement_backend'] as String?,
       enhancementDesign: data['enhancement_design'] as String?,
+      enhancementAppId: data['enhancement_app_id'] as String?,
     );
   }
 
