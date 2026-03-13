@@ -9,6 +9,7 @@ import 'package:firebase_ai/firebase_ai.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:async';
 import '../repositories/micro_app_data_repository.dart';
 import '../providers/settings_provider.dart';
@@ -44,6 +45,7 @@ class PreviewSheetState extends State<PreviewSheet> {
   final DraggableScrollableController _sheetController = DraggableScrollableController();
   double _currentExtent = 0.9;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
@@ -287,6 +289,38 @@ class PreviewSheetState extends State<PreviewSheet> {
         _accelerometerSubscription?.cancel();
         _accelerometerSubscription = null;
         _sendResponse(requestId, {'success': true});
+      } else if (action == 'showNotification') {
+        final settings = context.read<SettingsProvider>();
+        if (!settings.allowNotifications) {
+          _sendResponse(requestId, {'error': 'Notifications are disabled in settings.'});
+          return;
+        }
+
+        final title = data['title'] ?? 'MicroForge';
+        final body = data['body'] ?? '';
+        final payload = data['payload']?.toString();
+
+        const androidDetails = AndroidNotificationDetails(
+          'micro_app_channel',
+          'Micro App Notifications',
+          channelDescription: 'Notifications from forged micro-apps',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
+        const iosDetails = DarwinNotificationDetails();
+        const notificationDetails = NotificationDetails(
+          android: androidDetails,
+          iOS: iosDetails,
+        );
+
+        await _notificationsPlugin.show(
+          id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+          title: title,
+          body: body,
+          notificationDetails: notificationDetails,
+          payload: payload,
+        );
+        _sendResponse(requestId, {'success': true});
       } else if (action == 'closeApp') {
         if (widget.onClose != null) {
           widget.onClose?.call();
@@ -380,6 +414,7 @@ class PreviewSheetState extends State<PreviewSheet> {
         ${context.read<SettingsProvider>().allowAccelerometer ? "getAccelerometer: () => window.MicroForge._sendRequest('getAccelerometer', {})," : ""}
         ${context.read<SettingsProvider>().allowAccelerometer ? "watchAccelerometer: (callback) => { window.onAccelerometerUpdate = callback; return window.MicroForge._sendRequest('watchAccelerometer', {}); }," : ""}
         ${context.read<SettingsProvider>().allowAccelerometer ? "stopAccelerometer: () => window.MicroForge._sendRequest('stopAccelerometer', {})," : ""}
+        ${context.read<SettingsProvider>().allowNotifications ? "showNotification: (title, body, payload) => window.MicroForge._sendRequest('showNotification', { title, body, payload })," : ""}
         closeApp: () => {
           MicroForgeChannel.postMessage(JSON.stringify({
             action: 'closeApp'

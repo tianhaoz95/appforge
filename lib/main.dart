@@ -7,6 +7,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:feedback/feedback.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'firebase_options.dart';
 import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
@@ -23,6 +24,16 @@ import 'screens/settings_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+  const androidInitializationSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const iosInitializationSettings = DarwinInitializationSettings();
+  const initializationSettings = InitializationSettings(
+    android: androidInitializationSettings,
+    iOS: iosInitializationSettings,
+  );
+  await flutterLocalNotificationsPlugin.initialize(settings: initializationSettings);
+
   // Keep Firebase for AI if needed, but we could also move it later
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   
@@ -130,6 +141,11 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
           '- `window.MicroForge.stopAccelerometer()`: Stops the accelerometer subscription. ';
     }
 
+    if (settings.allowNotifications) {
+      systemPrompt += '- `window.MicroForge.showNotification(title, body, payload)`: Shows a local notification. Returns a Promise. '
+          'Payload is an optional string. ';
+    }
+
     systemPrompt += '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
         '\nExample of Alpine.js AI integration: '
         'x-data="{ input: \'\', response: \'\', loading: false }" '
@@ -148,6 +164,12 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       systemPrompt += '\nExample of Alpine.js Accelerometer: '
           'x-data="{ x: 0, y: 0, z: 0 }" '
           'x-init="window.MicroForge.watchAccelerometer(data => { x = data.x; y = data.y; z = data.z })"';
+    }
+
+    if (settings.allowNotifications) {
+      systemPrompt += '\nExample of Alpine.js Notifications: '
+          'x-data="{ title: \'\', body: \'\' }" '
+          '@submit.prevent="await window.MicroForge.showNotification(title, body, \'my-payload\')"';
     }
 
     if (enhancementCode != null) {

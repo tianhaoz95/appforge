@@ -4,10 +4,12 @@ class SettingsProvider with ChangeNotifier {
   bool _suggestExistingApps = true;
   bool _allowGeolocation = false;
   bool _allowAccelerometer = false;
+  bool _allowNotifications = false;
 
   bool get suggestExistingApps => _suggestExistingApps;
   bool get allowGeolocation => _allowGeolocation;
   bool get allowAccelerometer => _allowAccelerometer;
+  bool get allowNotifications => _allowNotifications;
 
   void setSuggestExistingApps(bool value) {
     if (_suggestExistingApps != value) {
@@ -26,6 +28,13 @@ class SettingsProvider with ChangeNotifier {
   void setAllowAccelerometer(bool value) {
     if (_allowAccelerometer != value) {
       _allowAccelerometer = value;
+      notifyListeners();
+    }
+  }
+
+  void setAllowNotifications(bool value) {
+    if (_allowNotifications != value) {
+      _allowNotifications = value;
       notifyListeners();
     }
   }

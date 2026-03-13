@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 
@@ -14,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _nameController = TextEditingController();
   bool _isLoading = false;
+  final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
@@ -21,6 +24,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final user = context.read<AuthProvider>().user;
     if (user != null) {
       _nameController.text = user.displayName ?? '';
+    }
+  }
+
+  Future<void> _requestNotificationPermissions() async {
+    if (Platform.isAndroid) {
+      await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+    } else if (Platform.isIOS) {
+      await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>()
+          ?.requestPermissions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
     }
   }
 
@@ -175,6 +194,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
+                _buildPreferenceItem(
+                  icon: Icons.notifications_active_outlined,
+                  title: 'Allow Notifications',
+                  subtitle: 'Enable local notifications for your micro-apps',
+                  trailing: Switch(
+                    value: settingsProvider.allowNotifications,
+                    onChanged: (v) async {
+                      if (v) {
+                        await _requestNotificationPermissions();
+                      }
+                      settingsProvider.setAllowNotifications(v);
+                    },
+                  ),
+                ),
                 const SizedBox(height: 32),
                 _buildSectionHeader('Account'),
                 const SizedBox(height: 12),
@@ -315,7 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       children: [
         const Text(
-          'MicroForge v1.1.2',
+          'MicroForge v1.2.24',
           style: TextStyle(color: Colors.grey, fontSize: 12),
         ),
         const SizedBox(height: 4),
