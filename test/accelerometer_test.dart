@@ -4,11 +4,16 @@ import 'package:provider/provider.dart';
 import 'package:appforge/providers/settings_provider.dart';
 import 'package:appforge/widgets/preview_sheet.dart';
 import 'package:appforge/repositories/micro_app_data_repository.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockMicroAppDataRepository extends Mock implements MicroAppDataRepository {}
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   test('SettingsProvider allowAccelerometer defaults to false', () {
     final provider = SettingsProvider();
     expect(provider.allowAccelerometer, isFalse);

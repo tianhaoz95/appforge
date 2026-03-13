@@ -38,11 +38,13 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   
   final dbHelper = LocalDatabase();
+  final settingsProvider = SettingsProvider();
+  await settingsProvider.loadSettings();
   
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider.value(value: settingsProvider),
         Provider(create: (_) => MicroAppRepository(dbHelper: dbHelper)),
         Provider(create: (_) => MicroAppDataRepository(dbHelper: dbHelper)),
         Provider(create: (_) => ConversationRepository(dbHelper: dbHelper)),
