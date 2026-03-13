@@ -285,11 +285,6 @@ class PreviewSheetState extends State<PreviewSheet> {
             const Divider(),
             const SizedBox(height: 16),
           ],
-          const Text(
-            'Design Documentation',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 12),
           MarkdownBody(
             data: _activeDesignDoc ?? 'No design documentation provided.',
             styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(

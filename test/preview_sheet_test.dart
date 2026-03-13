@@ -67,8 +67,7 @@ void main() {
     await tester.tap(find.byIcon(Icons.description_outlined));
     await tester.pumpAndSettle();
 
-    // Verify modal is shown
-    expect(find.text('Design Document'), findsOneWidget);
+    // Verify modal is shown (now without title)
     expect(find.text('My Design'), findsOneWidget);
     expect(find.text('This is a test design.'), findsOneWidget);
   });
@@ -97,11 +96,11 @@ void main() {
       ),
     ));
 
-    expect(find.text('Enhance'), findsOneWidget);
+    expect(find.byTooltip('Enhance'), findsOneWidget);
     expect(find.byIcon(Icons.auto_awesome), findsOneWidget);
 
     // Tap the Enhance button
-    await tester.tap(find.text('Enhance'));
+    await tester.tap(find.byTooltip('Enhance'));
     await tester.pump();
 
     // Verify callback triggered
@@ -133,11 +132,11 @@ void main() {
       ),
     ));
 
-    expect(find.text('Feedback'), findsOneWidget);
+    expect(find.byTooltip('Feedback'), findsOneWidget);
     expect(find.byIcon(Icons.feedback_outlined), findsOneWidget);
 
     // Tap the Feedback button
-    await tester.tap(find.text('Feedback'));
+    await tester.tap(find.byTooltip('Feedback'));
     await tester.pumpAndSettle();
 
     // BetterFeedback shows its UI, but it's hard to test the whole flow here.
