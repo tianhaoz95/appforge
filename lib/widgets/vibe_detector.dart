@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'mini_app_preview.dart';
 
 class VibeDetector extends StatelessWidget {
   final String message;
@@ -51,9 +52,44 @@ class VibeDetector extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          if (cleanMessage.isNotEmpty) MarkdownBody(data: cleanMessage),
-          const SizedBox(height: 8),
-          if (forgeMatch != null)
+          if (forgeMatch != null) ...[
+            Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: Colors.orangeAccent, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  name != null ? 'Preview: $name' : 'App Preview',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            MiniAppPreview(code: forgeCode ?? ''),
+            const SizedBox(height: 8),
+            Theme(
+              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+              child: ExpansionTile(
+                title: const Text('Details & Description', style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                tilePadding: EdgeInsets.zero,
+                children: [
+                  if (cleanMessage.isNotEmpty) MarkdownBody(data: cleanMessage),
+                  if (designDoc != null) ...[
+                    const SizedBox(height: 12),
+                    const Text('Design Document:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    MarkdownBody(data: designDoc),
+                  ],
+                  const SizedBox(height: 12),
+                  const Text('Source Code:', style: TextStyle(fontWeight: FontWeight.bold)),
+                  MarkdownBody(data: '```html\n${forgeCode ?? ''}\n```'),
+                  if (backendCode != null && backendCode.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Text('Backend Code:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    MarkdownBody(data: '```javascript\n$backendCode\n```'),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
             ElevatedButton.icon(
               onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, name, designDoc, version, releaseNotes),
               icon: const Icon(Icons.rocket_launch),
@@ -63,6 +99,9 @@ class VibeDetector extends StatelessWidget {
                 foregroundColor: Colors.black,
               ),
             ),
+          ] else if (cleanMessage.isNotEmpty) ...[
+            MarkdownBody(data: cleanMessage),
+          ],
           if (suggestAppMatches.isNotEmpty)
             ...suggestAppMatches.map((match) {
               final appId = match.group(1);

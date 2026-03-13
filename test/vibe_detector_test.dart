@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:appforge/widgets/vibe_detector.dart';
+import 'package:appforge/widgets/mini_app_preview.dart';
 
 void main() {
+  setUp(() {
+    MiniAppPreview.skipWebViewForTesting = true;
+  });
+
   testWidgets('VibeDetector shows deploy button when <forge> tags present', (WidgetTester tester) async {
     const message = 'Hello! <name>My App</name> <forge>alert("Hello")</forge> This is your app.';
     
@@ -13,7 +18,15 @@ void main() {
     ));
 
     expect(find.text('Deploy My App'), findsOneWidget);
-    // Markdown might split texts, so we check for fragments or use find.byType
+    expect(find.text('Preview: My App'), findsOneWidget);
+    
+    // Original message is collapsed by default
+    expect(find.textContaining('Hello!'), findsNothing);
+    
+    // Open the expansion tile
+    await tester.tap(find.text('Details & Description'));
+    await tester.pumpAndSettle();
+    
     expect(find.textContaining('Hello!'), findsOneWidget);
     expect(find.textContaining('This is your app.'), findsOneWidget);
   });
