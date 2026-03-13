@@ -141,6 +141,9 @@ class PreviewSheetState extends State<PreviewSheet> {
     final primaryModel = FirebaseAI.googleAI().generativeModel(
       model: 'gemini-3.1-flash-lite-preview',
       systemInstruction: systemInstruction != null ? Content.system(systemInstruction) : null,
+      tools: [
+        Tool.urlContext(),
+      ],
     );
 
     try {
@@ -153,6 +156,9 @@ class PreviewSheetState extends State<PreviewSheet> {
         final secondaryModel = FirebaseAI.googleAI().generativeModel(
           model: 'gemini-2.0-flash',
           systemInstruction: systemInstruction != null ? Content.system(systemInstruction) : null,
+          tools: [
+            Tool.urlContext(),
+          ],
         );
         final response = await secondaryModel.generateContent([Content.text(prompt)]);
         return response.text ?? 'No response';

@@ -70,9 +70,15 @@ void main() {
 
     final primaryModel = FirebaseAI.googleAI().generativeModel(
       model: 'gemini-3.1-flash-lite-preview',
+      tools: [
+        Tool.urlContext(),
+      ],
     );
     final secondaryModel = FirebaseAI.googleAI().generativeModel(
       model: 'gemini-2.0-flash',
+      tools: [
+        Tool.urlContext(),
+      ],
     );
 
     final fallbackProvider = FallbackLlmProvider(

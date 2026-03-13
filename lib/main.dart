@@ -117,6 +117,9 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         '\n\nDo not use other markdown blocks for the micro-app code itself. '
         'Use Tailwind CSS for styling and Alpine.js for reactivity. '
         'The micro-apps should be self-contained and visually appealing. '
+        '\n\nNEW CAPABILITY: URL Context. '
+        'You can now access and analyze content from URLs provided in the prompt. '
+        'If the user provides a link to a website, documentation, or an image, you can use that information to better fulfill their request. '
         '\n\nNEW CAPABILITY: MicroForge Bridge API. '
         'You can use the `window.MicroForge` bridge to persist data locally and call AI. '
         'Methods: '
@@ -214,11 +217,17 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final primaryModel = FirebaseAI.googleAI().generativeModel(
       model: 'gemini-3.1-flash-lite-preview',
       systemInstruction: Content.system(systemPrompt),
+      tools: [
+        Tool.urlContext(),
+      ],
     );
 
     final secondaryModel = FirebaseAI.googleAI().generativeModel(
       model: 'gemini-2.0-flash',
       systemInstruction: Content.system(systemPrompt),
+      tools: [
+        Tool.urlContext(),
+      ],
     );
 
     final provider = FallbackLlmProvider(
