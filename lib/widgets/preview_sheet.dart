@@ -46,13 +46,14 @@ class PreviewSheet extends StatefulWidget {
   State<PreviewSheet> createState() => PreviewSheetState();
 }
 
-class PreviewSheetState extends State<PreviewSheet> {
+class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderStateMixin {
   WebViewController? _controller;
   final DraggableScrollableController _sheetController = DraggableScrollableController();
   double _currentExtent = 0.9;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
   
+  late TabController _tabController;
   JavascriptRuntime? _jsRuntime;
   final List<String> _logs = [];
 
@@ -67,6 +68,12 @@ class PreviewSheetState extends State<PreviewSheet> {
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    _tabController.addListener(() {
+      if (!_tabController.indexIsChanging) {
+        setState(() {}); // Rebuild dropdown when swipe completes
+      }
+    });
     _activeCode = widget.code;
     _activeBackendCode = widget.backendCode;
     _activeDesignDoc = widget.designDoc;
@@ -204,6 +211,7 @@ class PreviewSheetState extends State<PreviewSheet> {
     _sheetController.dispose();
     _accelerometerSubscription?.cancel();
     _jsRuntime?.dispose();
+    _tabController.dispose();
     super.dispose();
   }
 
@@ -707,170 +715,175 @@ class PreviewSheetState extends State<PreviewSheet> {
         snapSizes: const [0.0, 0.9, 1.0],
         builder: (context, scrollController) {
           final isFullScreen = _currentExtent > 0.95;
-          return DefaultTabController(
-            length: 4,
-            child: Container(
-              decoration: BoxDecoration(
+          return Container(
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: isFullScreen 
+                  ? null 
+                  : const BorderRadius.vertical(top: Radius.circular(16)),
+              boxShadow: [
+                BoxShadow(blurRadius: 10, color: Colors.black26, offset: const Offset(0, -2)),
+              ],
+            ),
+            child: SafeArea(
+              top: isFullScreen,
+              bottom: false,
+              child: Material(
                 color: Colors.white,
-                borderRadius: isFullScreen 
-                    ? null 
-                    : const BorderRadius.vertical(top: Radius.circular(16)),
-                boxShadow: [
-                  BoxShadow(blurRadius: 10, color: Colors.black26, offset: const Offset(0, -2)),
-                ],
-              ),
-              child: SafeArea(
-                top: isFullScreen,
-                bottom: false,
                 child: Column(
                   children: [
                     // Top handle and header are wrapped in SingleChildScrollView to make them draggable
-                    SingleChildScrollView(
-                      controller: scrollController,
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Column(
-                        children: [
-                          // Grab handle
-                          Container(
-                            width: 40,
-                            height: 4,
-                            margin: const EdgeInsets.symmetric(vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.grey[300],
-                              borderRadius: BorderRadius.circular(2),
-                            ),
+                  SingleChildScrollView(
+                    controller: scrollController,
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      children: [
+                        // Grab handle
+                        Container(
+                          width: 40,
+                          height: 4,
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[300],
+                            borderRadius: BorderRadius.circular(2),
                           ),
-                          Container(
-                            height: 44,
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Row(
-                                    children: [
-                                      if (_versions.length > 1)
-                                        Container(
-                                          margin: const EdgeInsets.only(right: 8),
-                                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[100],
-                                            borderRadius: BorderRadius.circular(8),
-                                            border: Border.all(color: Colors.grey[300]!),
-                                          ),
-                                          child: DropdownButtonHideUnderline(
-                                            child: DropdownButton<String>(
-                                              value: _currentVersion,
-                                              icon: const Icon(Icons.history, size: 14),
-                                              style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.bold),
-                                              onChanged: (String? newValue) {
-                                                if (newValue != null) _switchVersion(newValue);
-                                              },
-                                              items: _versions.map<DropdownMenuItem<String>>((Map<String, dynamic> v) {
-                                                return DropdownMenuItem<String>(
-                                                  value: v['version'],
-                                                  child: Text('v${v['version']}'),
-                                                );
-                                              }).toList(),
-                                            ),
-                                          ),
-                                        )
-                                      else if (_currentVersion != null)
-                                        Container(
-                                          margin: const EdgeInsets.only(right: 8),
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: Colors.grey[100],
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            'v$_currentVersion',
-                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                        ),
+                        Container(
+                          height: 44,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Expanded(
+                                child: Row(
+                                  children: [
+                                    if (_versions.length > 1)
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.symmetric(horizontal: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(8),
+                                          border: Border.all(color: Colors.grey[300]!),
+                                        ),
+                                        child: DropdownButtonHideUnderline(
+                                          child: DropdownButton<String>(
+                                            value: _currentVersion,
+                                            icon: const Icon(Icons.history, size: 14),
+                                            style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.bold),
+                                            onChanged: (String? newValue) {
+                                              if (newValue != null) _switchVersion(newValue);
+                                            },
+                                            items: _versions.map<DropdownMenuItem<String>>((Map<String, dynamic> v) {
+                                              return DropdownMenuItem<String>(
+                                                value: v['version'],
+                                                child: Text('v${v['version']}'),
+                                              );
+                                            }).toList(),
                                           ),
                                         ),
-                                      const Flexible(
-                                        child: TabBar(
-                                          isScrollable: true,
-                                          labelPadding: EdgeInsets.symmetric(horizontal: 8),
-                                          indicatorSize: TabBarIndicatorSize.label,
-                                          indicatorColor: Colors.indigo,
-                                          labelColor: Colors.indigo,
-                                          unselectedLabelColor: Colors.grey,
-                                          tabs: [
-                                            Tooltip(message: 'App', child: Tab(icon: Icon(Icons.apps, size: 20))),
-                                            Tooltip(message: 'Design', child: Tab(icon: Icon(Icons.description_outlined, size: 20))),
-                                            Tooltip(message: 'Code', child: Tab(icon: Icon(Icons.code_outlined, size: 20))),
-                                            Tooltip(message: 'Logs', child: Tab(icon: Icon(Icons.terminal_outlined, size: 20))),
+                                      )
+                                    else if (_currentVersion != null)
+                                      Container(
+                                        margin: const EdgeInsets.only(right: 8),
+                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey[100],
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
+                                        child: Text(
+                                          'v$_currentVersion',
+                                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                                        ),
+                                      ),
+                                    Flexible(
+                                      child: DropdownButtonHideUnderline(
+                                        child: DropdownButton<int>(
+                                          value: _tabController.index,
+                                          isDense: true,
+                                          style: const TextStyle(fontSize: 14, color: Colors.indigo, fontWeight: FontWeight.bold),
+                                          onChanged: (int? newValue) {
+                                            if (newValue != null) {
+                                              _tabController.animateTo(newValue);
+                                            }
+                                          },
+                                          items: const [
+                                            DropdownMenuItem(value: 0, child: Row(children: [Icon(Icons.apps, size: 18), SizedBox(width: 8), Text("App")])),
+                                            DropdownMenuItem(value: 1, child: Row(children: [Icon(Icons.description_outlined, size: 18), SizedBox(width: 8), Text("Design")])),
+                                            DropdownMenuItem(value: 2, child: Row(children: [Icon(Icons.code_outlined, size: 18), SizedBox(width: 8), Text("Code")])),
+                                            DropdownMenuItem(value: 3, child: Row(children: [Icon(Icons.terminal_outlined, size: 18), SizedBox(width: 8), Text("Logs")])),
                                           ],
                                         ),
                                       ),
-                                    ],
-                                  ),
-                                ),
-                                Row(
-                                  children: [
-                                    if (widget.onEnhance != null)
-                                      IconButton(
-                                        icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
-                                        onPressed: widget.onEnhance,
-                                        tooltip: 'Enhance',
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    const SizedBox(width: 8),
-                                    if (widget.onFeedback != null)
-                                      IconButton(
-                                        icon: const Icon(Icons.feedback_outlined, size: 18),
-                                        onPressed: () {
-                                          BetterFeedback.of(context).show((feedback) {
-                                            widget.onFeedback?.call(feedback.text, feedback.screenshot);
-                                          });
-                                        },
-                                        tooltip: 'Feedback',
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    const SizedBox(width: 8),
-                                    if (isFullScreen)
-                                      IconButton(
-                                        icon: const Icon(Icons.fullscreen_exit, size: 20),
-                                        onPressed: _toggleFullScreen,
-                                        padding: EdgeInsets.zero,
-                                        constraints: const BoxConstraints(),
-                                      ),
-                                    IconButton(
-                                      icon: const Icon(Icons.close, size: 20),
-                                      onPressed: widget.onClose ?? () => Navigator.pop(context),
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
                                     ),
                                   ],
                                 ),
-                              ],
-                            ),
+                              ),
+                              Row(
+                                children: [
+                                  if (widget.onEnhance != null)
+                                    IconButton(
+                                      icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
+                                      onPressed: widget.onEnhance,
+                                      tooltip: 'Enhance',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  const SizedBox(width: 8),
+                                  if (widget.onFeedback != null)
+                                    IconButton(
+                                      icon: const Icon(Icons.feedback_outlined, size: 18),
+                                      onPressed: () {
+                                        BetterFeedback.of(context).show((feedback) {
+                                          widget.onFeedback?.call(feedback.text, feedback.screenshot);
+                                        });
+                                      },
+                                      tooltip: 'Feedback',
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  const SizedBox(width: 8),
+                                  if (isFullScreen)
+                                    IconButton(
+                                      icon: const Icon(Icons.fullscreen_exit, size: 20),
+                                      onPressed: _toggleFullScreen,
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 20),
+                                    onPressed: widget.onClose ?? () => Navigator.pop(context),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                ],
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const Divider(height: 1),
-                    Expanded(
-                      child: TabBarView(
-                        physics: const BouncingScrollPhysics(),
-                        children: [
-                          _buildAppView(),
-                          _buildDesignLogView(),
-                          _buildMergedCodeView(),
-                          _buildLogsView(),
-                        ],
-                      ),
+                  ),
+                  const Divider(height: 1),
+                  Expanded(
+                    child: TabBarView(
+                      controller: _tabController,
+                      physics: const BouncingScrollPhysics(),
+                      children: [
+                        _buildAppView(),
+                        _buildDesignLogView(),
+                        _buildMergedCodeView(),
+                        _buildLogsView(),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
-          );
-        },
-      ),
-    );
-  }
+          ),
+        );
+      },
+    ),
+  );
+}
 }

@@ -61,13 +61,17 @@ void main() {
       ),
     ));
 
-    expect(find.byIcon(Icons.description_outlined), findsOneWidget);
+    expect(find.byType(DropdownButton<int>), findsOneWidget);
 
-    // Tap the Design button
-    await tester.tap(find.byIcon(Icons.description_outlined));
+    // Tap the dropdown to open it
+    await tester.tap(find.byType(DropdownButton<int>));
     await tester.pumpAndSettle();
 
-    // Verify modal is shown (now without title)
+    // Tap the Design item in the dropdown
+    await tester.tap(find.text('Design').last);
+    await tester.pumpAndSettle();
+
+    // Verify content is shown
     expect(find.text('My Design'), findsOneWidget);
     expect(find.text('This is a test design.'), findsOneWidget);
   });
