@@ -208,6 +208,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
+                _buildPreferenceItem(
+                  icon: Icons.storage_outlined,
+                  title: 'Allow Backend Database',
+                  subtitle: 'Enable database access for the backend engine',
+                  trailing: Switch(
+                    value: settingsProvider.allowBackendDatabase,
+                    onChanged: (v) => settingsProvider.setAllowBackendDatabase(v),
+                  ),
+                ),
                 const SizedBox(height: 32),
                 _buildSectionHeader('Account'),
                 const SizedBox(height: 12),
@@ -348,7 +357,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Column(
       children: [
         const Text(
-          'MicroForge v1.2.24',
+          'MicroForge v1.2.32',
           style: TextStyle(color: Colors.grey, fontSize: 12),
         ),
         const SizedBox(height: 4),

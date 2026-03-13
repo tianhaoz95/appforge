@@ -19,6 +19,7 @@ class MicroAppRepository {
       'conversationId': appData['conversationId'],
       'name': appData['name'],
       'html_blob': appData['html_blob'],
+      'backend_blob': appData['backend_blob'],
       'design_doc': appData['design_doc'],
       'version': appData['version'],
       'icon': appData['icon'],

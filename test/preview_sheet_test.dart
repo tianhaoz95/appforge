@@ -49,11 +49,10 @@ void main() {
       ),
     ));
 
-    expect(find.text('Design'), findsOneWidget);
     expect(find.byIcon(Icons.description_outlined), findsOneWidget);
 
     // Tap the Design button
-    await tester.tap(find.text('Design'));
+    await tester.tap(find.byIcon(Icons.description_outlined));
     await tester.pumpAndSettle();
 
     // Verify modal is shown

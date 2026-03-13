@@ -81,12 +81,14 @@ class MicroForgeHomePage extends StatefulWidget {
 class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
   LlmProvider? _provider;
   String? _activeForgeCode;
+  String? _activeBackendCode;
   String? _activeDesignDoc;
   String? _activeAppId;
   bool _showPreview = false;
   String _currentConversationId = const Uuid().v4();
   String _conversationTitle = 'New Conversation';
   String? _enhancementCode;
+  String? _enhancementBackend;
   String? _enhancementDesign;
 
   @override
@@ -97,6 +99,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
   void _initializeAI({
     String? enhancementCode,
+    String? enhancementBackend,
     String? enhancementDesign,
     List<ChatMessage>? history,
   }) async {
@@ -117,6 +120,30 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         '\n\nDo not use other markdown blocks for the micro-app code itself. '
         'Use Tailwind CSS for styling and Alpine.js for reactivity. '
         'The micro-apps should be self-contained and visually appealing. '
+        '\n\nNEW CAPABILITY: Vanilla JavaScript Backend. '
+        'You can now write a separate backend using vanilla JavaScript, which will be executed in a dedicated engine (flutter_js). '
+        'If the app requires heavy processing, data manipulation, or complex logic, you SHOULD delegate it to the backend. '
+        'The backend code MUST be wrapped in <backend>...</backend> tags. '
+        'The backend should define a single entry point function named `handleRequest(jsonInput)`. '
+        'The `jsonInput` will always contain an `api` string and a `payload` object. '
+        'The function MUST return a JSON object with `status` (e.g., "success", "error") and `payload`. '
+        'Example backend: '
+        '<backend>'
+        'function handleRequest(input) { '
+        '  const { api, payload } = input; '
+        '  switch(api) { '
+        '    case "calculate": return { status: "success", payload: { result: payload.a + payload.b } }; '
+        '    default: return { status: "error", payload: "Unknown API" }; '
+        '  } '
+        '}'
+        '</backend>'
+        '\n\nFrontend (Alpine.js) can call the backend using `window.MicroForge.callBackend(api, payload)`. '
+        'Example: `const response = await window.MicroForge.callBackend("calculate", { a: 1, b: 2 });` '
+        '\n\nBACKEND CAPABILITIES: '
+        '- `MicroForge.saveData(key, value)`: Returns a Promise. '
+        '- `MicroForge.getData(key)`: Returns a Promise that resolves to the value. '
+        '- `MicroForge.showNotification(title, body, payload)`: Shows a local notification. '
+        '\nNote: Backend database and notification access are controlled by user toggles. '
         '\n\nNEW CAPABILITY: URL Context. '
         'You can now access and analyze content from URLs provided in the prompt. '
         'If the user provides a link to a website, documentation, or an image, you can use that information to better fulfill their request. '
@@ -131,7 +158,8 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'Use `promptAi` to build AI-powered features within your micro-apps. '
         '- `window.MicroForge.pickFiles(options)`: Returns a Promise that resolves to a list of file objects. '
         'Options: `{ multiple: true/false, type: "any"/"image"/"video"/"audio"/"media"/"custom", extensions: ["pdf", "doc"] }`. '
-        'File object: `{ name, size, extension, bytes (base64) }`. ';
+        'File object: `{ name, size, extension, bytes (base64) }`. '
+        '- `window.MicroForge.callBackend(api, payload)`: Calls the backend JS engine. Returns a Promise that resolves to the backend response object `{ status, payload }`. ';
 
     if (settings.allowGeolocation) {
       systemPrompt += '- `window.MicroForge.getLocation()`: Returns a Promise that resolves to a location object. '
@@ -178,7 +206,8 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     if (enhancementCode != null) {
       systemPrompt += '\n\nCONTEXT FOR ENHANCEMENT:\n'
           'You are currently enhancing an existing micro-app.\n'
-          'Current Implementation:\n<forge>$enhancementCode</forge>\n\n'
+          'Current Implementation:\n<forge>$enhancementCode</forge>\n'
+          'Current Backend:\n<backend>${enhancementBackend ?? 'No backend provided.'}</backend>\n'
           'Design Document:\n<design>${enhancementDesign ?? 'No design document provided.'}</design>';
     }
 
@@ -244,6 +273,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     setState(() {
       _provider = provider;
       _enhancementCode = enhancementCode;
+      _enhancementBackend = enhancementBackend;
       _enhancementDesign = enhancementDesign;
     });
   }
@@ -271,6 +301,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _conversationTitle,
       history.toList(),
       enhancementCode: _enhancementCode,
+      enhancementBackend: _enhancementBackend,
       enhancementDesign: _enhancementDesign,
     );
   }
@@ -278,10 +309,12 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
   void _createNewForge() {
     setState(() {
       _activeForgeCode = null;
+      _activeBackendCode = null;
       _showPreview = false;
       _currentConversationId = const Uuid().v4();
       _conversationTitle = 'New Conversation';
       _enhancementCode = null;
+      _enhancementBackend = null;
       _enhancementDesign = null;
       if (_provider != null) {
         _provider!.history = [];
@@ -295,6 +328,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
     final codeToEnhance = _activeForgeCode!;
+    final backendToEnhance = _activeBackendCode;
     final designToEnhance = _activeDesignDoc;
 
     setState(() {
@@ -302,10 +336,15 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _currentConversationId = const Uuid().v4();
       _conversationTitle = 'Enhance $name';
       _enhancementCode = codeToEnhance;
+      _enhancementBackend = backendToEnhance;
       _enhancementDesign = designToEnhance;
     });
 
-    _initializeAI(enhancementCode: codeToEnhance, enhancementDesign: designToEnhance);
+    _initializeAI(
+      enhancementCode: codeToEnhance, 
+      enhancementBackend: backendToEnhance,
+      enhancementDesign: designToEnhance,
+    );
 
     // Give it a moment for AI to be ready with new provider
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -332,6 +371,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
     final codeToEnhance = _activeForgeCode!;
+    final backendToEnhance = _activeBackendCode;
     final designToEnhance = _activeDesignDoc;
 
     setState(() {
@@ -339,10 +379,15 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _currentConversationId = const Uuid().v4();
       _conversationTitle = 'Feedback on $name';
       _enhancementCode = codeToEnhance;
+      _enhancementBackend = backendToEnhance;
       _enhancementDesign = designToEnhance;
     });
 
-    _initializeAI(enhancementCode: codeToEnhance, enhancementDesign: designToEnhance);
+    _initializeAI(
+      enhancementCode: codeToEnhance, 
+      enhancementBackend: backendToEnhance,
+      enhancementDesign: designToEnhance,
+    );
 
     // Give it a moment for AI to be ready with new provider
     Future.delayed(const Duration(milliseconds: 100), () {
@@ -370,9 +415,10 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
   }
 
-  void _onDeploy(String code, String? name, String? designDoc) async {
+  void _onDeploy(String code, String? backendCode, String? name, String? designDoc) async {
     setState(() {
       _activeForgeCode = code;
+      _activeBackendCode = backendCode;
       _activeDesignDoc = designDoc;
       _showPreview = true;
     });
@@ -387,6 +433,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'conversationId': _currentConversationId,
         'name': name ?? 'Forged App',
         'html_blob': code,
+        'backend_blob': backendCode,
         'design_doc': designDoc,
         'version': '1.0.0',
         'icon': 'rocket',
@@ -432,23 +479,27 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
       setState(() {
         _activeForgeCode = app['html_blob'];
+        _activeBackendCode = app['backend_blob'];
         _activeDesignDoc = app['design_doc'];
         _activeAppId = appId;
         _showPreview = true;
         _currentConversationId = conversationId;
         _conversationTitle = app['name'] ?? 'Forged App';
         _enhancementCode = data.enhancementCode;
+        _enhancementBackend = data.enhancementBackend;
         _enhancementDesign = data.enhancementDesign;
       });
 
       _initializeAI(
         enhancementCode: data.enhancementCode,
+        enhancementBackend: data.enhancementBackend,
         enhancementDesign: data.enhancementDesign,
         history: data.history.toList(),
       );
     } else {
       setState(() {
         _activeForgeCode = app['html_blob'];
+        _activeBackendCode = app['backend_blob'];
         _activeDesignDoc = app['design_doc'];
         _activeAppId = appId;
         _showPreview = true;
@@ -463,14 +514,17 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     setState(() {
       _currentConversationId = conversationId;
       _conversationTitle = title;
-      _activeForgeCode = null; // Don't show preview until deployed again or we could find the latest forge in history
+      _activeForgeCode = null; 
+      _activeBackendCode = null;
       _showPreview = false;
       _enhancementCode = data.enhancementCode;
+      _enhancementBackend = data.enhancementBackend;
       _enhancementDesign = data.enhancementDesign;
     });
 
     _initializeAI(
       enhancementCode: data.enhancementCode,
+      enhancementBackend: data.enhancementBackend,
       enhancementDesign: data.enhancementDesign,
       history: data.history.toList(),
     );
@@ -500,6 +554,13 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
               const SizedBox(height: 8),
               MarkdownBody(
                 data: '```html\n${_enhancementCode ?? ''}\n```',
+                selectable: true,
+              ),
+              const SizedBox(height: 16),
+              Text('Original Backend', style: Theme.of(context).textTheme.titleLarge),
+              const SizedBox(height: 8),
+              MarkdownBody(
+                data: '```javascript\n${_enhancementBackend ?? ''}\n```',
                 selectable: true,
               ),
               const SizedBox(height: 24),
@@ -561,6 +622,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
                   );
                   _initializeAI(
                     enhancementCode: _enhancementCode,
+                    enhancementBackend: _enhancementBackend,
                     enhancementDesign: _enhancementDesign,
                     history: currentHistory,
                   );
@@ -631,6 +693,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         if (_showPreview && _activeForgeCode != null)
           PreviewSheet(
             code: _activeForgeCode!,
+            backendCode: _activeBackendCode,
             designDoc: _activeDesignDoc,
             appId: _activeAppId ?? 'unknown',
             onClose: () => setState(() => _showPreview = false),

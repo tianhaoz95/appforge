@@ -10,12 +10,14 @@ import 'package:file_picker/file_picker.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_js/flutter_js.dart';
 import 'dart:async';
 import '../repositories/micro_app_data_repository.dart';
 import '../providers/settings_provider.dart';
 
 class PreviewSheet extends StatefulWidget {
   final String code;
+  final String? backendCode;
   final String? designDoc;
   final String appId;
   final VoidCallback? onClose;
@@ -28,6 +30,7 @@ class PreviewSheet extends StatefulWidget {
   const PreviewSheet({
     super.key, 
     required this.code, 
+    this.backendCode,
     this.designDoc,
     required this.appId,
     this.onClose,
@@ -46,12 +49,96 @@ class PreviewSheetState extends State<PreviewSheet> {
   double _currentExtent = 0.9;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  
+  JavascriptRuntime? _jsRuntime;
+  final List<String> _logs = [];
 
   @override
   void initState() {
     super.initState();
+    _initJsRuntime();
     _initController();
     _sheetController.addListener(_onSheetChanged);
+  }
+
+  void _addLog(String source, String message) {
+    setState(() {
+      _logs.add('[$source] $message');
+    });
+    debugPrint('[$source] $message');
+  }
+
+  void _initJsRuntime() {
+    if (widget.backendCode == null || widget.backendCode!.trim().isEmpty) return;
+
+    try {
+      _jsRuntime = getJavascriptRuntime();
+      _addLog('Backend', 'Initializing JS Runtime...');
+
+      // Expose Bridge to Backend JS
+      _jsRuntime!.onMessage('MicroForgeBridge', (dynamic args) {
+        final data = jsonDecode(args.toString()) as Map<String, dynamic>;
+        final action = data['action'];
+        final repository = context.read<MicroAppDataRepository>();
+        final settings = context.read<SettingsProvider>();
+
+        if (action == 'saveData') {
+          if (!settings.allowBackendDatabase) {
+            return jsonEncode({'error': 'Database access disabled in settings.'});
+          }
+          return repository.saveData(widget.appId, data['key'], data['value']).then((_) => jsonEncode({'success': true}));
+        } else if (action == 'getData') {
+          if (!settings.allowBackendDatabase) {
+            return jsonEncode({'error': 'Database access disabled in settings.'});
+          }
+          return repository.getData(widget.appId, data['key']).then((val) => jsonEncode({'value': val}));
+        } else if (action == 'showNotification') {
+          if (!settings.allowNotifications) {
+            return jsonEncode({'error': 'Notification access disabled in settings.'});
+          }
+          return _showNotification(data['title'], data['body'], data['payload']).then((_) => jsonEncode({'success': true}));
+        }
+        return jsonEncode({'error': 'Unknown action: $action'});
+      });
+
+      // Inject helper for backend JS
+      final wrapper = '''
+        var MicroForge = {
+          saveData: (key, value) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'saveData', key, value})).then(r => JSON.parse(r)),
+          getData: (key) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'getData', key})).then(r => JSON.parse(r).value),
+          showNotification: (title, body, payload) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'showNotification', title, body, payload})).then(r => JSON.parse(r))
+        };
+        ${widget.backendCode}
+      ''';
+
+      _jsRuntime!.evaluate(wrapper);
+      _addLog('Backend', 'Backend engine ready.');
+    } catch (e) {
+      _addLog('Backend Error', e.toString());
+    }
+  }
+
+  Future<void> _showNotification(String? title, String? body, String? payload) async {
+    const androidDetails = AndroidNotificationDetails(
+      'micro_app_channel',
+      'Micro App Notifications',
+      channelDescription: 'Notifications from forged micro-apps',
+      importance: Importance.max,
+      priority: Priority.high,
+    );
+    const iosDetails = DarwinNotificationDetails();
+    const notificationDetails = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _notificationsPlugin.show(
+      id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+      title: title ?? 'MicroForge',
+      body: body ?? '',
+      notificationDetails: notificationDetails,
+      payload: payload,
+    );
   }
 
   @override
@@ -59,6 +146,7 @@ class PreviewSheetState extends State<PreviewSheet> {
     _sheetController.removeListener(_onSheetChanged);
     _sheetController.dispose();
     _accelerometerSubscription?.cancel();
+    _jsRuntime?.dispose();
     super.dispose();
   }
 
@@ -87,9 +175,20 @@ class PreviewSheetState extends State<PreviewSheet> {
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
         ..setBackgroundColor(Colors.transparent) // Optimization for rendering
+        ..setNavigationDelegate(NavigationDelegate(
+          onWebResourceError: (error) {
+            _addLog('WebView Error', '${error.description} (${error.errorCode})');
+          },
+        ))
         ..addJavaScriptChannel(
           'MicroForgeChannel',
           onMessageReceived: (JavaScriptMessage message) => handleMessage(message.message),
+        )
+        ..addJavaScriptChannel(
+          'MicroForgeLogger',
+          onMessageReceived: (JavaScriptMessage message) {
+            _addLog('Frontend', message.message);
+          },
         )
         ..loadHtmlString(_buildHtmlShell(widget.code));
     }
@@ -133,6 +232,132 @@ class PreviewSheetState extends State<PreviewSheet> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  void _showLogs(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.7,
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Execution Logs',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                ),
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.delete_sweep_outlined),
+                      onPressed: () => setState(() => _logs.clear()),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const Divider(),
+            Expanded(
+              child: _logs.isEmpty 
+                ? const Center(child: Text('No logs yet.', style: TextStyle(color: Colors.grey)))
+                : ListView.builder(
+                    itemCount: _logs.length,
+                    itemBuilder: (context, index) {
+                      final log = _logs[index];
+                      Color textColor = Colors.black87;
+                      if (log.contains('Error')) textColor = Colors.red;
+                      if (log.contains('Backend')) textColor = Colors.blue[800]!;
+                      
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Text(
+                          log,
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                            color: textColor,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCode(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => DefaultTabController(
+        length: 2,
+        child: Container(
+          height: MediaQuery.of(context).size.height * 0.8,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          ),
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text('Generated Code', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
+                  ],
+                ),
+              ),
+              const TabBar(
+                tabs: [
+                  Tab(text: 'Frontend (HTML)'),
+                  Tab(text: 'Backend (JS)'),
+                ],
+                labelColor: Colors.blue,
+                unselectedLabelColor: Colors.grey,
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildCodeView(widget.code, 'html'),
+                    _buildCodeView(widget.backendCode ?? '// No backend code provided.', 'javascript'),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCodeView(String code, String language) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: MarkdownBody(
+        data: '```$language\n$code\n```',
+        selectable: true,
       ),
     );
   }
@@ -302,31 +527,26 @@ class PreviewSheetState extends State<PreviewSheet> {
           return;
         }
 
-        final title = data['title'] ?? 'MicroForge';
-        final body = data['body'] ?? '';
-        final payload = data['payload']?.toString();
-
-        const androidDetails = AndroidNotificationDetails(
-          'micro_app_channel',
-          'Micro App Notifications',
-          channelDescription: 'Notifications from forged micro-apps',
-          importance: Importance.max,
-          priority: Priority.high,
-        );
-        const iosDetails = DarwinNotificationDetails();
-        const notificationDetails = NotificationDetails(
-          android: androidDetails,
-          iOS: iosDetails,
-        );
-
-        await _notificationsPlugin.show(
-          id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-          title: title,
-          body: body,
-          notificationDetails: notificationDetails,
-          payload: payload,
-        );
+        await _showNotification(data['title'], data['body'], data['payload']?.toString());
         _sendResponse(requestId, {'success': true});
+      } else if (action == 'callBackend') {
+        if (_jsRuntime == null) {
+          _sendResponse(requestId, {'error': 'Backend engine is not initialized.'});
+          return;
+        }
+        final api = data['api'];
+        final payload = data['payload'] ?? {};
+        
+        final input = jsonEncode({'api': api, 'payload': payload});
+        _addLog('Backend Call', 'API: $api');
+        
+        try {
+          final result = _jsRuntime!.evaluate('JSON.stringify(handleRequest($input))');
+          _sendResponse(requestId, jsonDecode(result.stringResult));
+        } catch (e) {
+          _addLog('Backend Call Error', e.toString());
+          _sendResponse(requestId, {'status': 'error', 'payload': e.toString()});
+        }
       } else if (action == 'closeApp') {
         if (widget.onClose != null) {
           widget.onClose?.call();
@@ -357,7 +577,9 @@ class PreviewSheetState extends State<PreviewSheet> {
   @override
   void didUpdateWidget(PreviewSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.code != widget.code || oldWidget.appId != widget.appId) {
+    if (oldWidget.code != widget.code || oldWidget.appId != widget.appId || oldWidget.backendCode != widget.backendCode) {
+      _jsRuntime?.dispose();
+      _initJsRuntime();
       _controller?.loadHtmlString(_buildHtmlShell(widget.code));
     }
   }
@@ -386,6 +608,13 @@ class PreviewSheetState extends State<PreviewSheet> {
     (function() {
       const pendingRequests = new Map();
       
+      // Override console.log to send logs to Flutter
+      const oldLog = console.log;
+      console.log = function(...args) {
+        MicroForgeLogger.postMessage(args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' '));
+        oldLog.apply(console, args);
+      };
+
       window.MicroForge = {
         _handleResponse: (requestId, response) => {
           if (pendingRequests.has(requestId)) {
@@ -416,6 +645,7 @@ class PreviewSheetState extends State<PreviewSheet> {
         listAll: () => window.MicroForge._sendRequest('listAll', {}).then(r => r.data),
         promptAi: (prompt, systemInstruction) => window.MicroForge._sendRequest('promptAi', { prompt, systemInstruction }).then(r => r.text),
         pickFiles: (options = {}) => window.MicroForge._sendRequest('pickFiles', options).then(r => r.files),
+        callBackend: (api, payload) => window.MicroForge._sendRequest('callBackend', { api, payload }),
         ${context.read<SettingsProvider>().allowGeolocation ? "getLocation: () => window.MicroForge._sendRequest('getLocation', {})," : ""}
         ${context.read<SettingsProvider>().allowAccelerometer ? "getAccelerometer: () => window.MicroForge._sendRequest('getAccelerometer', {})," : ""}
         ${context.read<SettingsProvider>().allowAccelerometer ? "watchAccelerometer: (callback) => { window.onAccelerometerUpdate = callback; return window.MicroForge._sendRequest('watchAccelerometer', {}); }," : ""}
@@ -493,6 +723,16 @@ class PreviewSheetState extends State<PreviewSheet> {
                               const SizedBox.shrink(),
                               Row(
                                 children: [
+                                  IconButton(
+                                    icon: const Icon(Icons.terminal_outlined, size: 20),
+                                    onPressed: () => _showLogs(context),
+                                    tooltip: 'Logs',
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.code_outlined, size: 20),
+                                    onPressed: () => _showCode(context),
+                                    tooltip: 'Source Code',
+                                  ),
                                   if (widget.onEnhance != null)
                                     TextButton.icon(
                                       icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
@@ -510,10 +750,10 @@ class PreviewSheetState extends State<PreviewSheet> {
                                       },
                                     ),
                                   if (widget.designDoc != null && widget.designDoc!.isNotEmpty)
-                                    TextButton.icon(
-                                      icon: const Icon(Icons.description_outlined, size: 18),
-                                      label: const Text('Design'),
+                                    IconButton(
+                                      icon: const Icon(Icons.description_outlined, size: 20),
                                       onPressed: () => _showDesignDoc(context),
+                                      tooltip: 'Design Doc',
                                     ),
                                   if (isFullScreen)
                                     IconButton(

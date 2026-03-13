@@ -5,11 +5,13 @@ class SettingsProvider with ChangeNotifier {
   bool _allowGeolocation = false;
   bool _allowAccelerometer = false;
   bool _allowNotifications = false;
+  bool _allowBackendDatabase = false;
 
   bool get suggestExistingApps => _suggestExistingApps;
   bool get allowGeolocation => _allowGeolocation;
   bool get allowAccelerometer => _allowAccelerometer;
   bool get allowNotifications => _allowNotifications;
+  bool get allowBackendDatabase => _allowBackendDatabase;
 
   void setSuggestExistingApps(bool value) {
     if (_suggestExistingApps != value) {
@@ -35,6 +37,13 @@ class SettingsProvider with ChangeNotifier {
   void setAllowNotifications(bool value) {
     if (_allowNotifications != value) {
       _allowNotifications = value;
+      notifyListeners();
+    }
+  }
+
+  void setAllowBackendDatabase(bool value) {
+    if (_allowBackendDatabase != value) {
+      _allowBackendDatabase = value;
       notifyListeners();
     }
   }

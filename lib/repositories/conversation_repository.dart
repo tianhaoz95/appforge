@@ -6,9 +6,15 @@ import 'package:sqflite/sqflite.dart';
 class ConversationData {
   final List<ChatMessage> history;
   final String? enhancementCode;
+  final String? enhancementBackend;
   final String? enhancementDesign;
 
-  ConversationData({required this.history, this.enhancementCode, this.enhancementDesign});
+  ConversationData({
+    required this.history, 
+    this.enhancementCode, 
+    this.enhancementBackend,
+    this.enhancementDesign,
+  });
 }
 
 class ConversationRepository {
@@ -22,6 +28,7 @@ class ConversationRepository {
     String title,
     List<ChatMessage> history, {
     String? enhancementCode,
+    String? enhancementBackend,
     String? enhancementDesign,
   }) async {
     final db = await _dbHelper.database;
@@ -34,6 +41,7 @@ class ConversationRepository {
         'title': title,
         'history': jsonEncode(messages),
         'enhancement_code': enhancementCode,
+        'enhancement_backend': enhancementBackend,
         'enhancement_design': enhancementDesign,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
       },
@@ -71,6 +79,7 @@ class ConversationRepository {
     return ConversationData(
       history: history,
       enhancementCode: data['enhancement_code'] as String?,
+      enhancementBackend: data['enhancement_backend'] as String?,
       enhancementDesign: data['enhancement_design'] as String?,
     );
   }
