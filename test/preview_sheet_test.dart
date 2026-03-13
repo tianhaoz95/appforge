@@ -3,10 +3,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:appforge/widgets/preview_sheet.dart';
 import 'package:appforge/repositories/micro_app_data_repository.dart';
+import 'package:appforge/repositories/micro_app_repository.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:feedback/feedback.dart';
 
 class MockMicroAppDataRepository extends Mock implements MicroAppDataRepository {}
+class MockMicroAppRepository extends Mock implements MicroAppRepository {}
 
 void main() {
   setUpAll(() {
@@ -14,12 +16,17 @@ void main() {
   });
 
   testWidgets('PreviewSheet shows content and close button', (WidgetTester tester) async {
-    final mockRepo = MockMicroAppDataRepository();
+    final mockDataRepo = MockMicroAppDataRepository();
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
     
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: Provider<MicroAppDataRepository>.value(
-          value: mockRepo,
+        body: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>.value(value: mockDataRepo),
+            Provider<MicroAppRepository>.value(value: mockAppRepo),
+          ],
           child: const PreviewSheet(
             code: '<h1>Hello</h1>',
             appId: 'test-app',
@@ -33,13 +40,18 @@ void main() {
   });
 
   testWidgets('PreviewSheet shows Design button when designDoc is provided', (WidgetTester tester) async {
-    final mockRepo = MockMicroAppDataRepository();
+    final mockDataRepo = MockMicroAppDataRepository();
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
     const designDoc = '# My Design\nThis is a test design.';
     
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: Provider<MicroAppDataRepository>.value(
-          value: mockRepo,
+        body: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>.value(value: mockDataRepo),
+            Provider<MicroAppRepository>.value(value: mockAppRepo),
+          ],
           child: const PreviewSheet(
             code: '<h1>Hello</h1>',
             designDoc: designDoc,
@@ -62,13 +74,18 @@ void main() {
   });
 
   testWidgets('PreviewSheet shows Enhance button when onEnhance is provided', (WidgetTester tester) async {
-    final mockRepo = MockMicroAppDataRepository();
+    final mockDataRepo = MockMicroAppDataRepository();
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
     bool enhanceTapped = false;
     
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: Provider<MicroAppDataRepository>.value(
-          value: mockRepo,
+        body: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>.value(value: mockDataRepo),
+            Provider<MicroAppRepository>.value(value: mockAppRepo),
+          ],
           child: PreviewSheet(
             code: '<h1>Hello</h1>',
             appId: 'test-app',
@@ -92,13 +109,18 @@ void main() {
   });
 
   testWidgets('PreviewSheet shows Feedback button when onFeedback is provided', (WidgetTester tester) async {
-    final mockRepo = MockMicroAppDataRepository();
+    final mockDataRepo = MockMicroAppDataRepository();
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
     
     await tester.pumpWidget(BetterFeedback(
       child: MaterialApp(
         home: Scaffold(
-          body: Provider<MicroAppDataRepository>.value(
-            value: mockRepo,
+          body: MultiProvider(
+            providers: [
+              Provider<MicroAppDataRepository>.value(value: mockDataRepo),
+              Provider<MicroAppRepository>.value(value: mockAppRepo),
+            ],
             child: PreviewSheet(
               code: '<h1>Hello</h1>',
               appId: 'test-app',
@@ -123,12 +145,17 @@ void main() {
   });
 
   testWidgets('PreviewSheetState.handleMessage routes promptAi action', (WidgetTester tester) async {
-    final mockRepo = MockMicroAppDataRepository();
+    final mockDataRepo = MockMicroAppDataRepository();
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
     
     await tester.pumpWidget(MaterialApp(
       home: Scaffold(
-        body: Provider<MicroAppDataRepository>.value(
-          value: mockRepo,
+        body: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>.value(value: mockDataRepo),
+            Provider<MicroAppRepository>.value(value: mockAppRepo),
+          ],
           child: const PreviewSheet(
             code: '<h1>Hello</h1>',
             appId: 'test-app',
@@ -149,10 +176,10 @@ void main() {
     // we'll focus on verifying the existing functionality is still working.
     
     final message = '{"action": "saveData", "key": "testKey", "value": "testValue", "requestId": "123"}';
-    when(() => mockRepo.saveData('test-app', 'testKey', 'testValue')).thenAnswer((_) async => {});
+    when(() => mockDataRepo.saveData('test-app', 'testKey', 'testValue')).thenAnswer((_) async => {});
     
     await state.handleMessage(message);
     
-    verify(() => mockRepo.saveData('test-app', 'testKey', 'testValue')).called(1);
+    verify(() => mockDataRepo.saveData('test-app', 'testKey', 'testValue')).called(1);
   });
 }

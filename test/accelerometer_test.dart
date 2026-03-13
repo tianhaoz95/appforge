@@ -4,10 +4,12 @@ import 'package:provider/provider.dart';
 import 'package:appforge/providers/settings_provider.dart';
 import 'package:appforge/widgets/preview_sheet.dart';
 import 'package:appforge/repositories/micro_app_data_repository.dart';
+import 'package:appforge/repositories/micro_app_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockMicroAppDataRepository extends Mock implements MicroAppDataRepository {}
+class MockMicroAppRepository extends Mock implements MicroAppRepository {}
 
 void main() {
   setUp(() {
@@ -26,7 +28,9 @@ void main() {
   });
 
   testWidgets('PreviewSheet handles getAccelerometer when disabled', (WidgetTester tester) async {
-    final mockRepo = MockMicroAppDataRepository();
+    final mockDataRepo = MockMicroAppDataRepository();
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
     final settingsProvider = SettingsProvider(); // defaults to false
     
     PreviewSheet.skipWebViewForTesting = true;
@@ -36,7 +40,8 @@ void main() {
         body: MultiProvider(
           providers: [
             ChangeNotifierProvider<SettingsProvider>.value(value: settingsProvider),
-            Provider<MicroAppDataRepository>.value(value: mockRepo),
+            Provider<MicroAppDataRepository>.value(value: mockDataRepo),
+            Provider<MicroAppRepository>.value(value: mockAppRepo),
           ],
           child: const PreviewSheet(
             code: '<h1>Hello</h1>',

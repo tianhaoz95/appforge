@@ -85,6 +85,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String? _activeForgeCode;
   String? _activeBackendCode;
   String? _activeDesignDoc;
+  String? _activeReleaseNotes;
   String? _activeAppId;
   bool _showPreview = false;
   String _currentConversationId = const Uuid().v4();
@@ -117,9 +118,14 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'Additionally, for every micro-app you forge, you MUST also provide: '
         '1. A concise name wrapped in <name>...</name> tags. '
         '2. A brief design document in Markdown wrapped in <design>...</design> tags. '
+        '3. A version number (e.g., 1.0.0, 1.1.0) wrapped in <version>...</version> tags. '
+        '   When enhancing an app, increment the version based on the complexity of changes. '
+        '4. A concise release note summarizing the improvements wrapped in <release_notes>...</release_notes> tags. '
         '\nExample: '
         '<name>Task Master</name> '
         '<design># Task Master\nA simple todo app with local persistence.</design> '
+        '<version>1.0.0</version> '
+        '<release_notes>Initial release with task creation and local storage.</release_notes> '
         '<forge><div class="p-4">...</div></forge> '
         '\n\nDo not use other markdown blocks for the micro-app code itself. '
         'Use Tailwind CSS for styling and Alpine.js for reactivity. '
@@ -439,11 +445,12 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void _onDeploy(String code, String? backendCode, String? name, String? designDoc) async {
+  void _onDeploy(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes) async {
     setState(() {
       _activeForgeCode = code;
       _activeBackendCode = backendCode;
       _activeDesignDoc = designDoc;
+      _activeReleaseNotes = releaseNotes;
       _showPreview = true;
     });
 
@@ -454,14 +461,16 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
       String finalAppId = const Uuid().v4();
       String finalName = name ?? 'Forged App';
-      String finalVersion = '1.0.0';
+      String finalVersion = version ?? '1.0.0';
 
       if (_enhancementAppId != null) {
         final existingApp = await repository.getApp(_enhancementAppId!);
         if (existingApp != null) {
           finalAppId = _enhancementAppId!;
           finalName = existingApp['name'] ?? finalName;
-          finalVersion = _bumpVersion(existingApp['version']);
+          if (version == null) {
+            finalVersion = _bumpVersion(existingApp['version']);
+          }
         }
       }
 
@@ -473,6 +482,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'html_blob': code,
         'backend_blob': backendCode,
         'design_doc': designDoc,
+        'release_notes': releaseNotes,
         'version': finalVersion,
         'icon': 'rocket',
       });
@@ -519,6 +529,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _activeForgeCode = app['html_blob'];
         _activeBackendCode = app['backend_blob'];
         _activeDesignDoc = app['design_doc'];
+        _activeReleaseNotes = app['release_notes'];
         _activeAppId = appId;
         _showPreview = true;
         _currentConversationId = conversationId;
@@ -541,6 +552,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _activeForgeCode = app['html_blob'];
         _activeBackendCode = app['backend_blob'];
         _activeDesignDoc = app['design_doc'];
+        _activeReleaseNotes = app['release_notes'];
         _activeAppId = appId;
         _showPreview = true;
       });
@@ -737,6 +749,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
             code: _activeForgeCode!,
             backendCode: _activeBackendCode,
             designDoc: _activeDesignDoc,
+            releaseNotes: _activeReleaseNotes,
             appId: _activeAppId ?? 'unknown',
             onClose: () => setState(() => _showPreview = false),
             onEnhance: _onEnhance,

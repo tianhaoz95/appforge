@@ -97,21 +97,62 @@ class LocalDatabase {
         // Column might already exist
       }
     }
+    if (oldVersion < 8) {
+      await db.transaction((txn) async {
+        // 1. Create new table with composite primary key and release_notes column
+        await txn.execute('''
+          CREATE TABLE micro_apps_new (
+            appId TEXT,
+            ownerId TEXT,
+            conversationId TEXT,
+            name TEXT,
+            html_blob TEXT,
+            backend_blob TEXT,
+            design_doc TEXT,
+            release_notes TEXT,
+            version TEXT,
+            icon TEXT,
+            created_at INTEGER,
+            PRIMARY KEY (appId, version)
+          )
+        ''');
+
+        // 2. Copy data from old table
+        await txn.execute('''
+          INSERT INTO micro_apps_new (
+            appId, ownerId, conversationId, name, html_blob, backend_blob, 
+            design_doc, version, icon, created_at
+          )
+          SELECT 
+            appId, ownerId, conversationId, name, html_blob, backend_blob, 
+            design_doc, version, icon, created_at
+          FROM micro_apps
+        ''');
+
+        // 3. Drop old table
+        await txn.execute('DROP TABLE micro_apps');
+
+        // 4. Rename new table to original name
+        await txn.execute('ALTER TABLE micro_apps_new RENAME TO micro_apps');
+      });
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
     await db.execute('''
       CREATE TABLE micro_apps (
-        appId TEXT PRIMARY KEY,
+        appId TEXT,
         ownerId TEXT,
         conversationId TEXT,
         name TEXT,
         html_blob TEXT,
         backend_blob TEXT,
         design_doc TEXT,
+        release_notes TEXT,
         version TEXT,
         icon TEXT,
-        created_at INTEGER
+        created_at INTEGER,
+        PRIMARY KEY (appId, version)
       )
     ''');
 

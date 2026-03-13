@@ -5,6 +5,10 @@ import 'package:provider/provider.dart';
 import 'package:appforge/widgets/vibe_detector.dart';
 import 'package:appforge/widgets/preview_sheet.dart';
 import 'package:appforge/repositories/micro_app_data_repository.dart';
+import 'package:appforge/repositories/micro_app_repository.dart';
+import 'package:mocktail/mocktail.dart';
+
+class MockMicroAppRepository extends Mock implements MicroAppRepository {}
 
 class MockMicroAppDataRepository extends StatelessWidget {
   final Widget child;
@@ -26,10 +30,16 @@ void main() {
     String? deployedCode;
     bool showPreview = false;
 
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
+
     await tester.pumpWidget(
       MaterialApp(
-        home: Provider<MicroAppDataRepository>(
-          create: (_) => MicroAppDataRepository(),
+        home: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>(create: (_) => MicroAppDataRepository()),
+            Provider<MicroAppRepository>.value(value: mockAppRepo),
+          ],
           child: StatefulBuilder(
             builder: (context, setState) {
               return Scaffold(
@@ -37,7 +47,7 @@ void main() {
                   children: [
                     VibeDetector(
                       message: 'Here is your app: <forge><h1>Hello</h1></forge>',
-                      onDeploy: (code, backendCode, name, designDoc) {
+                      onDeploy: (code, backendCode, name, designDoc, version, releaseNotes) {
                         setState(() {
                           deployedCode = code;
                           showPreview = true;

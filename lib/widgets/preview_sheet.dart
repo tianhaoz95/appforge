@@ -13,12 +13,14 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_js/flutter_js.dart';
 import 'dart:async';
 import '../repositories/micro_app_data_repository.dart';
+import '../repositories/micro_app_repository.dart';
 import '../providers/settings_provider.dart';
 
 class PreviewSheet extends StatefulWidget {
   final String code;
   final String? backendCode;
   final String? designDoc;
+  final String? releaseNotes;
   final String appId;
   final VoidCallback? onClose;
   final VoidCallback? onEnhance;
@@ -32,6 +34,7 @@ class PreviewSheet extends StatefulWidget {
     required this.code, 
     this.backendCode,
     this.designDoc,
+    this.releaseNotes,
     required this.appId,
     this.onClose,
     this.onEnhance,
@@ -53,12 +56,66 @@ class PreviewSheetState extends State<PreviewSheet> {
   JavascriptRuntime? _jsRuntime;
   final List<String> _logs = [];
 
+  // Versioning state
+  List<Map<String, dynamic>> _versions = [];
+  String? _currentVersion;
+  String? _activeCode;
+  String? _activeBackendCode;
+  String? _activeDesignDoc;
+  String? _activeReleaseNotes;
+
   @override
   void initState() {
     super.initState();
+    _activeCode = widget.code;
+    _activeBackendCode = widget.backendCode;
+    _activeDesignDoc = widget.designDoc;
+    _activeReleaseNotes = widget.releaseNotes;
+    
     _initJsRuntime();
     _initController();
     _sheetController.addListener(_onSheetChanged);
+    _loadVersions();
+  }
+
+  void _loadVersions() async {
+    if (widget.appId == 'unknown') return;
+    try {
+      final repository = context.read<MicroAppRepository>();
+      final versions = await repository.getAppVersions(widget.appId);
+      if (mounted) {
+        setState(() {
+          _versions = versions;
+          if (_versions.isNotEmpty) {
+            // Find the version that matches the current code/version
+            // For now, assume the one passed in is the latest or matches one of them
+            final matching = _versions.firstWhere(
+              (v) => v['html_blob'] == widget.code,
+              orElse: () => _versions.first,
+            );
+            _currentVersion = matching['version'];
+          }
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading versions: $e');
+    }
+  }
+
+  void _switchVersion(String version) {
+    final v = _versions.firstWhere((v) => v['version'] == version);
+    setState(() {
+      _currentVersion = version;
+      _activeCode = v['html_blob'];
+      _activeBackendCode = v['backend_blob'];
+      _activeDesignDoc = v['design_doc'];
+      _activeReleaseNotes = v['release_notes'];
+      _logs.clear();
+    });
+    
+    _jsRuntime?.dispose();
+    _initJsRuntime();
+    _controller?.loadHtmlString(_buildHtmlShell(_activeCode!));
   }
 
   void _addLog(String source, String message) {
@@ -69,7 +126,7 @@ class PreviewSheetState extends State<PreviewSheet> {
   }
 
   void _initJsRuntime() {
-    if (widget.backendCode == null || widget.backendCode!.trim().isEmpty) return;
+    if (_activeBackendCode == null || _activeBackendCode!.trim().isEmpty) return;
 
     try {
       _jsRuntime = getJavascriptRuntime();
@@ -108,7 +165,7 @@ class PreviewSheetState extends State<PreviewSheet> {
           getData: (key) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'getData', key})).then(r => JSON.parse(r).value),
           showNotification: (title, body, payload) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'showNotification', title, body, payload})).then(r => JSON.parse(r))
         };
-        ${widget.backendCode}
+        ${_activeBackendCode}
       ''';
 
       _jsRuntime!.evaluate(wrapper);
@@ -190,7 +247,7 @@ class PreviewSheetState extends State<PreviewSheet> {
             _addLog('Frontend', message.message);
           },
         )
-        ..loadHtmlString(_buildHtmlShell(widget.code));
+        ..loadHtmlString(_buildHtmlShell(_activeCode!));
     }
   }
 
@@ -225,8 +282,27 @@ class PreviewSheetState extends State<PreviewSheet> {
             const Divider(),
             Expanded(
               child: SingleChildScrollView(
-                child: MarkdownBody(
-                  data: widget.designDoc ?? 'No design documentation provided.',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (_activeReleaseNotes != null && _activeReleaseNotes!.isNotEmpty) ...[
+                      const Text(
+                        'Release Notes',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        _activeReleaseNotes!,
+                        style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
+                      ),
+                      const SizedBox(height: 16),
+                      const Divider(),
+                      const SizedBox(height: 16),
+                    ],
+                    MarkdownBody(
+                      data: _activeDesignDoc ?? 'No design documentation provided.',
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -340,8 +416,8 @@ class PreviewSheetState extends State<PreviewSheet> {
               Expanded(
                 child: TabBarView(
                   children: [
-                    _buildCodeView(widget.code, 'html'),
-                    _buildCodeView(widget.backendCode ?? '// No backend code provided.', 'javascript'),
+                    _buildCodeView(_activeCode!, 'html'),
+                    _buildCodeView(_activeBackendCode ?? '// No backend code provided.', 'javascript'),
                   ],
                 ),
               ),
@@ -578,9 +654,16 @@ class PreviewSheetState extends State<PreviewSheet> {
   void didUpdateWidget(PreviewSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.code != widget.code || oldWidget.appId != widget.appId || oldWidget.backendCode != widget.backendCode) {
+      setState(() {
+        _activeCode = widget.code;
+        _activeBackendCode = widget.backendCode;
+        _activeDesignDoc = widget.designDoc;
+        _activeReleaseNotes = widget.releaseNotes;
+      });
       _jsRuntime?.dispose();
       _initJsRuntime();
-      _controller?.loadHtmlString(_buildHtmlShell(widget.code));
+      _controller?.loadHtmlString(_buildHtmlShell(_activeCode!));
+      _loadVersions();
     }
   }
 
@@ -715,12 +798,50 @@ class PreviewSheetState extends State<PreviewSheet> {
                           ),
                         ),
                         Container(
-                          height: 40,
+                          height: 44,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const SizedBox.shrink(),
+                              if (_versions.length > 1)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: Colors.grey[300]!),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String>(
+                                      value: _currentVersion,
+                                      icon: const Icon(Icons.history, size: 16),
+                                      style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold),
+                                      onChanged: (String? newValue) {
+                                        if (newValue != null) _switchVersion(newValue);
+                                      },
+                                      items: _versions.map<DropdownMenuItem<String>>((Map<String, dynamic> v) {
+                                        return DropdownMenuItem<String>(
+                                          value: v['version'],
+                                          child: Text('v${v['version']}'),
+                                        );
+                                      }).toList(),
+                                    ),
+                                  ),
+                                )
+                              else if (_currentVersion != null)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    'v$_currentVersion',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  ),
+                                )
+                              else
+                                const SizedBox.shrink(),
                               Row(
                                 children: [
                                   IconButton(
@@ -749,11 +870,11 @@ class PreviewSheetState extends State<PreviewSheet> {
                                         });
                                       },
                                     ),
-                                  if (widget.designDoc != null && widget.designDoc!.isNotEmpty)
+                                  if (_activeDesignDoc != null && _activeDesignDoc!.isNotEmpty)
                                     IconButton(
                                       icon: const Icon(Icons.description_outlined, size: 20),
                                       onPressed: () => _showDesignDoc(context),
-                                      tooltip: 'Design Doc',
+                                      tooltip: 'Design & Release Notes',
                                     ),
                                   if (isFullScreen)
                                     IconButton(

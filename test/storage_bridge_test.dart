@@ -4,22 +4,27 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:appforge/widgets/preview_sheet.dart';
 import 'package:appforge/repositories/micro_app_data_repository.dart';
+import 'package:appforge/repositories/micro_app_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 class MockMicroAppDataRepository extends Mock implements MicroAppDataRepository {}
+class MockMicroAppRepository extends Mock implements MicroAppRepository {}
 
 void main() {
   // IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   group('Storage Bridge Integration Tests', () {
-    late MockMicroAppDataRepository mockRepository;
+    late MockMicroAppDataRepository mockDataRepository;
+    late MockMicroAppRepository mockAppRepository;
 
     setUpAll(() async {
       PreviewSheet.skipWebViewForTesting = true;
     });
 
     setUp(() async {
-      mockRepository = MockMicroAppDataRepository();
+      mockDataRepository = MockMicroAppDataRepository();
+      mockAppRepository = MockMicroAppRepository();
+      when(() => mockAppRepository.getAppVersions(any())).thenAnswer((_) async => []);
     });
 
     testWidgets('Bridge processes saveData message', (WidgetTester tester) async {
@@ -27,12 +32,15 @@ void main() {
       const key = 'test_key';
       const value = {'foo': 'bar'};
 
-      when(() => mockRepository.saveData(any(), any(), any()))
+      when(() => mockDataRepository.saveData(any(), any(), any()))
           .thenAnswer((_) async => {});
 
       await tester.pumpWidget(MaterialApp(
-        home: Provider<MicroAppDataRepository>.value(
-          value: mockRepository,
+        home: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>.value(value: mockDataRepository),
+            Provider<MicroAppRepository>.value(value: mockAppRepository),
+          ],
           child: const PreviewSheet(
             code: '<div></div>',
             appId: appId,
@@ -51,7 +59,7 @@ void main() {
       }));
 
       // Verify data in repository
-      verify(() => mockRepository.saveData(appId, key, value)).called(1);
+      verify(() => mockDataRepository.saveData(appId, key, value)).called(1);
     });
 
     testWidgets('Bridge processes getData message', (WidgetTester tester) async {
@@ -59,12 +67,15 @@ void main() {
       const key = 'existing_key';
       const value = 'important data';
       
-      when(() => mockRepository.getData(any(), any()))
+      when(() => mockDataRepository.getData(any(), any()))
           .thenAnswer((_) async => value);
 
       await tester.pumpWidget(MaterialApp(
-        home: Provider<MicroAppDataRepository>.value(
-          value: mockRepository,
+        home: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>.value(value: mockDataRepository),
+            Provider<MicroAppRepository>.value(value: mockAppRepository),
+          ],
           child: const PreviewSheet(
             code: '<div></div>',
             appId: appId,
@@ -80,7 +91,7 @@ void main() {
         'key': key,
       }));
       
-      verify(() => mockRepository.getData(appId, key)).called(1);
+      verify(() => mockDataRepository.getData(appId, key)).called(1);
     });
   });
 }

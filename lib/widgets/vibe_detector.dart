@@ -3,7 +3,7 @@ import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 
 class VibeDetector extends StatelessWidget {
   final String message;
-  final Function(String code, String? backendCode, String? name, String? designDoc)? onDeploy;
+  final Function(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes)? onDeploy;
   final Function(String appId)? onOpenApp;
 
   const VibeDetector({
@@ -19,12 +19,16 @@ class VibeDetector extends StatelessWidget {
     final backendRegex = RegExp(r'<backend>([\s\S]*?)<\/backend>');
     final nameRegex = RegExp(r'<name>([\s\S]*?)<\/name>');
     final designRegex = RegExp(r'<design>([\s\S]*?)<\/design>');
+    final versionRegex = RegExp(r'<version>([\s\S]*?)<\/version>');
+    final releaseNotesRegex = RegExp(r'<release_notes>([\s\S]*?)<\/release_notes>');
     final suggestAppRegex = RegExp(r'<suggest_app id="([^"]+)">([\s\S]*?)<\/suggest_app>');
 
     final forgeMatch = forgeRegex.firstMatch(message);
     final backendMatch = backendRegex.firstMatch(message);
     final nameMatch = nameRegex.firstMatch(message);
     final designMatch = designRegex.firstMatch(message);
+    final versionMatch = versionRegex.firstMatch(message);
+    final releaseNotesMatch = releaseNotesRegex.allMatches(message).lastOrNull;
     final suggestAppMatches = suggestAppRegex.allMatches(message).toList();
 
     if (forgeMatch != null || suggestAppMatches.isNotEmpty) {
@@ -32,6 +36,8 @@ class VibeDetector extends StatelessWidget {
       cleanMessage = cleanMessage.replaceAll(backendRegex, '');
       cleanMessage = cleanMessage.replaceAll(nameRegex, '');
       cleanMessage = cleanMessage.replaceAll(designRegex, '');
+      cleanMessage = cleanMessage.replaceAll(versionRegex, '');
+      cleanMessage = cleanMessage.replaceAll(releaseNotesRegex, '');
       cleanMessage = cleanMessage.replaceAll(suggestAppRegex, '');
       cleanMessage = cleanMessage.trim();
 
@@ -39,6 +45,8 @@ class VibeDetector extends StatelessWidget {
       final backendCode = backendMatch?.group(1);
       final name = nameMatch?.group(1)?.trim();
       final designDoc = designMatch?.group(1)?.trim();
+      final version = versionMatch?.group(1)?.trim();
+      final releaseNotes = releaseNotesMatch?.group(1)?.trim();
 
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -47,7 +55,7 @@ class VibeDetector extends StatelessWidget {
           const SizedBox(height: 8),
           if (forgeMatch != null)
             ElevatedButton.icon(
-              onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, name, designDoc),
+              onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, name, designDoc, version, releaseNotes),
               icon: const Icon(Icons.rocket_launch),
               label: Text(name != null ? 'Deploy $name' : 'Deploy App'),
               style: ElevatedButton.styleFrom(
