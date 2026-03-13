@@ -247,10 +247,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
         .substring(0, 1)
         .toUpperCase();
 
-    return Column(
+    return Row(
       children: [
         CircleAvatar(
-          radius: 40,
+          radius: 36,
           backgroundColor: theme.colorScheme.primaryContainer,
           child: Text(
             initials,
@@ -260,14 +260,22 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 16),
-        Text(
-          user?.displayName ?? 'Forgemaster',
-          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-        ),
-        Text(
-          user?.email ?? 'anonymous@microforge.ai',
-          style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+        const SizedBox(width: 20),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                user?.displayName ?? 'Forgemaster',
+                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                user?.email ?? 'anonymous@microforge.ai',
+                style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+              ),
+            ],
+          ),
         ),
       ],
     );
