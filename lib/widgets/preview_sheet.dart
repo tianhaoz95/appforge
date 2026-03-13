@@ -347,41 +347,34 @@ class PreviewSheetState extends State<PreviewSheet> {
     );
   }
 
-  Widget _buildCodeTabsView() {
-    return DefaultTabController(
-      length: 2,
-      child: Column(
-        children: [
-          TabBar(
-            tabs: const [
-              Tab(text: 'Frontend'),
-              Tab(text: 'Backend'),
-            ],
-            labelColor: Colors.indigo,
-            unselectedLabelColor: Colors.grey,
-            indicatorColor: Colors.indigo,
-            indicatorSize: TabBarIndicatorSize.label,
-            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          Expanded(
-            child: TabBarView(
-              children: [
-                _buildCodeView(_activeCode!, 'html'),
-                _buildCodeView(_activeBackendCode ?? '// No backend code provided.', 'javascript'),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildCodeView(String code, String language) {
+  Widget _buildMergedCodeView() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
-      child: MarkdownBody(
-        data: '```$language\n$code\n```',
-        selectable: true,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Frontend',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
+          ),
+          const SizedBox(height: 8),
+          MarkdownBody(
+            data: '```html\n$_activeCode\n```',
+            selectable: true,
+          ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          const Text(
+            'Backend',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
+          ),
+          const SizedBox(height: 8),
+          MarkdownBody(
+            data: '```javascript\n${_activeBackendCode ?? '// No backend code provided.'}\n```',
+            selectable: true,
+          ),
+        ],
       ),
     );
   }
@@ -866,7 +859,7 @@ class PreviewSheetState extends State<PreviewSheet> {
                         children: [
                           _buildAppView(),
                           _buildDesignLogView(),
-                          _buildCodeTabsView(),
+                          _buildMergedCodeView(),
                           _buildLogsView(),
                         ],
                       ),
