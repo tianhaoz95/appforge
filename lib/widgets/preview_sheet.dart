@@ -165,7 +165,7 @@ class PreviewSheetState extends State<PreviewSheet> {
           getData: (key) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'getData', key})).then(r => JSON.parse(r).value),
           showNotification: (title, body, payload) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'showNotification', title, body, payload})).then(r => JSON.parse(r))
         };
-        ${_activeBackendCode}
+        $_activeBackendCode
       ''';
 
       _jsRuntime!.evaluate(wrapper);
@@ -251,179 +251,132 @@ class PreviewSheetState extends State<PreviewSheet> {
     }
   }
 
-  void _showDesignDoc(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.8,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Design Document',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                ),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
+  Widget _buildAppView() {
+    return _controller != null 
+        ? WebViewWidget(controller: _controller!)
+        : const Center(child: Text('WebView Placeholder'));
+  }
+
+  Widget _buildDesignLogView() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (_activeReleaseNotes != null && _activeReleaseNotes!.isNotEmpty) ...[
+            const Text(
+              'Release Notes',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.indigo),
             ),
-            const Divider(),
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (_activeReleaseNotes != null && _activeReleaseNotes!.isNotEmpty) ...[
-                      const Text(
-                        'Release Notes',
-                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.blueGrey),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        _activeReleaseNotes!,
-                        style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic),
-                      ),
-                      const SizedBox(height: 16),
-                      const Divider(),
-                      const SizedBox(height: 16),
-                    ],
-                    MarkdownBody(
-                      data: _activeDesignDoc ?? 'No design documentation provided.',
-                    ),
-                  ],
-                ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.indigo.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.indigo.withOpacity(0.1)),
+              ),
+              child: Text(
+                _activeReleaseNotes!,
+                style: const TextStyle(fontSize: 14, fontStyle: FontStyle.italic, color: Colors.black87),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  void _showLogs(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.7,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Execution Logs',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                ),
-                Row(
-                  children: [
-                    IconButton(
-                      icon: const Icon(Icons.delete_sweep_outlined),
-                      onPressed: () => setState(() => _logs.clear()),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.pop(context),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            const SizedBox(height: 24),
             const Divider(),
-            Expanded(
-              child: _logs.isEmpty 
-                ? const Center(child: Text('No logs yet.', style: TextStyle(color: Colors.grey)))
-                : ListView.builder(
-                    itemCount: _logs.length,
-                    itemBuilder: (context, index) {
-                      final log = _logs[index];
-                      Color textColor = Colors.black87;
-                      if (log.contains('Error')) textColor = Colors.red;
-                      if (log.contains('Backend')) textColor = Colors.blue[800]!;
-                      
-                      return Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4),
-                        child: Text(
-                          log,
-                          style: TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            color: textColor,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-            ),
+            const SizedBox(height: 16),
           ],
-        ),
-      ),
-    );
-  }
-
-  void _showCode(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) => DefaultTabController(
-        length: 2,
-        child: Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          const Text(
+            'Design Documentation',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
           ),
-          child: Column(
+          const SizedBox(height: 12),
+          MarkdownBody(
+            data: _activeDesignDoc ?? 'No design documentation provided.',
+            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+              p: const TextStyle(color: Colors.black87, fontSize: 14),
+              h1: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+              h2: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+              h3: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+              listBullet: const TextStyle(color: Colors.black87),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLogsView() {
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 8, 0),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Generated Code', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                    IconButton(icon: const Icon(Icons.close), onPressed: () => Navigator.pop(context)),
-                  ],
-                ),
-              ),
-              const TabBar(
-                tabs: [
-                  Tab(text: 'Frontend (HTML)'),
-                  Tab(text: 'Backend (JS)'),
-                ],
-                labelColor: Colors.blue,
-                unselectedLabelColor: Colors.grey,
-              ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _buildCodeView(_activeCode!, 'html'),
-                    _buildCodeView(_activeBackendCode ?? '// No backend code provided.', 'javascript'),
-                  ],
-                ),
+              TextButton.icon(
+                icon: const Icon(Icons.delete_sweep_outlined, size: 18),
+                label: const Text('Clear Logs'),
+                onPressed: () => setState(() => _logs.clear()),
               ),
             ],
           ),
         ),
+        const Divider(height: 1),
+        Expanded(
+          child: _logs.isEmpty 
+            ? const Center(child: Text('No logs yet.', style: TextStyle(color: Colors.grey)))
+            : ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: _logs.length,
+                itemBuilder: (context, index) {
+                  final log = _logs[index];
+                  Color textColor = Colors.black87;
+                  if (log.contains('Error')) textColor = Colors.red;
+                  if (log.contains('Backend')) textColor = Colors.blue[800]!;
+                  
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Text(
+                      log,
+                      style: TextStyle(
+                        fontFamily: 'monospace',
+                        fontSize: 12,
+                        color: textColor,
+                      ),
+                    ),
+                  );
+                },
+              ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCodeTabsView() {
+    return DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          TabBar(
+            tabs: const [
+              Tab(text: 'Frontend'),
+              Tab(text: 'Backend'),
+            ],
+            labelColor: Colors.indigo,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: Colors.indigo,
+            indicatorSize: TabBarIndicatorSize.label,
+            labelStyle: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          Expanded(
+            child: TabBarView(
+              children: [
+                _buildCodeView(_activeCode!, 'html'),
+                _buildCodeView(_activeBackendCode ?? '// No backend code provided.', 'javascript'),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -766,142 +719,165 @@ class PreviewSheetState extends State<PreviewSheet> {
         snapSizes: const [0.0, 0.9, 1.0],
         builder: (context, scrollController) {
           final isFullScreen = _currentExtent > 0.95;
-          return Container(
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: isFullScreen 
-                  ? null 
-                  : const BorderRadius.vertical(top: Radius.circular(16)),
-              boxShadow: [
-                BoxShadow(blurRadius: 10, color: Colors.black26, offset: const Offset(0, -2)),
-              ],
-            ),
-            child: SafeArea(
-              top: isFullScreen,
-              bottom: false,
-              child: Column(
-                children: [
-                  // Top handle and header are wrapped in SingleChildScrollView to make them draggable
-                  SingleChildScrollView(
-                    controller: scrollController,
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    child: Column(
-                      children: [
-                        // Grab handle
-                        Container(
-                          width: 40,
-                          height: 4,
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.grey[300],
-                            borderRadius: BorderRadius.circular(2),
-                          ),
-                        ),
-                        Container(
-                          height: 44,
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              if (_versions.length > 1)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(8),
-                                    border: Border.all(color: Colors.grey[300]!),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _currentVersion,
-                                      icon: const Icon(Icons.history, size: 16),
-                                      style: const TextStyle(fontSize: 12, color: Colors.black, fontWeight: FontWeight.bold),
-                                      onChanged: (String? newValue) {
-                                        if (newValue != null) _switchVersion(newValue);
-                                      },
-                                      items: _versions.map<DropdownMenuItem<String>>((Map<String, dynamic> v) {
-                                        return DropdownMenuItem<String>(
-                                          value: v['version'],
-                                          child: Text('v${v['version']}'),
-                                        );
-                                      }).toList(),
-                                    ),
-                                  ),
-                                )
-                              else if (_currentVersion != null)
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: Colors.grey[100],
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Text(
-                                    'v$_currentVersion',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
-                                  ),
-                                )
-                              else
-                                const SizedBox.shrink(),
-                              Row(
-                                children: [
-                                  IconButton(
-                                    icon: const Icon(Icons.terminal_outlined, size: 20),
-                                    onPressed: () => _showLogs(context),
-                                    tooltip: 'Logs',
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.code_outlined, size: 20),
-                                    onPressed: () => _showCode(context),
-                                    tooltip: 'Source Code',
-                                  ),
-                                  if (widget.onEnhance != null)
-                                    TextButton.icon(
-                                      icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
-                                      label: const Text('Enhance', style: TextStyle(color: Colors.indigo)),
-                                      onPressed: widget.onEnhance,
-                                    ),
-                                  if (widget.onFeedback != null)
-                                    TextButton.icon(
-                                      icon: const Icon(Icons.feedback_outlined, size: 18),
-                                      label: const Text('Feedback'),
-                                      onPressed: () {
-                                        BetterFeedback.of(context).show((feedback) {
-                                          widget.onFeedback?.call(feedback.text, feedback.screenshot);
-                                        });
-                                      },
-                                    ),
-                                  if (_activeDesignDoc != null && _activeDesignDoc!.isNotEmpty)
-                                    IconButton(
-                                      icon: const Icon(Icons.description_outlined, size: 20),
-                                      onPressed: () => _showDesignDoc(context),
-                                      tooltip: 'Design & Release Notes',
-                                    ),
-                                  if (isFullScreen)
-                                    IconButton(
-                                      icon: const Icon(Icons.fullscreen_exit),
-                                      iconSize: 20,
-                                      onPressed: _toggleFullScreen,
-                                    ),
-                                  IconButton(
-                                    icon: const Icon(Icons.close),
-                                    iconSize: 20,
-                                    onPressed: widget.onClose ?? () => Navigator.pop(context),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Divider(height: 1),
-                  Expanded(
-                    child: _controller != null 
-                        ? WebViewWidget(controller: _controller!)
-                        : const Center(child: Text('WebView Placeholder')),
-                  ),
+          return DefaultTabController(
+            length: 4,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: isFullScreen 
+                    ? null 
+                    : const BorderRadius.vertical(top: Radius.circular(16)),
+                boxShadow: [
+                  BoxShadow(blurRadius: 10, color: Colors.black26, offset: const Offset(0, -2)),
                 ],
+              ),
+              child: SafeArea(
+                top: isFullScreen,
+                bottom: false,
+                child: Column(
+                  children: [
+                    // Top handle and header are wrapped in SingleChildScrollView to make them draggable
+                    SingleChildScrollView(
+                      controller: scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        children: [
+                          // Grab handle
+                          Container(
+                            width: 40,
+                            height: 4,
+                            margin: const EdgeInsets.symmetric(vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(2),
+                            ),
+                          ),
+                          Container(
+                            height: 44,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Row(
+                                    children: [
+                                      if (_versions.length > 1)
+                                        Container(
+                                          margin: const EdgeInsets.only(right: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(8),
+                                            border: Border.all(color: Colors.grey[300]!),
+                                          ),
+                                          child: DropdownButtonHideUnderline(
+                                            child: DropdownButton<String>(
+                                              value: _currentVersion,
+                                              icon: const Icon(Icons.history, size: 14),
+                                              style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.bold),
+                                              onChanged: (String? newValue) {
+                                                if (newValue != null) _switchVersion(newValue);
+                                              },
+                                              items: _versions.map<DropdownMenuItem<String>>((Map<String, dynamic> v) {
+                                                return DropdownMenuItem<String>(
+                                                  value: v['version'],
+                                                  child: Text('v${v['version']}'),
+                                                );
+                                              }).toList(),
+                                            ),
+                                          ),
+                                        )
+                                      else if (_currentVersion != null)
+                                        Container(
+                                          margin: const EdgeInsets.only(right: 8),
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.grey[100],
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            'v$_currentVersion',
+                                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.black87),
+                                          ),
+                                        ),
+                                      const Flexible(
+                                        child: TabBar(
+                                          isScrollable: true,
+                                          labelPadding: EdgeInsets.symmetric(horizontal: 8),
+                                          indicatorSize: TabBarIndicatorSize.label,
+                                          indicatorColor: Colors.indigo,
+                                          labelColor: Colors.indigo,
+                                          unselectedLabelColor: Colors.grey,
+                                          tabs: [
+                                            Tooltip(message: 'App', child: Tab(icon: Icon(Icons.apps, size: 20))),
+                                            Tooltip(message: 'Design', child: Tab(icon: Icon(Icons.description_outlined, size: 20))),
+                                            Tooltip(message: 'Code', child: Tab(icon: Icon(Icons.code_outlined, size: 20))),
+                                            Tooltip(message: 'Logs', child: Tab(icon: Icon(Icons.terminal_outlined, size: 20))),
+                                          ],
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                Row(
+                                  children: [
+                                    if (widget.onEnhance != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
+                                        onPressed: widget.onEnhance,
+                                        tooltip: 'Enhance',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    const SizedBox(width: 8),
+                                    if (widget.onFeedback != null)
+                                      IconButton(
+                                        icon: const Icon(Icons.feedback_outlined, size: 18),
+                                        onPressed: () {
+                                          BetterFeedback.of(context).show((feedback) {
+                                            widget.onFeedback?.call(feedback.text, feedback.screenshot);
+                                          });
+                                        },
+                                        tooltip: 'Feedback',
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    const SizedBox(width: 8),
+                                    if (isFullScreen)
+                                      IconButton(
+                                        icon: const Icon(Icons.fullscreen_exit, size: 20),
+                                        onPressed: _toggleFullScreen,
+                                        padding: EdgeInsets.zero,
+                                        constraints: const BoxConstraints(),
+                                      ),
+                                    IconButton(
+                                      icon: const Icon(Icons.close, size: 20),
+                                      onPressed: widget.onClose ?? () => Navigator.pop(context),
+                                      padding: EdgeInsets.zero,
+                                      constraints: const BoxConstraints(),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const Divider(height: 1),
+                    Expanded(
+                      child: TabBarView(
+                        physics: const BouncingScrollPhysics(),
+                        children: [
+                          _buildAppView(),
+                          _buildDesignLogView(),
+                          _buildCodeTabsView(),
+                          _buildLogsView(),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           );
