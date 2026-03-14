@@ -62,6 +62,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   late TabController _tabController;
   JavascriptRuntime? _jsRuntime;
   final List<String> _logs = [];
+  String? _lastThemeSignature;
 
   // Versioning state
   List<Map<String, dynamic>> _versions = [];
@@ -246,6 +247,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
     super.dispose();
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncThemeToWebView();
+  }
+
   void _onSheetChanged() {
     if (_sheetController.isAttached) {
       setState(() {
@@ -274,6 +281,9 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
         ..setNavigationDelegate(NavigationDelegate(
           onWebResourceError: (error) {
             _addLog('WebView Error', '${error.description} (${error.errorCode})');
+          },
+          onPageFinished: (_) {
+            _syncThemeToWebView();
           },
         ))
         ..addJavaScriptChannel(
@@ -703,21 +713,86 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       _controller?.loadHtmlString(_buildHtmlShell(_activeCode!));
       _loadVersions();
     }
+    _syncThemeToWebView();
+  }
+
+  Map<String, dynamic> _buildThemePayload() {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final settings = context.read<SettingsProvider>();
+    final brightness = theme.brightness;
+    final mode = brightness == Brightness.dark ? 'dark' : 'light';
+    final source = settings.themeMode == ThemeMode.system
+        ? 'system'
+        : (settings.themeMode == ThemeMode.dark ? 'dark' : 'light');
+
+    return {
+      'mode': mode,
+      'source': source,
+      'colors': {
+        'background': _colorToHex(scheme.background),
+        'surface': _colorToHex(scheme.surface),
+        'text': _colorToHex(scheme.onSurface),
+        'muted': _colorToHex(scheme.onSurfaceVariant),
+        'primary': _colorToHex(scheme.primary),
+        'onPrimary': _colorToHex(scheme.onPrimary),
+        'secondary': _colorToHex(scheme.secondary),
+        'onSecondary': _colorToHex(scheme.onSecondary),
+        'outline': _colorToHex(scheme.outline),
+      },
+    };
+  }
+
+  String _colorToHex(Color color) {
+    final value = color.value & 0xFFFFFF;
+    return '#${value.toRadixString(16).padLeft(6, '0')}';
+  }
+
+  void _syncThemeToWebView() {
+    if (_controller == null) return;
+    final payload = _buildThemePayload();
+    final signature = jsonEncode(payload);
+    if (_lastThemeSignature == signature) return;
+    _lastThemeSignature = signature;
+    _controller?.runJavaScript(
+      'window.MicroForge && window.MicroForge._setTheme && window.MicroForge._setTheme($signature);',
+    );
   }
 
   String _buildHtmlShell(String code) {
     // Optimization: Inline standard libraries if possible or use reliable CDNs
     // Added minimal loading overlay and transition
+    final themePayload = jsonEncode(_buildThemePayload());
     return '''
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>tailwind.config = { darkMode: 'class' };</script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
-    body { margin: 0; padding: 16px; font-family: sans-serif; background-color: white; opacity: 0; transition: opacity 0.3s ease-in; }
+    :root {
+      --mf-bg: #ffffff;
+      --mf-surface: #ffffff;
+      --mf-text: #111827;
+      --mf-muted: #6b7280;
+      --mf-primary: #3b82f6;
+      --mf-on-primary: #ffffff;
+      --mf-secondary: #6366f1;
+      --mf-on-secondary: #ffffff;
+      --mf-outline: #d1d5db;
+    }
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: sans-serif;
+      background-color: var(--mf-bg);
+      color: var(--mf-text);
+      opacity: 0;
+      transition: opacity 0.3s ease-in, background-color 0.2s ease, color 0.2s ease;
+    }
     body.ready { opacity: 1; }
   </style>
 </head>
@@ -728,6 +803,22 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   <script>
     (function() {
       const pendingRequests = new Map();
+      const themeListeners = new Set();
+
+      function applyTheme(theme) {
+        if (!theme || !theme.colors) return;
+        const root = document.documentElement;
+        root.classList.toggle('dark', theme.mode === 'dark');
+        root.style.setProperty('--mf-bg', theme.colors.background);
+        root.style.setProperty('--mf-surface', theme.colors.surface);
+        root.style.setProperty('--mf-text', theme.colors.text);
+        root.style.setProperty('--mf-muted', theme.colors.muted);
+        root.style.setProperty('--mf-primary', theme.colors.primary);
+        root.style.setProperty('--mf-on-primary', theme.colors.onPrimary);
+        root.style.setProperty('--mf-secondary', theme.colors.secondary);
+        root.style.setProperty('--mf-on-secondary', theme.colors.onSecondary);
+        root.style.setProperty('--mf-outline', theme.colors.outline);
+      }
       
       // Override console.log to send logs to Flutter
       const oldLog = console.log;
@@ -737,6 +828,19 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       };
 
       window.MicroForge = {
+        theme: null,
+        getTheme: () => window.MicroForge.theme,
+        onThemeChange: (callback) => {
+          themeListeners.add(callback);
+          return () => themeListeners.delete(callback);
+        },
+        _setTheme: (theme) => {
+          window.MicroForge.theme = theme;
+          applyTheme(theme);
+          themeListeners.forEach((cb) => {
+            try { cb(theme); } catch (_) {}
+          });
+        },
         _handleResponse: (requestId, response) => {
           if (pendingRequests.has(requestId)) {
             pendingRequests.get(requestId)(response);
@@ -778,6 +882,9 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           }));
         }
       };
+
+      const initialTheme = $themePayload;
+      window.MicroForge._setTheme(initialTheme);
     })();
   </script>
 </body>

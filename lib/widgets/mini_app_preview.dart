@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:provider/provider.dart';
@@ -21,6 +22,7 @@ class MiniAppPreview extends StatefulWidget {
 
 class _MiniAppPreviewState extends State<MiniAppPreview> {
   WebViewController? _controller;
+  String? _lastThemeSignature;
 
   @override
   void initState() {
@@ -28,7 +30,7 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
     if (!MiniAppPreview.skipWebViewForTesting) {
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(Colors.white)
+        ..setBackgroundColor(Colors.transparent)
         ..loadHtmlString(_buildHtmlShell(widget.code));
     }
   }
@@ -39,6 +41,61 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
     if (oldWidget.code != widget.code && _controller != null) {
       _controller!.loadHtmlString(_buildHtmlShell(widget.code));
     }
+    _syncThemeToWebView();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncThemeToWebView();
+  }
+
+  Map<String, dynamic> _buildThemePayload(SettingsProvider? settings) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final brightness = theme.brightness;
+    final mode = brightness == Brightness.dark ? 'dark' : 'light';
+    final source = settings == null
+        ? 'system'
+        : (settings.themeMode == ThemeMode.system
+            ? 'system'
+            : (settings.themeMode == ThemeMode.dark ? 'dark' : 'light'));
+
+    return {
+      'mode': mode,
+      'source': source,
+      'colors': {
+        'background': _colorToHex(scheme.background),
+        'surface': _colorToHex(scheme.surface),
+        'text': _colorToHex(scheme.onSurface),
+        'muted': _colorToHex(scheme.onSurfaceVariant),
+        'primary': _colorToHex(scheme.primary),
+        'onPrimary': _colorToHex(scheme.onPrimary),
+        'secondary': _colorToHex(scheme.secondary),
+        'onSecondary': _colorToHex(scheme.onSecondary),
+        'outline': _colorToHex(scheme.outline),
+      },
+    };
+  }
+
+  String _colorToHex(Color color) {
+    final value = color.value & 0xFFFFFF;
+    return '#${value.toRadixString(16).padLeft(6, '0')}';
+  }
+
+  void _syncThemeToWebView() {
+    if (_controller == null) return;
+    SettingsProvider? settings;
+    try {
+      settings = context.read<SettingsProvider>();
+    } catch (_) {}
+    final payload = _buildThemePayload(settings);
+    final signature = jsonEncode(payload);
+    if (_lastThemeSignature == signature) return;
+    _lastThemeSignature = signature;
+    _controller?.runJavaScript(
+      'window.MicroForge && window.MicroForge._setTheme && window.MicroForge._setTheme($signature);',
+    );
   }
 
   String _buildHtmlShell(String code) {
@@ -51,6 +108,7 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
     }
     
     final allowGeo = settings?.allowGeolocation ?? false;
+    final themePayload = _buildThemePayload(settings);
     
     return '''
 <!DOCTYPE html>
@@ -58,10 +116,29 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script>tailwind.config = { darkMode: 'class' };</script>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <style>
-    body { margin: 0; padding: 12px; font-family: sans-serif; background-color: white; }
+    :root {
+      --mf-bg: #ffffff;
+      --mf-surface: #ffffff;
+      --mf-text: #111827;
+      --mf-muted: #6b7280;
+      --mf-primary: #3b82f6;
+      --mf-on-primary: #ffffff;
+      --mf-secondary: #6366f1;
+      --mf-on-secondary: #ffffff;
+      --mf-outline: #d1d5db;
+    }
+    body {
+      margin: 0;
+      padding: 12px;
+      font-family: sans-serif;
+      background-color: var(--mf-bg);
+      color: var(--mf-text);
+      transition: background-color 0.2s ease, color 0.2s ease;
+    }
     /* Hide scrollbars for mini preview if preferred, or keep them */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -72,8 +149,37 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
     $code
   </div>
   <script>
+    const themeListeners = new Set();
+    function applyTheme(theme) {
+      if (!theme || !theme.colors) return;
+      const root = document.documentElement;
+      root.classList.toggle('dark', theme.mode === 'dark');
+      root.style.setProperty('--mf-bg', theme.colors.background);
+      root.style.setProperty('--mf-surface', theme.colors.surface);
+      root.style.setProperty('--mf-text', theme.colors.text);
+      root.style.setProperty('--mf-muted', theme.colors.muted);
+      root.style.setProperty('--mf-primary', theme.colors.primary);
+      root.style.setProperty('--mf-on-primary', theme.colors.onPrimary);
+      root.style.setProperty('--mf-secondary', theme.colors.secondary);
+      root.style.setProperty('--mf-on-secondary', theme.colors.onSecondary);
+      root.style.setProperty('--mf-outline', theme.colors.outline);
+    }
+
     // Minimal MicroForge bridge for preview
     window.MicroForge = {
+      theme: null,
+      getTheme: () => window.MicroForge.theme,
+      onThemeChange: (callback) => {
+        themeListeners.add(callback);
+        return () => themeListeners.delete(callback);
+      },
+      _setTheme: (theme) => {
+        window.MicroForge.theme = theme;
+        applyTheme(theme);
+        themeListeners.forEach((cb) => {
+          try { cb(theme); } catch (_) {}
+        });
+      },
       saveData: () => Promise.resolve({ success: true }),
       getData: () => Promise.resolve(null),
       deleteData: () => Promise.resolve({ success: true }),
@@ -84,6 +190,8 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
       ${allowGeo ? "getLocation: () => Promise.reject('Geolocation disabled in preview.')," : ""}
       closeApp: () => {}
     };
+
+    window.MicroForge._setTheme(${jsonEncode(themePayload)});
   </script>
 </body>
 </html>
