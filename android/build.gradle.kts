@@ -1,7 +1,16 @@
+import org.gradle.api.tasks.compile.JavaCompile
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+subprojects {
+    tasks.withType<JavaCompile>().configureEach {
+        // Suppress javac warnings from plugin modules still using -source/-target 8.
+        options.compilerArgs.addAll(listOf("-Xlint:-options", "-Xlint:-deprecation"))
     }
 }
 
