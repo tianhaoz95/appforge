@@ -37,5 +37,22 @@ void main() {
       await newProvider.loadSettings();
       expect(newProvider.themeMode, ThemeMode.light);
     });
+
+    test('rememberMe persists across loadSettings', () async {
+      await settingsProvider.setRememberMe(true);
+
+      final newProvider = SettingsProvider();
+      await newProvider.loadSettings();
+      expect(newProvider.rememberMe, isTrue);
+    });
+
+    test('rememberedEmail persists across loadSettings', () async {
+      const email = 'test@example.com';
+      await settingsProvider.setRememberedEmail(email);
+
+      final newProvider = SettingsProvider();
+      await newProvider.loadSettings();
+      expect(newProvider.rememberedEmail, email);
+    });
   });
 }

@@ -10,6 +10,8 @@ class SettingsProvider with ChangeNotifier {
   bool _allowBackgroundExecution = false;
   bool _allowBackgroundNotifications = false;
   bool _allowBackgroundDatabase = false;
+  bool _rememberMe = false;
+  String _rememberedEmail = '';
   ThemeMode _themeMode = ThemeMode.system;
 
   static const String _keySuggestExistingApps = 'suggest_existing_apps';
@@ -20,6 +22,8 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyAllowBackgroundExecution = 'allow_background_execution';
   static const String _keyAllowBackgroundNotifications = 'allow_background_notifications';
   static const String _keyAllowBackgroundDatabase = 'allow_background_database';
+  static const String _keyRememberMe = 'remember_me';
+  static const String _keyRememberedEmail = 'remembered_email';
   static const String _keyThemeMode = 'theme_mode';
 
   bool get suggestExistingApps => _suggestExistingApps;
@@ -30,6 +34,8 @@ class SettingsProvider with ChangeNotifier {
   bool get allowBackgroundExecution => _allowBackgroundExecution;
   bool get allowBackgroundNotifications => _allowBackgroundNotifications;
   bool get allowBackgroundDatabase => _allowBackgroundDatabase;
+  bool get rememberMe => _rememberMe;
+  String get rememberedEmail => _rememberedEmail;
   ThemeMode get themeMode => _themeMode;
 
   Future<void> loadSettings() async {
@@ -42,6 +48,8 @@ class SettingsProvider with ChangeNotifier {
     _allowBackgroundExecution = prefs.getBool(_keyAllowBackgroundExecution) ?? false;
     _allowBackgroundNotifications = prefs.getBool(_keyAllowBackgroundNotifications) ?? false;
     _allowBackgroundDatabase = prefs.getBool(_keyAllowBackgroundDatabase) ?? false;
+    _rememberMe = prefs.getBool(_keyRememberMe) ?? false;
+    _rememberedEmail = prefs.getString(_keyRememberedEmail) ?? '';
     
     final themeIndex = prefs.getInt(_keyThemeMode) ?? ThemeMode.system.index;
     _themeMode = ThemeMode.values[themeIndex];
@@ -55,6 +63,24 @@ class SettingsProvider with ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_keyThemeMode, value.index);
+    }
+  }
+
+  Future<void> setRememberMe(bool value) async {
+    if (_rememberMe != value) {
+      _rememberMe = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyRememberMe, value);
+    }
+  }
+
+  Future<void> setRememberedEmail(String value) async {
+    if (_rememberedEmail != value) {
+      _rememberedEmail = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyRememberedEmail, value);
     }
   }
 

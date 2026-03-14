@@ -3,40 +3,70 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:appforge/screens/auth/login_screen.dart';
 import 'package:appforge/screens/auth/register_screen.dart';
 import 'package:appforge/screens/auth/forgot_password_screen.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:appforge/screens/auth/login_screen.dart';
+import 'package:appforge/screens/auth/register_screen.dart';
+import 'package:appforge/screens/auth/forgot_password_screen.dart';
 import 'package:appforge/providers/auth_provider.dart';
+import 'package:appforge/providers/settings_provider.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockAuthProvider extends Mock implements AuthProvider {}
 class MockUser extends Mock implements User {}
 
 void main() {
   late MockAuthProvider mockAuthProvider;
+  late SettingsProvider settingsProvider;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     mockAuthProvider = MockAuthProvider();
+    settingsProvider = SettingsProvider();
     // Default mock behavior
     when(() => mockAuthProvider.isAuthenticated).thenReturn(false);
   });
 
   Widget createAuthScreen(Widget screen) {
-    return MaterialApp(
-      home: ChangeNotifierProvider<AuthProvider>.value(
-        value: mockAuthProvider,
-        child: screen,
+    return MultiProvider(
+      providers: [
+        ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
+        ChangeNotifierProvider<SettingsProvider>.value(value: settingsProvider),
+      ],
+      child: MaterialApp(
+        home: screen,
       ),
     );
   }
 
-  testWidgets('LoginScreen shows all required fields and buttons', (WidgetTester tester) async {
+  testWidgets('LoginScreen shows all required fields, buttons, and checkbox', (WidgetTester tester) async {
     await tester.pumpWidget(createAuthScreen(const LoginScreen()));
 
     expect(find.text('MicroForge'), findsOneWidget);
     expect(find.byType(TextField), findsNWidgets(2)); // Email and Password
+    expect(find.byType(Checkbox), findsOneWidget);
+    expect(find.text('Remember Me'), findsOneWidget);
     expect(find.text('Sign In'), findsOneWidget);
     expect(find.text('Register'), findsOneWidget);
     expect(find.text('Forgot Password?'), findsOneWidget);
+  });
+
+  testWidgets('LoginScreen pre-fills email when rememberMe is true', (WidgetTester tester) async {
+    const email = 'remembered@example.com';
+    SharedPreferences.setMockInitialValues({
+      'remember_me': true,
+      'remembered_email': email,
+    });
+    await settingsProvider.loadSettings();
+
+    await tester.pumpWidget(createAuthScreen(const LoginScreen()));
+
+    expect(find.text(email), findsOneWidget);
+    final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
+    expect(checkbox.value, isTrue);
   });
 
   testWidgets('RegisterScreen shows all required fields and buttons', (WidgetTester tester) async {
