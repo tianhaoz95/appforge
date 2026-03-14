@@ -6,6 +6,7 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
   final LlmProvider _primaryProvider;
   final LlmProvider _secondaryProvider;
   bool _isUsingFallback = false;
+  bool _isBusy = false;
 
   FallbackLlmProvider({
     required LlmProvider primary,
@@ -13,6 +14,8 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
   })  : _primaryProvider = primary,
         _secondaryProvider = secondary,
         _currentProvider = primary;
+
+  bool get isBusy => _isBusy;
 
   @override
   List<ChatMessage> get history => _currentProvider.history.toList();
@@ -26,12 +29,14 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
 
   @override
   Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
+    _isBusy = true;
     notifyListeners(); // Notify when starting to capture user's message
     try {
       final stream = _primaryProvider.sendMessageStream(prompt, attachments: attachments);
       await for (final chunk in stream) {
         yield chunk;
       }
+      _isBusy = false;
       notifyListeners(); // Notify when finished to capture AI's response
     } catch (e) {
       final errorStr = e.toString().toLowerCase();
@@ -45,8 +50,11 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
         await for (final chunk in stream) {
           yield chunk;
         }
+        _isBusy = false;
         notifyListeners(); // Notify when finished to capture AI's response
       } else {
+        _isBusy = false;
+        notifyListeners();
         rethrow;
       }
     }

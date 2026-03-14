@@ -95,6 +95,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String? _enhancementDesign;
   String? _enhancementAppId;
   final GlobalKey<PreviewSheetState> _previewSheetKey = GlobalKey();
+  late MicroAppRepository _repository;
 
   // Add getters for testing
   String? get activeBackendCode => _activeBackendCode;
@@ -106,7 +107,37 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   @override
   void initState() {
     super.initState();
+    _repository = context.read<MicroAppRepository>();
+    _repository.addListener(_onAppsChanged);
     _initializeAI();
+  }
+
+  @override
+  void dispose() {
+    _repository.removeListener(_onAppsChanged);
+    super.dispose();
+  }
+
+  void _onAppsChanged() {
+    if (!mounted) return;
+    
+    // Check if we are busy to avoid interrupting a generation
+    if (_provider is FallbackLlmProvider && (_provider as FallbackLlmProvider).isBusy) {
+      debugPrint('Apps changed but AI is busy. Delaying re-initialization...');
+      return;
+    }
+
+    final settings = context.read<SettingsProvider>();
+    if (settings.suggestExistingApps) {
+      debugPrint('Apps changed, re-initializing AI to update system prompt...');
+      _initializeAI(
+        enhancementCode: _enhancementCode,
+        enhancementBackend: _enhancementBackend,
+        enhancementDesign: _enhancementDesign,
+        enhancementAppId: _enhancementAppId,
+        history: _provider?.history.toList(),
+      );
+    }
   }
 
   void _initializeAI({
