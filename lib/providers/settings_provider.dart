@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider with ChangeNotifier {
@@ -7,18 +7,21 @@ class SettingsProvider with ChangeNotifier {
   bool _allowAccelerometer = false;
   bool _allowNotifications = false;
   bool _allowBackendDatabase = false;
+  ThemeMode _themeMode = ThemeMode.system;
 
   static const String _keySuggestExistingApps = 'suggest_existing_apps';
   static const String _keyAllowGeolocation = 'allow_geolocation';
   static const String _keyAllowAccelerometer = 'allow_accelerometer';
   static const String _keyAllowNotifications = 'allow_notifications';
   static const String _keyAllowBackendDatabase = 'allow_backend_database';
+  static const String _keyThemeMode = 'theme_mode';
 
   bool get suggestExistingApps => _suggestExistingApps;
   bool get allowGeolocation => _allowGeolocation;
   bool get allowAccelerometer => _allowAccelerometer;
   bool get allowNotifications => _allowNotifications;
   bool get allowBackendDatabase => _allowBackendDatabase;
+  ThemeMode get themeMode => _themeMode;
 
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -27,7 +30,20 @@ class SettingsProvider with ChangeNotifier {
     _allowAccelerometer = prefs.getBool(_keyAllowAccelerometer) ?? false;
     _allowNotifications = prefs.getBool(_keyAllowNotifications) ?? false;
     _allowBackendDatabase = prefs.getBool(_keyAllowBackendDatabase) ?? false;
+    
+    final themeIndex = prefs.getInt(_keyThemeMode) ?? ThemeMode.system.index;
+    _themeMode = ThemeMode.values[themeIndex];
+    
     notifyListeners();
+  }
+
+  Future<void> setThemeMode(ThemeMode value) async {
+    if (_themeMode != value) {
+      _themeMode = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_keyThemeMode, value.index);
+    }
   }
 
   Future<void> setSuggestExistingApps(bool value) async {

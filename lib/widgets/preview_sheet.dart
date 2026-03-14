@@ -302,22 +302,21 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
               'Release Notes',
               style: Theme.of(context).textTheme.titleLarge?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: Colors.indigo,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
             ),
             const SizedBox(height: 8),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: Colors.indigo.withOpacity(0.05),
+                color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.indigo.withOpacity(0.1)),
+                border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)),
               ),
               child: Text(
                 _activeReleaseNotes!,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontStyle: FontStyle.italic,
-                      color: Colors.black87,
                     ),
               ),
             ),
@@ -328,11 +327,11 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           MarkdownBody(
             data: _activeDesignDoc ?? 'No design documentation provided.',
             styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-              p: const TextStyle(color: Colors.black87, fontSize: 14),
-              h1: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              h2: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              h3: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-              listBullet: const TextStyle(color: Colors.black87),
+              p: Theme.of(context).textTheme.bodyMedium,
+              h1: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+              h2: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+              h3: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              listBullet: Theme.of(context).textTheme.bodyMedium,
             ),
           ),
         ],
@@ -370,9 +369,9 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                 itemCount: _logs.length,
                 itemBuilder: (context, index) {
                   final log = _logs[index];
-                  Color textColor = Colors.black87;
-                  if (log.contains('Error')) textColor = Colors.red;
-                  if (log.contains('Backend')) textColor = Colors.blue[800]!;
+                  Color textColor = Theme.of(context).colorScheme.onSurface;
+                  if (log.contains('Error')) textColor = Theme.of(context).colorScheme.error;
+                  if (log.contains('Backend')) textColor = Theme.of(context).colorScheme.primary;
                   
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
@@ -402,7 +401,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
             'Frontend',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
           ),
           const SizedBox(height: 8),
@@ -417,7 +416,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
             'Backend',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
           ),
           const SizedBox(height: 8),
@@ -760,7 +759,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           final isFullScreen = _currentExtent > 0.95;
           return Container(
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: Theme.of(context).colorScheme.surface,
               borderRadius: isFullScreen 
                   ? null 
                   : const BorderRadius.vertical(top: Radius.circular(16)),
@@ -772,7 +771,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
               top: isFullScreen,
               bottom: false,
               child: Material(
-                color: Colors.white,
+                color: Theme.of(context).colorScheme.surface,
                 child: Column(
                   children: [
                     // Top handle and header are wrapped in SingleChildScrollView to make them draggable
@@ -805,15 +804,15 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                         margin: const EdgeInsets.only(right: 8),
                                         padding: const EdgeInsets.symmetric(horizontal: 4),
                                         decoration: BoxDecoration(
-                                          color: Colors.grey[100],
+                                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                           borderRadius: BorderRadius.circular(8),
-                                          border: Border.all(color: Colors.grey[300]!),
+                                          border: Border.all(color: Theme.of(context).colorScheme.outline),
                                         ),
                                         child: DropdownButtonHideUnderline(
                                           child: DropdownButton<String>(
                                             value: _currentVersion,
                                             icon: const Icon(Icons.history, size: 14),
-                                            style: const TextStyle(fontSize: 11, color: Colors.black, fontWeight: FontWeight.bold),
+                                            style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
                                             onChanged: (String? newValue) {
                                               if (newValue != null) _switchVersion(newValue);
                                             },
@@ -836,14 +835,14 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                         margin: const EdgeInsets.only(right: 8),
                                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                         decoration: BoxDecoration(
-                                          color: Colors.grey[100],
+                                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                                           borderRadius: BorderRadius.circular(8),
                                         ),
                                         child: Text(
                                           'v$_currentVersion',
                                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                             fontWeight: FontWeight.bold,
-                                            color: Colors.black87,
+                                            color: Theme.of(context).colorScheme.onSurface,
                                           ),
                                         ),
                                       ),
@@ -852,7 +851,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                         child: DropdownButton<int>(
                                           value: _tabController.index,
                                           isDense: true,
-                                          style: const TextStyle(fontSize: 14, color: Colors.indigo, fontWeight: FontWeight.bold),
+                                          style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                                           onChanged: (int? newValue) {
                                             if (newValue != null) {
                                               _tabController.animateTo(newValue);

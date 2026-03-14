@@ -147,6 +147,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSectionHeader('Preferences'),
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
+                  icon: Icons.palette_outlined,
+                  title: 'App Theme',
+                  subtitle: 'Choose your preferred look',
+                  trailing: SegmentedButton<ThemeMode>(
+                    segments: const [
+                      ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto, size: 18)),
+                      ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode, size: 18)),
+                      ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode, size: 18)),
+                    ],
+                    selected: {settingsProvider.themeMode},
+                    onSelectionChanged: (Set<ThemeMode> newSelection) {
+                      settingsProvider.setThemeMode(newSelection.first);
+                    },
+                    showSelectedIcon: false,
+                    style: SegmentedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ),
+                _buildPreferenceItem(
                   icon: Icons.lightbulb_outline,
                   title: 'Suggest Existing Apps',
                   subtitle: 'AI will look for similar apps before forging new ones',

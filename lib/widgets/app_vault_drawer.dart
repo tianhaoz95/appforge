@@ -47,7 +47,10 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
           DrawerHeader(
             decoration: BoxDecoration(
               gradient: LinearGradient(
-                colors: [Colors.blueGrey[800]!, Colors.blueGrey[600]!],
+                colors: [
+                  Theme.of(context).colorScheme.primaryContainer,
+                  Theme.of(context).colorScheme.secondaryContainer,
+                ],
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
               ),
@@ -61,20 +64,24 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                     Container(
                       padding: const EdgeInsets.all(4),
                       decoration: BoxDecoration(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.surface,
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Image.asset(
                         'brand/logo.png',
                         height: 32,
-                        errorBuilder: (context, error, stackTrace) => const Icon(Icons.auto_awesome_motion, size: 32, color: Colors.indigo),
+                        errorBuilder: (context, error, stackTrace) => Icon(
+                          Icons.auto_awesome_motion, 
+                          size: 32, 
+                          color: Theme.of(context).colorScheme.primary
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
-                    const Text(
+                    Text(
                       'AppVault',
                       style: TextStyle(
-                        color: Colors.white,
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
@@ -118,7 +125,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                           style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w500,
-                            color: Colors.blueGrey[400],
+                            color: Theme.of(context).colorScheme.secondary,
                           ),
                         ),
                         leading: const Icon(Icons.history, size: 18),
