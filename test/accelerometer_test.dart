@@ -41,7 +41,7 @@ void main() {
           providers: [
             ChangeNotifierProvider<SettingsProvider>.value(value: settingsProvider),
             Provider<MicroAppDataRepository>.value(value: mockDataRepo),
-            Provider<MicroAppRepository>.value(value: mockAppRepo),
+            ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepo),
           ],
           child: const PreviewSheet(
             code: '<h1>Hello</h1>',

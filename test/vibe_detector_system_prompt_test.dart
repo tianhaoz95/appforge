@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:appforge/widgets/vibe_detector.dart';
+import 'package:appforge/widgets/mini_app_preview.dart';
 
 void main() {
+  setUp(() {
+    MiniAppPreview.skipWebViewForTesting = true;
+  });
+
   testWidgets('VibeDetector handles multiline <forge> tags', (WidgetTester tester) async {
     const message = '''
 Here is your app:

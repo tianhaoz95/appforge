@@ -77,10 +77,10 @@ class MicroForgeHomePage extends StatefulWidget {
   const MicroForgeHomePage({super.key});
 
   @override
-  State<MicroForgeHomePage> createState() => _MicroForgeHomePageState();
+  State<MicroForgeHomePage> createState() => MicroForgeHomePageState();
 }
 
-class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
+class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   LlmProvider? _provider;
   String? _activeForgeCode;
   String? _activeBackendCode;
@@ -95,6 +95,13 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String? _enhancementDesign;
   String? _enhancementAppId;
   final GlobalKey<PreviewSheetState> _previewSheetKey = GlobalKey();
+
+  // Add getters for testing
+  String? get activeBackendCode => _activeBackendCode;
+  String? get enhancementBackend => _enhancementBackend;
+  String? get activeForgeCode => _activeForgeCode;
+  String? get activeAppId => _activeAppId;
+  bool get showPreview => _showPreview;
 
   @override
   void initState() {
@@ -341,7 +348,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     _initializeAI();
   }
 
-  void _onEnhance() {
+  void onEnhance() {
     if (_activeForgeCode == null) return;
 
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
@@ -505,13 +512,24 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void _onDeploy(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes, {bool isTemporary = false}) async {
+  void onDeploy(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes, {bool isTemporary = false}) async {
+    // Fallback to enhancement values if current ones are null
+    final finalBackend = backendCode ?? _enhancementBackend;
+    final finalDesign = designDoc ?? _enhancementDesign;
+    final finalName = name ?? (_conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App');
+
     setState(() {
       _activeForgeCode = code;
-      _activeBackendCode = backendCode;
-      _activeDesignDoc = designDoc;
+      _activeBackendCode = finalBackend;
+      _activeDesignDoc = finalDesign;
       _activeReleaseNotes = releaseNotes;
       _showPreview = true;
+      
+      // Update enhancement context so subsequent deploys in the same conversation 
+      // can also benefit from these fallbacks
+      _enhancementCode = code;
+      _enhancementBackend = finalBackend;
+      _enhancementDesign = finalDesign;
     });
 
     if (isTemporary) {
@@ -527,14 +545,14 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       const userId = 'local-user';
 
       String finalAppId = const Uuid().v4();
-      String finalName = name ?? 'Forged App';
+      String resolvedName = finalName;
       String finalVersion = version ?? '1.0.0';
 
       if (_enhancementAppId != null) {
         final existingApp = await repository.getApp(_enhancementAppId!);
         if (existingApp != null) {
           finalAppId = _enhancementAppId!;
-          finalName = existingApp['name'] ?? finalName;
+          resolvedName = name ?? existingApp['name'] ?? resolvedName;
           if (version == null) {
             finalVersion = _bumpVersion(existingApp['version']);
           }
@@ -545,10 +563,10 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'appId': finalAppId,
         'ownerId': userId,
         'conversationId': _currentConversationId,
-        'name': finalName,
+        'name': resolvedName,
         'html_blob': code,
-        'backend_blob': backendCode,
-        'design_doc': designDoc,
+        'backend_blob': finalBackend,
+        'design_doc': finalDesign,
         'release_notes': releaseNotes,
         'version': finalVersion,
         'icon': 'rocket',
@@ -584,7 +602,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final repository = context.read<MicroAppRepository>();
     final app = await repository.getApp(appId);
     if (app != null) {
-      _loadApp(app);
+      loadApp(app);
     } else {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -594,7 +612,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void _loadApp(Map<String, dynamic> app, {bool switchConversation = false}) async {
+  void loadApp(Map<String, dynamic> app, {bool switchConversation = false}) async {
     final conversationId = app['conversationId'];
     final appId = app['appId'];
     if (conversationId != null && switchConversation) {
@@ -761,7 +779,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
             ],
           ),
           drawer: AppVaultDrawer(
-            onAppSelected: _loadApp,
+            onAppSelected: loadApp,
             onConversationSelected: _onConversationSelected,
           ),
           body: _provider == null
@@ -779,11 +797,11 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                 provider: _provider!,
                                 responseBuilder: (context, message) => VibeDetector(
                                   message: message,
-                                  onDeploy: _onDeploy,
+                                onDeploy: onDeploy,
                                   onOpenApp: _onOpenApp,
                                   onAutoRefine: (code, backendCode, name, designDoc, version, releaseNotes) async {
                                     if (!_showPreview) {
-                                      _onDeploy(code, backendCode, name, designDoc, version, releaseNotes, isTemporary: true);
+                                      onDeploy(code, backendCode, name, designDoc, version, releaseNotes, isTemporary: true);
                                       // Give WebView some time to load before attempting to capture logs/screenshot
                                       await Future.delayed(const Duration(milliseconds: 1500));
                                     }
@@ -847,7 +865,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
             releaseNotes: _activeReleaseNotes,
             appId: _activeAppId ?? 'unknown',
             onClose: () => setState(() => _showPreview = false),
-            onEnhance: _onEnhance,
+            onEnhance: onEnhance,
             onFeedback: _onFeedback,
             onAutoRefine: _onAutoRefine,
             onSaveData: (key, value) {

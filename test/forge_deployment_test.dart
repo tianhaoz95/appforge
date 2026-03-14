@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:integration_test/integration_test.dart';
 import 'package:provider/provider.dart';
 import 'package:appforge/widgets/vibe_detector.dart';
 import 'package:appforge/widgets/preview_sheet.dart';
+import 'package:appforge/widgets/mini_app_preview.dart';
 import 'package:appforge/repositories/micro_app_data_repository.dart';
 import 'package:appforge/repositories/micro_app_repository.dart';
 import 'package:mocktail/mocktail.dart';
@@ -24,6 +24,7 @@ void main() {
 
   setUpAll(() {
     PreviewSheet.skipWebViewForTesting = true;
+    MiniAppPreview.skipWebViewForTesting = true;
   });
 
   testWidgets('VibeDetector Deployment Logic Test', (WidgetTester tester) async {
@@ -38,7 +39,7 @@ void main() {
         home: MultiProvider(
           providers: [
             Provider<MicroAppDataRepository>(create: (_) => MicroAppDataRepository()),
-            Provider<MicroAppRepository>.value(value: mockAppRepo),
+            ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepo),
           ],
           child: StatefulBuilder(
             builder: (context, setState) {

@@ -39,7 +39,7 @@ void main() {
         home: MultiProvider(
           providers: [
             Provider<MicroAppDataRepository>.value(value: mockDataRepository),
-            Provider<MicroAppRepository>.value(value: mockAppRepository),
+            ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
           ],
           child: const PreviewSheet(
             code: '<div></div>',
@@ -74,7 +74,7 @@ void main() {
         home: MultiProvider(
           providers: [
             Provider<MicroAppDataRepository>.value(value: mockDataRepository),
-            Provider<MicroAppRepository>.value(value: mockAppRepository),
+            ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
           ],
           child: const PreviewSheet(
             code: '<div></div>',

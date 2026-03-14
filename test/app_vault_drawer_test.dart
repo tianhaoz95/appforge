@@ -32,8 +32,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: MultiProvider(
         providers: [
-          Provider<MicroAppRepository>.value(value: mockAppRepository),
-          Provider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
+          ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
         ],
         child: const Scaffold(
           drawer: AppVaultDrawer(),
@@ -63,8 +63,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: MultiProvider(
         providers: [
-          Provider<MicroAppRepository>.value(value: mockAppRepository),
-          Provider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
+          ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
         ],
         child: const Scaffold(
           drawer: AppVaultDrawer(),
@@ -106,8 +106,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: MultiProvider(
         providers: [
-          Provider<MicroAppRepository>.value(value: mockAppRepository),
-          Provider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
+          ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
         ],
         child: const Scaffold(
           drawer: AppVaultDrawer(),
@@ -152,8 +152,8 @@ void main() {
     await tester.pumpWidget(MaterialApp(
       home: MultiProvider(
         providers: [
-          Provider<MicroAppRepository>.value(value: mockAppRepository),
-          Provider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
+          ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
         ],
         child: const Scaffold(
           drawer: AppVaultDrawer(),
