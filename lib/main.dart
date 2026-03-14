@@ -558,7 +558,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _activeAppId = appId;
       });
 
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('$finalName (v$finalVersion) forged and saved locally!'),
@@ -568,6 +568,15 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       }
     } catch (e) {
       debugPrint('Failed to save app: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to save app: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
     }
   }
 
@@ -781,7 +790,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     
                                     if (_previewSheetKey.currentState != null) {
                                       _previewSheetKey.currentState!.handleAutoRefine();
-                                    } else if (mounted) {
+                                    } else if (context.mounted) {
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(
                                           content: Text('Failed to start refinement. Please try again.'),
