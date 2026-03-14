@@ -14,92 +14,28 @@ class AppVaultDrawer extends StatefulWidget {
 }
 
 class _AppVaultDrawerState extends State<AppVaultDrawer> {
-  late Future<List<Map<String, dynamic>>> _appsFuture;
-  late Future<List<Map<String, dynamic>>> _convsFuture;
   static const userId = 'local-user';
-
-  @override
-  void initState() {
-    super.initState();
-    // In order to use Provider.of in initState, we'd need listen: false,
-    // but the future should be initialized using the repositories.
-    // However, build() is where we have access to context easily.
-    // We can initialize them in didChangeDependencies.
-  }
+  Future<List<Map<String, dynamic>>>? _appsFuture;
+  Future<List<Map<String, dynamic>>>? _convsFuture;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    _refreshApps();
-    _refreshConvs();
+    // Refresh futures when dependencies change (including repository notifications)
+    // We use context.watch to trigger didChangeDependencies on notifyListeners()
+    Provider.of<MicroAppRepository>(context);
+    Provider.of<ConversationRepository>(context);
+    _refresh();
   }
 
-  void _refreshApps() {
+  void _refresh() {
     final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
+    final convRepository = Provider.of<ConversationRepository>(context, listen: false);
+    
     setState(() {
       _appsFuture = appRepository.getAppsForOwner(userId);
-    });
-  }
-
-  void _refreshConvs() {
-    final convRepository = Provider.of<ConversationRepository>(context, listen: false);
-    setState(() {
       _convsFuture = convRepository.getConversations();
     });
-  }
-
-  Future<void> _confirmDelete(Map<String, dynamic> app) async {
-    final bool? shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Micro App?'),
-        content: Text('Are you sure you want to delete "${app['name']}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldDelete == true) {
-      final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
-      await appRepository.deleteApp(app['appId']);
-      _refreshApps();
-    }
-  }
-
-  Future<void> _confirmDeleteConversation(Map<String, dynamic> conv) async {
-    final bool? shouldDelete = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Delete Conversation?'),
-        content: Text('Are you sure you want to delete "${conv['title'] ?? 'Untitled Chat'}"? This action cannot be undone.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
-          ),
-        ],
-      ),
-    );
-
-    if (shouldDelete == true) {
-      final convRepository = Provider.of<ConversationRepository>(context, listen: false);
-      await convRepository.deleteConversation(conv['conversationId']);
-      _refreshConvs();
-    }
   }
 
   @override
@@ -222,7 +158,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                     widget.onAppSelected?.call(app);
                     Navigator.pop(context);
                   },
-                  onLongPress: () => _confirmDelete(app),
+                  onLongPress: () => _confirmDelete(context, app),
                 )).toList(),
               );
             },
@@ -233,23 +169,77 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
   }
 
   Widget _buildConversationTile(Map<String, dynamic> conv) {
-    return ListTile(
-      dense: true,
-      leading: const Icon(Icons.chat_bubble_outline, size: 20),
-      title: Text(
-        conv['title'] ?? 'Untitled Chat',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      onTap: () {
-        widget.onConversationSelected?.call(
-          conv['conversationId'],
+    return Builder(builder: (context) {
+      return ListTile(
+        dense: true,
+        leading: const Icon(Icons.chat_bubble_outline, size: 20),
+        title: Text(
           conv['title'] ?? 'Untitled Chat',
-        );
-        Navigator.pop(context);
-      },
-      onLongPress: () => _confirmDeleteConversation(conv),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        onTap: () {
+          widget.onConversationSelected?.call(
+            conv['conversationId'],
+            conv['title'] ?? 'Untitled Chat',
+          );
+          Navigator.pop(context);
+        },
+        onLongPress: () => _confirmDeleteConversation(context, conv),
+      );
+    });
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Map<String, dynamic> app) async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Micro App?'),
+        content: Text('Are you sure you want to delete "${app['name']}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
+
+    if (shouldDelete == true && context.mounted) {
+      final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
+      await appRepository.deleteApp(app['appId']);
+    }
+  }
+
+  Future<void> _confirmDeleteConversation(BuildContext context, Map<String, dynamic> conv) async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Conversation?'),
+        content: Text('Are you sure you want to delete "${conv['title'] ?? 'Untitled Chat'}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true && context.mounted) {
+      final convRepository = Provider.of<ConversationRepository>(context, listen: false);
+      await convRepository.deleteConversation(conv['conversationId']);
+    }
   }
 
   IconData _getIcon(String? iconName) {

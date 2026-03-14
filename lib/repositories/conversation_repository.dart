@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'local_database.dart';
 import 'package:sqflite/sqflite.dart';
@@ -19,7 +20,7 @@ class ConversationData {
   });
 }
 
-class ConversationRepository {
+class ConversationRepository extends ChangeNotifier {
   final LocalDatabase _dbHelper;
 
   ConversationRepository({LocalDatabase? dbHelper})
@@ -51,6 +52,7 @@ class ConversationRepository {
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    notifyListeners();
   }
 
   Future<List<Map<String, dynamic>>> getConversations() async {
@@ -96,5 +98,6 @@ class ConversationRepository {
       where: 'conversationId = ?',
       whereArgs: [conversationId],
     );
+    notifyListeners();
   }
 }

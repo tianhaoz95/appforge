@@ -45,9 +45,9 @@ void main() async {
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: settingsProvider),
-        Provider(create: (_) => MicroAppRepository(dbHelper: dbHelper)),
+        ChangeNotifierProvider(create: (_) => MicroAppRepository(dbHelper: dbHelper)),
         Provider(create: (_) => MicroAppDataRepository(dbHelper: dbHelper)),
-        Provider(create: (_) => ConversationRepository(dbHelper: dbHelper)),
+        ChangeNotifierProvider(create: (_) => ConversationRepository(dbHelper: dbHelper)),
         ChangeNotifierProvider(create: (_) => AuthProvider()), // Kept for potential UI needs, but not for auth
       ],
       child: const MyApp(),
@@ -94,6 +94,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String? _enhancementBackend;
   String? _enhancementDesign;
   String? _enhancementAppId;
+  final GlobalKey<PreviewSheetState> _previewSheetKey = GlobalKey();
 
   @override
   void initState() {
@@ -188,6 +189,10 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
 
     systemPrompt += '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
+        '\n\nAUTO REFINE CAPABILITY: '
+        'When you receive a message starting with "AUTO REFINE:", it means the user wants you to analyze the current app for flaws and potential improvements based on logs and a screenshot. '
+        'You MUST analyze the console logs for errors or warnings, and the screenshot for layout/styling issues. '
+        'Then, provide the improved code (and design document) following the same <forge>, <backend>, <name>, <design>, <version>, and <release_notes> tagging rules. '
         '\nExample of Alpine.js AI integration: '
         'x-data="{ input: \'\', response: \'\', loading: false }" '
         '@submit.prevent="loading = true; response = await window.MicroForge.promptAi(input, \'You are a helpful assistant.\'); loading = false"'
@@ -431,6 +436,61 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
   }
 
+  void _onAutoRefine(List<String> logs, Uint8List screenshot) {
+    if (_activeForgeCode == null) return;
+
+    final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
+    final codeToEnhance = _activeForgeCode!;
+    final backendToEnhance = _activeBackendCode;
+    final designToEnhance = _activeDesignDoc;
+
+    setState(() {
+      _showPreview = false;
+      _currentConversationId = const Uuid().v4();
+      _conversationTitle = 'Refining $name';
+      _enhancementCode = codeToEnhance;
+      _enhancementBackend = backendToEnhance;
+      _enhancementDesign = designToEnhance;
+    });
+
+    _initializeAI(
+      enhancementCode: codeToEnhance, 
+      enhancementBackend: backendToEnhance,
+      enhancementDesign: designToEnhance,
+    );
+
+    // Prepare logs text
+    final logsText = logs.isNotEmpty ? logs.join('\n') : 'No logs captured.';
+
+    // Give it a moment for AI to be ready with new provider
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_provider != null) {
+        setState(() {
+          _provider!.history = [
+            ChatMessage(
+              origin: MessageOrigin.user,
+              text: "AUTO REFINE: Please analyze this app for flaws and potential improvements based on the following context:\n\n"
+                  "1. App Console Logs:\n$logsText\n\n"
+                  "2. App Screenshot (attached below).\n\n"
+                  "Please look for visual inconsistencies, bugs indicated by logs, or UX improvements and implement the necessary changes in the code and design doc.",
+              attachments: [
+                ImageFileAttachment(
+                  name: 'app_screenshot.png',
+                  mimeType: 'image/png',
+                  bytes: screenshot,
+                ),
+              ],
+            ),
+          ];
+        });
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Analyzing app for refinements...')),
+    );
+  }
+
   String _bumpVersion(String? currentVersion) {
     if (currentVersion == null || currentVersion.isEmpty) return '1.0.0';
     final parts = currentVersion.split('.');
@@ -445,7 +505,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void _onDeploy(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes) async {
+  void _onDeploy(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes, {bool isTemporary = false}) async {
     setState(() {
       _activeForgeCode = code;
       _activeBackendCode = backendCode;
@@ -453,6 +513,13 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _activeReleaseNotes = releaseNotes;
       _showPreview = true;
     });
+
+    if (isTemporary) {
+      setState(() {
+        _activeAppId = 'temp-preview';
+      });
+      return;
+    }
 
     // Automatically save app locally
     try {
@@ -705,6 +772,24 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                   message: message,
                                   onDeploy: _onDeploy,
                                   onOpenApp: _onOpenApp,
+                                  onAutoRefine: (code, backendCode, name, designDoc, version, releaseNotes) async {
+                                    if (!_showPreview) {
+                                      _onDeploy(code, backendCode, name, designDoc, version, releaseNotes, isTemporary: true);
+                                      // Give WebView some time to load before attempting to capture logs/screenshot
+                                      await Future.delayed(const Duration(milliseconds: 1500));
+                                    }
+                                    
+                                    if (_previewSheetKey.currentState != null) {
+                                      _previewSheetKey.currentState!.handleAutoRefine();
+                                    } else if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('Failed to start refinement. Please try again.'),
+                                          duration: Duration(seconds: 2),
+                                        ),
+                                      );
+                                    }
+                                  },
                                 ),
                               ),
                               if (_provider!.history.isEmpty)
@@ -746,6 +831,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
         ),
         if (_showPreview && _activeForgeCode != null)
           PreviewSheet(
+            key: _previewSheetKey,
             code: _activeForgeCode!,
             backendCode: _activeBackendCode,
             designDoc: _activeDesignDoc,
@@ -754,6 +840,7 @@ class _MicroForgeHomePageState extends State<MicroForgeHomePage> {
             onClose: () => setState(() => _showPreview = false),
             onEnhance: _onEnhance,
             onFeedback: _onFeedback,
+            onAutoRefine: _onAutoRefine,
             onSaveData: (key, value) {
               // Handled by the internal bridge now
             },

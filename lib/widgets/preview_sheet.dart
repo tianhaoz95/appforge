@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -24,6 +26,7 @@ class PreviewSheet extends StatefulWidget {
   final String appId;
   final VoidCallback? onClose;
   final VoidCallback? onEnhance;
+  final Function(List<String> logs, Uint8List screenshot)? onAutoRefine;
   final Function(String text, Uint8List screenshot)? onFeedback;
   final Function(String key, dynamic value)? onSaveData;
   
@@ -38,6 +41,7 @@ class PreviewSheet extends StatefulWidget {
     required this.appId,
     this.onClose,
     this.onEnhance,
+    this.onAutoRefine,
     this.onFeedback,
     this.onSaveData,
   });
@@ -52,6 +56,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   double _currentExtent = 0.9;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
+  final GlobalKey _repaintKey = GlobalKey();
   
   late TabController _tabController;
   JavascriptRuntime? _jsRuntime;
@@ -86,7 +91,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   }
 
   void _loadVersions() async {
-    if (widget.appId == 'unknown') return;
+    if (widget.appId == 'unknown' || widget.appId == 'temp-preview') return;
     try {
       final repository = context.read<MicroAppRepository>();
       final versions = await repository.getAppVersions(widget.appId);
@@ -261,8 +266,29 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
 
   Widget _buildAppView() {
     return _controller != null 
-        ? WebViewWidget(controller: _controller!)
+        ? RepaintBoundary(
+            key: _repaintKey,
+            child: WebViewWidget(controller: _controller!),
+          )
         : const Center(child: Text('WebView Placeholder'));
+  }
+
+  Future<void> handleAutoRefine() async {
+    if (widget.onAutoRefine == null) return;
+    
+    try {
+      // Capture screenshot
+      final boundary = _repaintKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      
+      final image = await boundary.toImage(pixelRatio: 2.0);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      final screenshot = byteData!.buffer.asUint8List();
+      
+      widget.onAutoRefine?.call(List.from(_logs), screenshot);
+    } catch (e) {
+      debugPrint('Error capturing screenshot for Auto Refine: $e');
+    }
   }
 
   Widget _buildDesignLogView() {

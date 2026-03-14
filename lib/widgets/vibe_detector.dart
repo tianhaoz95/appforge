@@ -6,12 +6,14 @@ class VibeDetector extends StatelessWidget {
   final String message;
   final Function(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes)? onDeploy;
   final Function(String appId)? onOpenApp;
+  final Function(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes)? onAutoRefine;
 
   const VibeDetector({
     super.key,
     required this.message,
     this.onDeploy,
     this.onOpenApp,
+    this.onAutoRefine,
   });
 
   @override
@@ -90,13 +92,31 @@ class VibeDetector extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 8),
-            ElevatedButton.icon(
-              onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, name, designDoc, version, releaseNotes),
-              icon: const Icon(Icons.rocket_launch),
-              label: Text(name != null ? 'Deploy $name' : 'Deploy App'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orangeAccent,
-                foregroundColor: Colors.black,
+            if (onAutoRefine != null) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => onAutoRefine?.call(forgeCode ?? '', backendCode, name, designDoc, version, releaseNotes),
+                  icon: const Icon(Icons.auto_fix_high),
+                  label: const Text('Auto Refine'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+            ],
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, name, designDoc, version, releaseNotes),
+                icon: const Icon(Icons.rocket_launch),
+                label: Text(name != null ? 'Deploy $name' : 'Deploy App'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orangeAccent,
+                  foregroundColor: Colors.black,
+                ),
               ),
             ),
           ] else if (cleanMessage.isNotEmpty) ...[

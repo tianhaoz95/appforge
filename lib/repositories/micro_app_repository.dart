@@ -1,8 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 import 'package:sqflite/sqflite.dart';
 import 'local_database.dart';
 
-class MicroAppRepository {
+class MicroAppRepository extends ChangeNotifier {
   final LocalDatabase _dbHelper;
   final _uuid = const Uuid();
 
@@ -32,6 +33,7 @@ class MicroAppRepository {
       data,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    notifyListeners();
     return appId;
   }
 
@@ -63,9 +65,12 @@ class MicroAppRepository {
     final db = await _dbHelper.database;
     final List<Map<String, dynamic>> maps = await db.rawQuery('''
       SELECT * FROM micro_apps 
-      WHERE ownerId = ? 
-      GROUP BY appId 
-      HAVING MAX(created_at)
+      WHERE (appId, created_at) IN (
+        SELECT appId, MAX(created_at)
+        FROM micro_apps
+        WHERE ownerId = ?
+        GROUP BY appId
+      )
       ORDER BY created_at DESC
     ''', [ownerId]);
 
@@ -86,5 +91,6 @@ class MicroAppRepository {
         whereArgs: [appId],
       );
     });
+    notifyListeners();
   }
 }
