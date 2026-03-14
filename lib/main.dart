@@ -16,6 +16,7 @@ import 'firebase_options.dart';
 import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
 import 'widgets/preview_sheet.dart';
+import 'widgets/rolling_greeting.dart';
 import 'repositories/micro_app_repository.dart';
 import 'repositories/conversation_repository.dart';
 import 'repositories/micro_app_data_repository.dart';
@@ -1141,8 +1142,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                                   ),
                                             ),
                                             const SizedBox(height: 8),
-                                            Text(
-                                              "let's build an app!",
+                                            RollingGreeting(
                                               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                                     color: Colors.blueGrey[400],
                                                   ),
