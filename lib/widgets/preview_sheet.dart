@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
@@ -373,6 +374,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               TextButton.icon(
+                icon: const Icon(Icons.copy_outlined, size: 18),
+                label: const Text('Copy Errors'),
+                onPressed: _copyErrorLogs,
+              ),
+              const SizedBox(width: 8),
+              TextButton.icon(
                 icon: const Icon(Icons.delete_sweep_outlined, size: 18),
                 label: const Text('Clear Logs'),
                 onPressed: () => setState(() => _logs.clear()),
@@ -413,6 +420,21 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
               ),
         ),
       ],
+    );
+  }
+
+  void _copyErrorLogs() {
+    final errorLogs = _logs.where((log) => log.contains('Error')).toList();
+    if (errorLogs.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No error logs to copy.')),
+      );
+      return;
+    }
+
+    Clipboard.setData(ClipboardData(text: errorLogs.join('\n')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Error logs copied to clipboard.')),
     );
   }
 
