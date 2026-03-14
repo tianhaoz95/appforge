@@ -942,7 +942,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                   Expanded(
                     child: TabBarView(
                       controller: _tabController,
-                      physics: const BouncingScrollPhysics(),
+                      physics: const NeverScrollableScrollPhysics(),
                       children: [
                         _buildAppView(),
                         _buildDesignLogView(),

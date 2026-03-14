@@ -185,4 +185,28 @@ void main() {
     
     verify(() => mockDataRepo.saveData('test-app', 'testKey', 'testValue')).called(1);
   });
+
+  testWidgets('PreviewSheet TabBarView has NeverScrollableScrollPhysics', (WidgetTester tester) async {
+    final mockDataRepo = MockMicroAppDataRepository();
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
+    
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>.value(value: mockDataRepo),
+            ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepo),
+          ],
+          child: const PreviewSheet(
+            code: '<h1>Hello</h1>',
+            appId: 'test-app',
+          ),
+        ),
+      ),
+    ));
+
+    final tabBarView = tester.widget<TabBarView>(find.byType(TabBarView));
+    expect(tabBarView.physics, isA<NeverScrollableScrollPhysics>());
+  });
 }
