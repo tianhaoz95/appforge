@@ -4,9 +4,9 @@ import 'mini_app_preview.dart';
 
 class VibeDetector extends StatelessWidget {
   final String message;
-  final Function(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes)? onDeploy;
+  final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes)? onDeploy;
   final Function(String appId)? onOpenApp;
-  final Function(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes)? onAutoRefine;
+  final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes)? onAutoRefine;
 
   const VibeDetector({
     super.key,
@@ -20,6 +20,7 @@ class VibeDetector extends StatelessWidget {
   Widget build(BuildContext context) {
     final forgeRegex = RegExp(r'<forge>([\s\S]*?)<\/forge>');
     final backendRegex = RegExp(r'<backend>([\s\S]*?)<\/backend>');
+    final periodicBackendRegex = RegExp(r'<periodic_backend>([\s\S]*?)<\/periodic_backend>');
     final nameRegex = RegExp(r'<name>([\s\S]*?)<\/name>');
     final designRegex = RegExp(r'<design>([\s\S]*?)<\/design>');
     final versionRegex = RegExp(r'<version>([\s\S]*?)<\/version>');
@@ -28,6 +29,7 @@ class VibeDetector extends StatelessWidget {
 
     final forgeMatch = forgeRegex.firstMatch(message);
     final backendMatch = backendRegex.firstMatch(message);
+    final periodicBackendMatch = periodicBackendRegex.firstMatch(message);
     final nameMatch = nameRegex.firstMatch(message);
     final designMatch = designRegex.firstMatch(message);
     final versionMatch = versionRegex.firstMatch(message);
@@ -37,6 +39,7 @@ class VibeDetector extends StatelessWidget {
     if (forgeMatch != null || suggestAppMatches.isNotEmpty) {
       String cleanMessage = message.replaceAll(forgeRegex, '');
       cleanMessage = cleanMessage.replaceAll(backendRegex, '');
+      cleanMessage = cleanMessage.replaceAll(periodicBackendRegex, '');
       cleanMessage = cleanMessage.replaceAll(nameRegex, '');
       cleanMessage = cleanMessage.replaceAll(designRegex, '');
       cleanMessage = cleanMessage.replaceAll(versionRegex, '');
@@ -46,6 +49,7 @@ class VibeDetector extends StatelessWidget {
 
       final forgeCode = forgeMatch?.group(1);
       final backendCode = backendMatch?.group(1);
+      final periodicBackendCode = periodicBackendMatch?.group(1);
       final name = nameMatch?.group(1)?.trim();
       final designDoc = designMatch?.group(1)?.trim();
       final version = versionMatch?.group(1)?.trim();
@@ -88,6 +92,11 @@ class VibeDetector extends StatelessWidget {
                     const Text('Backend Code:', style: TextStyle(fontWeight: FontWeight.bold)),
                     MarkdownBody(data: '```javascript\n$backendCode\n```'),
                   ],
+                  if (periodicBackendCode != null && periodicBackendCode.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    const Text('Background Periodic Code:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    MarkdownBody(data: '```javascript\n$periodicBackendCode\n```'),
+                  ],
                 ],
               ),
             ),
@@ -96,7 +105,7 @@ class VibeDetector extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: () => onAutoRefine?.call(forgeCode ?? '', backendCode, name, designDoc, version, releaseNotes),
+                  onPressed: () => onAutoRefine?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes),
                   icon: const Icon(Icons.auto_fix_high),
                   label: const Text('Auto Refine'),
                   style: ElevatedButton.styleFrom(
@@ -110,7 +119,7 @@ class VibeDetector extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, name, designDoc, version, releaseNotes),
+                onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes),
                 icon: const Icon(Icons.rocket_launch),
                 label: Text(name != null ? 'Deploy $name' : 'Deploy App'),
                 style: ElevatedButton.styleFrom(

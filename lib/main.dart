@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
@@ -8,6 +9,9 @@ import 'package:provider/provider.dart';
 import 'package:uuid/uuid.dart';
 import 'package:feedback/feedback.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:workmanager/workmanager.dart';
+import 'package:flutter_js/flutter_js.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'firebase_options.dart';
 import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
@@ -22,6 +26,132 @@ import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
 
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    debugPrint("Background task starting: $task");
+    
+    final prefs = await SharedPreferences.getInstance();
+    final allowBackground = prefs.getBool('allow_background_execution') ?? false;
+    if (!allowBackground) {
+      debugPrint("Background execution disabled in settings.");
+      return Future.value(true);
+    }
+
+    final allowNotifications = prefs.getBool('allow_background_notifications') ?? false;
+    final allowDatabase = prefs.getBool('allow_background_database') ?? false;
+
+    final dbHelper = LocalDatabase();
+    final db = await dbHelper.database;
+    
+    // Get all apps with periodic backend
+    final List<Map<String, dynamic>> apps = await db.query(
+      'micro_apps',
+      where: 'periodic_backend_blob IS NOT NULL AND periodic_backend_blob != ""',
+    );
+
+    if (apps.isEmpty) {
+      debugPrint("No background tasks found.");
+      return Future.value(true);
+    }
+
+    final notificationsPlugin = FlutterLocalNotificationsPlugin();
+    final dataRepository = MicroAppDataRepository(dbHelper: dbHelper);
+
+    for (final app in apps) {
+      final appId = app['appId'];
+      final code = app['periodic_backend_blob'];
+      final appName = app['name'] ?? 'Unknown App';
+
+      debugPrint("Executing background task for app: $appName ($appId)");
+
+      final jsRuntime = getJavascriptRuntime();
+      
+      jsRuntime.onMessage('MicroForgeBridge', (dynamic args) async {
+        final data = jsonDecode(args.toString()) as Map<String, dynamic>;
+        final action = data['action'];
+
+        if (action == 'log') {
+          debugPrint('[Background $appName] ${data['message']}');
+          return jsonEncode({'success': true});
+        } else if (action == 'saveData') {
+          if (!allowDatabase) return jsonEncode({'error': 'Database access disabled'});
+          await dataRepository.saveData(appId, data['key'], data['value']);
+          return jsonEncode({'success': true});
+        } else if (action == 'getData') {
+          if (!allowDatabase) return jsonEncode({'error': 'Database access disabled'});
+          final val = await dataRepository.getData(appId, data['key']);
+          return jsonEncode({'value': val});
+        } else if (action == 'deleteData') {
+          if (!allowDatabase) return jsonEncode({'error': 'Database access disabled'});
+          await dataRepository.deleteData(appId, data['key']);
+          return jsonEncode({'success': true});
+        } else if (action == 'listAll') {
+          if (!allowDatabase) return jsonEncode({'error': 'Database access disabled'});
+          final allData = await dataRepository.listAll(appId);
+          return jsonEncode({'data': allData});
+        } else if (action == 'showNotification') {
+          if (!allowNotifications) return jsonEncode({'error': 'Notification access disabled'});
+          
+          const androidDetails = AndroidNotificationDetails(
+            'background_channel',
+            'Background Tasks',
+            importance: Importance.max,
+            priority: Priority.high,
+          );
+          const notificationDetails = NotificationDetails(android: androidDetails, iOS: DarwinNotificationDetails());
+          
+          await notificationsPlugin.show(
+            id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+            title: data['title'] ?? appName,
+            body: data['body'] ?? '',
+            notificationDetails: notificationDetails,
+            payload: data['payload'],
+          );
+          return jsonEncode({'success': true});
+        }
+        return jsonEncode({'error': 'Unknown action'});
+      });
+
+      final wrapper = '''
+        var window = this;
+        var MicroForge = {
+          saveData: (key, value) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'saveData', key, value})).then(r => JSON.parse(r)),
+          getData: (key) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'getData', key})).then(r => JSON.parse(r).value),
+          deleteData: (key) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'deleteData', key})).then(r => JSON.parse(r)),
+          listAll: () => sendMessage('MicroForgeBridge', JSON.stringify({action: 'listAll'})).then(r => JSON.parse(r).data),
+          showNotification: (title, body, payload) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'showNotification', title, body, payload})).then(r => JSON.parse(r))
+        };
+        var console = {
+          log: (...args) => sendMessage('MicroForgeBridge', JSON.stringify({
+            action: 'log', 
+            message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')
+          }))
+        };
+        
+        async function runWrapper() {
+          try {
+            $code
+          } catch (e) {
+            console.log("Error in background task: " + e.message);
+          }
+        }
+        runWrapper();
+      ''';
+
+      try {
+        await jsRuntime.evaluateAsync(wrapper);
+      } catch (e) {
+        debugPrint("JS Evaluation Error in background: $e");
+      } finally {
+        jsRuntime.dispose();
+      }
+    }
+
+    return Future.value(true);
+  });
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -33,6 +163,20 @@ void main() async {
     iOS: iosInitializationSettings,
   );
   await flutterLocalNotificationsPlugin.initialize(settings: initializationSettings);
+
+  await Workmanager().initialize(
+    callbackDispatcher,
+  );
+  
+  // Schedule a periodic task to run every 30 minutes
+  await Workmanager().registerPeriodicTask(
+    "microforge-periodic-background",
+    "periodicTask",
+    frequency: const Duration(minutes: 30),
+    constraints: Constraints(
+      networkType: NetworkType.connected,
+    ),
+  );
 
   // Keep Firebase for AI if needed, but we could also move it later
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -91,6 +235,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   LlmProvider? _provider;
   String? _activeForgeCode;
   String? _activeBackendCode;
+  String? _activePeriodicBackendCode;
   String? _activeDesignDoc;
   String? _activeReleaseNotes;
   String? _activeAppId;
@@ -99,6 +244,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String _conversationTitle = 'New Conversation';
   String? _enhancementCode;
   String? _enhancementBackend;
+  String? _enhancementPeriodicBackend;
   String? _enhancementDesign;
   String? _enhancementAppId;
   final GlobalKey<PreviewSheetState> _previewSheetKey = GlobalKey();
@@ -106,6 +252,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
   // Add getters for testing
   String? get activeBackendCode => _activeBackendCode;
+  String? get activePeriodicBackendCode => _activePeriodicBackendCode;
   String? get enhancementBackend => _enhancementBackend;
   String? get activeForgeCode => _activeForgeCode;
   String? get activeAppId => _activeAppId;
@@ -140,6 +287,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _initializeAI(
         enhancementCode: _enhancementCode,
         enhancementBackend: _enhancementBackend,
+        enhancementPeriodicBackend: _enhancementPeriodicBackend,
         enhancementDesign: _enhancementDesign,
         enhancementAppId: _enhancementAppId,
         history: _provider?.history.toList(),
@@ -150,6 +298,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   void _initializeAI({
     String? enhancementCode,
     String? enhancementBackend,
+    String? enhancementPeriodicBackend,
     String? enhancementDesign,
     String? enhancementAppId,
     List<ChatMessage>? history,
@@ -225,7 +374,29 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         '- `window.MicroForge.pickFiles(options)`: Returns a Promise that resolves to a list of file objects. '
         'Options: `{ multiple: true/false, type: "any"/"image"/"video"/"audio"/"media"/"custom", extensions: ["pdf", "doc"] }`. '
         'File object: `{ name, size, extension, bytes (base64) }`. '
-        '- `window.MicroForge.callBackend(api, payload)`: Calls the backend JS engine. Returns a Promise that resolves to the backend response object `{ status, payload }`. ';
+        '- `window.MicroForge.callBackend(api, payload)`: Calls the backend JS engine. Returns a Promise that resolves to the backend response object `{ status, payload }`. '
+        '\n\nNEW CAPABILITY: Background Periodic Functions. '
+        'You can now write a separate, pure JavaScript function that runs in the background periodically (every 15-30 mins). '
+        'This is ideal for tasks like checking external APIs, updating local data, or sending notifications when the app is NOT active. '
+        'The background code MUST be wrapped in <periodic_backend>...</periodic_backend> tags. '
+        'Rules for Periodic Backend: '
+        '1. It must NOT have input arguments or a return value. '
+        '2. It must be self-contained (no reliance on external UI variables). '
+        '3. It has access to the same MicroForge Bridge API as the standard backend (saveData, getData, showNotification, etc.). '
+        '4. It will be executed by the system even if the app is closed. '
+        '5. Access to Notifications and Database is controlled by "Background" toggles in the settings. '
+        'Example: '
+        '<periodic_backend>'
+        'async function runTask() { '
+        '  const lastCheck = await MicroForge.getData("last_check"); '
+        '  const now = Date.now(); '
+        '  if (!lastCheck || now - lastCheck > 3600000) { '
+        '    await MicroForge.showNotification("Time to check in!", "You haven\'t used the app in a while."); '
+        '    await MicroForge.saveData("last_check", now); '
+        '  } '
+        '} '
+        'runTask();'
+        '</periodic_backend>';
 
     if (settings.allowGeolocation) {
       systemPrompt += '- `window.MicroForge.getLocation()`: Returns a Promise that resolves to a location object. '
@@ -278,6 +449,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           'You are currently enhancing an existing micro-app.\n'
           'Current Implementation:\n<forge>$enhancementCode</forge>\n'
           'Current Backend:\n<backend>${enhancementBackend ?? 'No backend provided.'}</backend>\n'
+          'Current Background Periodic:\n<periodic_backend>${enhancementPeriodicBackend ?? 'No background periodic code provided.'}</periodic_backend>\n'
           'Design Document:\n<design>${enhancementDesign ?? 'No design document provided.'}</design>';
     }
 
@@ -373,6 +545,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       history.toList(),
       enhancementCode: _enhancementCode,
       enhancementBackend: _enhancementBackend,
+      enhancementPeriodicBackend: _enhancementPeriodicBackend,
       enhancementDesign: _enhancementDesign,
       enhancementAppId: _enhancementAppId,
     );
@@ -382,11 +555,13 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     setState(() {
       _activeForgeCode = null;
       _activeBackendCode = null;
+      _activePeriodicBackendCode = null;
       _showPreview = false;
       _currentConversationId = const Uuid().v4();
       _conversationTitle = 'New Conversation';
       _enhancementCode = null;
       _enhancementBackend = null;
+      _enhancementPeriodicBackend = null;
       _enhancementDesign = null;
       _enhancementAppId = null;
       if (_provider != null) {
@@ -402,6 +577,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
     final codeToEnhance = _activeForgeCode!;
     final backendToEnhance = _activeBackendCode;
+    final periodicBackendToEnhance = _activePeriodicBackendCode;
     final designToEnhance = _activeDesignDoc;
     final appIdToEnhance = _activeAppId;
 
@@ -411,6 +587,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _conversationTitle = 'Enhance $name';
       _enhancementCode = codeToEnhance;
       _enhancementBackend = backendToEnhance;
+      _enhancementPeriodicBackend = periodicBackendToEnhance;
       _enhancementDesign = designToEnhance;
       _enhancementAppId = appIdToEnhance;
     });
@@ -418,6 +595,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     _initializeAI(
       enhancementCode: codeToEnhance, 
       enhancementBackend: backendToEnhance,
+      enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
       enhancementAppId: appIdToEnhance,
     );
@@ -448,6 +626,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
     final codeToEnhance = _activeForgeCode!;
     final backendToEnhance = _activeBackendCode;
+    final periodicBackendToEnhance = _activePeriodicBackendCode;
     final designToEnhance = _activeDesignDoc;
 
     setState(() {
@@ -456,12 +635,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _conversationTitle = 'Feedback on $name';
       _enhancementCode = codeToEnhance;
       _enhancementBackend = backendToEnhance;
+      _enhancementPeriodicBackend = periodicBackendToEnhance;
       _enhancementDesign = designToEnhance;
     });
 
     _initializeAI(
       enhancementCode: codeToEnhance, 
       enhancementBackend: backendToEnhance,
+      enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
     );
 
@@ -497,6 +678,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
     final codeToEnhance = _activeForgeCode!;
     final backendToEnhance = _activeBackendCode;
+    final periodicBackendToEnhance = _activePeriodicBackendCode;
     final designToEnhance = _activeDesignDoc;
 
     setState(() {
@@ -505,12 +687,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _conversationTitle = 'Refining $name';
       _enhancementCode = codeToEnhance;
       _enhancementBackend = backendToEnhance;
+      _enhancementPeriodicBackend = periodicBackendToEnhance;
       _enhancementDesign = designToEnhance;
     });
 
     _initializeAI(
       enhancementCode: codeToEnhance, 
       enhancementBackend: backendToEnhance,
+      enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
     );
 
@@ -560,15 +744,17 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void onDeploy(String code, String? backendCode, String? name, String? designDoc, String? version, String? releaseNotes, {bool isTemporary = false}) async {
+  void onDeploy(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, {bool isTemporary = false}) async {
     // Fallback to enhancement values if current ones are null
     final finalBackend = backendCode ?? _enhancementBackend;
+    final finalPeriodicBackend = periodicBackendCode ?? _enhancementPeriodicBackend;
     final finalDesign = designDoc ?? _enhancementDesign;
     final finalName = name ?? (_conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App');
 
     setState(() {
       _activeForgeCode = code;
       _activeBackendCode = finalBackend;
+      _activePeriodicBackendCode = finalPeriodicBackend;
       _activeDesignDoc = finalDesign;
       _activeReleaseNotes = releaseNotes;
       _showPreview = true;
@@ -577,6 +763,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       // can also benefit from these fallbacks
       _enhancementCode = code;
       _enhancementBackend = finalBackend;
+      _enhancementPeriodicBackend = finalPeriodicBackend;
       _enhancementDesign = finalDesign;
     });
 
@@ -614,6 +801,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'name': resolvedName,
         'html_blob': code,
         'backend_blob': finalBackend,
+        'periodic_backend_blob': finalPeriodicBackend,
         'design_doc': finalDesign,
         'release_notes': releaseNotes,
         'version': finalVersion,
@@ -670,6 +858,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       setState(() {
         _activeForgeCode = app['html_blob'];
         _activeBackendCode = app['backend_blob'];
+        _activePeriodicBackendCode = app['periodic_backend_blob'];
         _activeDesignDoc = app['design_doc'];
         _activeReleaseNotes = app['release_notes'];
         _activeAppId = appId;
@@ -678,6 +867,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _conversationTitle = app['name'] ?? 'Forged App';
         _enhancementCode = data.enhancementCode;
         _enhancementBackend = data.enhancementBackend;
+        _enhancementPeriodicBackend = data.enhancementPeriodicBackend;
         _enhancementDesign = data.enhancementDesign;
         _enhancementAppId = data.enhancementAppId;
       });
@@ -685,6 +875,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _initializeAI(
         enhancementCode: data.enhancementCode,
         enhancementBackend: data.enhancementBackend,
+        enhancementPeriodicBackend: data.enhancementPeriodicBackend,
         enhancementDesign: data.enhancementDesign,
         enhancementAppId: data.enhancementAppId,
         history: data.history.toList(),
@@ -693,6 +884,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       setState(() {
         _activeForgeCode = app['html_blob'];
         _activeBackendCode = app['backend_blob'];
+        _activePeriodicBackendCode = app['periodic_backend_blob'];
         _activeDesignDoc = app['design_doc'];
         _activeReleaseNotes = app['release_notes'];
         _activeAppId = appId;
@@ -710,9 +902,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _conversationTitle = title;
       _activeForgeCode = null; 
       _activeBackendCode = null;
+      _activePeriodicBackendCode = null;
       _showPreview = false;
       _enhancementCode = data.enhancementCode;
       _enhancementBackend = data.enhancementBackend;
+      _enhancementPeriodicBackend = data.enhancementPeriodicBackend;
       _enhancementDesign = data.enhancementDesign;
       _enhancementAppId = data.enhancementAppId;
     });
@@ -720,6 +914,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     _initializeAI(
       enhancementCode: data.enhancementCode,
       enhancementBackend: data.enhancementBackend,
+      enhancementPeriodicBackend: data.enhancementPeriodicBackend,
       enhancementDesign: data.enhancementDesign,
       enhancementAppId: data.enhancementAppId,
       history: data.history.toList(),
@@ -886,9 +1081,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                   message: message,
                                 onDeploy: onDeploy,
                                   onOpenApp: _onOpenApp,
-                                  onAutoRefine: (code, backendCode, name, designDoc, version, releaseNotes) async {
+                                  onAutoRefine: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes) async {
                                     if (!_showPreview) {
-                                      onDeploy(code, backendCode, name, designDoc, version, releaseNotes, isTemporary: true);
+                                      onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, isTemporary: true);
                                       // Give WebView some time to load before attempting to capture logs/screenshot
                                       await Future.delayed(const Duration(milliseconds: 1500));
                                     }
@@ -948,6 +1143,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
             key: _previewSheetKey,
             code: _activeForgeCode!,
             backendCode: _activeBackendCode,
+            periodicBackendCode: _activePeriodicBackendCode,
             designDoc: _activeDesignDoc,
             releaseNotes: _activeReleaseNotes,
             appId: _activeAppId ?? 'unknown',

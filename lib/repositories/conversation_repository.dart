@@ -8,6 +8,7 @@ class ConversationData {
   final List<ChatMessage> history;
   final String? enhancementCode;
   final String? enhancementBackend;
+  final String? enhancementPeriodicBackend;
   final String? enhancementDesign;
   final String? enhancementAppId;
 
@@ -15,6 +16,7 @@ class ConversationData {
     required this.history, 
     this.enhancementCode, 
     this.enhancementBackend,
+    this.enhancementPeriodicBackend,
     this.enhancementDesign,
     this.enhancementAppId,
   });
@@ -32,6 +34,7 @@ class ConversationRepository extends ChangeNotifier {
     List<ChatMessage> history, {
     String? enhancementCode,
     String? enhancementBackend,
+    String? enhancementPeriodicBackend,
     String? enhancementDesign,
     String? enhancementAppId,
   }) async {
@@ -46,6 +49,7 @@ class ConversationRepository extends ChangeNotifier {
         'history': jsonEncode(messages),
         'enhancement_code': enhancementCode,
         'enhancement_backend': enhancementBackend,
+        'enhancement_periodic_backend': enhancementPeriodicBackend,
         'enhancement_design': enhancementDesign,
         'enhancement_app_id': enhancementAppId,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
@@ -86,6 +90,7 @@ class ConversationRepository extends ChangeNotifier {
       history: history,
       enhancementCode: data['enhancement_code'] as String?,
       enhancementBackend: data['enhancement_backend'] as String?,
+      enhancementPeriodicBackend: data['enhancement_periodic_backend'] as String?,
       enhancementDesign: data['enhancement_design'] as String?,
       enhancementAppId: data['enhancement_app_id'] as String?,
     );

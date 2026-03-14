@@ -36,7 +36,7 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 8,
+      version: 10,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -136,6 +136,20 @@ class LocalDatabase {
         await txn.execute('ALTER TABLE micro_apps_new RENAME TO micro_apps');
       });
     }
+    if (oldVersion < 9) {
+      try {
+        await db.execute('ALTER TABLE micro_apps ADD COLUMN periodic_backend_blob TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
+    if (oldVersion < 10) {
+      try {
+        await db.execute('ALTER TABLE conversations ADD COLUMN enhancement_periodic_backend TEXT');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -147,6 +161,7 @@ class LocalDatabase {
         name TEXT,
         html_blob TEXT,
         backend_blob TEXT,
+        periodic_backend_blob TEXT,
         design_doc TEXT,
         release_notes TEXT,
         version TEXT,
@@ -163,6 +178,7 @@ class LocalDatabase {
         history TEXT,
         enhancement_code TEXT,
         enhancement_backend TEXT,
+        enhancement_periodic_backend TEXT,
         enhancement_design TEXT,
         enhancement_app_id TEXT,
         updated_at INTEGER

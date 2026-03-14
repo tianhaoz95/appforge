@@ -239,6 +239,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+                _buildSectionHeader('Background Execution'),
+                const SizedBox(height: 12),
+                _buildPreferenceItem(
+                  icon: Icons.running_with_errors_outlined,
+                  title: 'Allow Background Execution',
+                  subtitle: 'Run periodic micro-app tasks in the background',
+                  trailing: Switch(
+                    value: settingsProvider.allowBackgroundExecution,
+                    onChanged: (v) => settingsProvider.setAllowBackgroundExecution(v),
+                  ),
+                ),
+                _buildPreferenceItem(
+                  icon: Icons.notification_important_outlined,
+                  title: 'Background: Notifications',
+                  subtitle: 'Allow background tasks to show notifications',
+                  trailing: Switch(
+                    value: settingsProvider.allowBackgroundNotifications,
+                    onChanged: (v) async {
+                      if (v) {
+                        await _requestNotificationPermissions();
+                      }
+                      settingsProvider.setAllowBackgroundNotifications(v);
+                    },
+                  ),
+                ),
+                _buildPreferenceItem(
+                  icon: Icons.cloud_done_outlined,
+                  title: 'Background: Database',
+                  subtitle: 'Allow background tasks to access the database',
+                  trailing: Switch(
+                    value: settingsProvider.allowBackgroundDatabase,
+                    onChanged: (v) => settingsProvider.setAllowBackgroundDatabase(v),
+                  ),
+                ),
+                const SizedBox(height: 32),
                 _buildSectionHeader('Account'),
                 const SizedBox(height: 12),
                 _buildAccountAction(

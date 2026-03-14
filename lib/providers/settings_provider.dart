@@ -7,6 +7,9 @@ class SettingsProvider with ChangeNotifier {
   bool _allowAccelerometer = false;
   bool _allowNotifications = false;
   bool _allowBackendDatabase = false;
+  bool _allowBackgroundExecution = false;
+  bool _allowBackgroundNotifications = false;
+  bool _allowBackgroundDatabase = false;
   ThemeMode _themeMode = ThemeMode.system;
 
   static const String _keySuggestExistingApps = 'suggest_existing_apps';
@@ -14,6 +17,9 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyAllowAccelerometer = 'allow_accelerometer';
   static const String _keyAllowNotifications = 'allow_notifications';
   static const String _keyAllowBackendDatabase = 'allow_backend_database';
+  static const String _keyAllowBackgroundExecution = 'allow_background_execution';
+  static const String _keyAllowBackgroundNotifications = 'allow_background_notifications';
+  static const String _keyAllowBackgroundDatabase = 'allow_background_database';
   static const String _keyThemeMode = 'theme_mode';
 
   bool get suggestExistingApps => _suggestExistingApps;
@@ -21,6 +27,9 @@ class SettingsProvider with ChangeNotifier {
   bool get allowAccelerometer => _allowAccelerometer;
   bool get allowNotifications => _allowNotifications;
   bool get allowBackendDatabase => _allowBackendDatabase;
+  bool get allowBackgroundExecution => _allowBackgroundExecution;
+  bool get allowBackgroundNotifications => _allowBackgroundNotifications;
+  bool get allowBackgroundDatabase => _allowBackgroundDatabase;
   ThemeMode get themeMode => _themeMode;
 
   Future<void> loadSettings() async {
@@ -30,6 +39,9 @@ class SettingsProvider with ChangeNotifier {
     _allowAccelerometer = prefs.getBool(_keyAllowAccelerometer) ?? false;
     _allowNotifications = prefs.getBool(_keyAllowNotifications) ?? false;
     _allowBackendDatabase = prefs.getBool(_keyAllowBackendDatabase) ?? false;
+    _allowBackgroundExecution = prefs.getBool(_keyAllowBackgroundExecution) ?? false;
+    _allowBackgroundNotifications = prefs.getBool(_keyAllowBackgroundNotifications) ?? false;
+    _allowBackgroundDatabase = prefs.getBool(_keyAllowBackgroundDatabase) ?? false;
     
     final themeIndex = prefs.getInt(_keyThemeMode) ?? ThemeMode.system.index;
     _themeMode = ThemeMode.values[themeIndex];
@@ -88,6 +100,33 @@ class SettingsProvider with ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyAllowBackendDatabase, value);
+    }
+  }
+
+  Future<void> setAllowBackgroundExecution(bool value) async {
+    if (_allowBackgroundExecution != value) {
+      _allowBackgroundExecution = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyAllowBackgroundExecution, value);
+    }
+  }
+
+  Future<void> setAllowBackgroundNotifications(bool value) async {
+    if (_allowBackgroundNotifications != value) {
+      _allowBackgroundNotifications = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyAllowBackgroundNotifications, value);
+    }
+  }
+
+  Future<void> setAllowBackgroundDatabase(bool value) async {
+    if (_allowBackgroundDatabase != value) {
+      _allowBackgroundDatabase = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyAllowBackgroundDatabase, value);
     }
   }
 }

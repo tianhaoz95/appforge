@@ -21,6 +21,7 @@ class MicroAppRepository extends ChangeNotifier {
       'name': appData['name'],
       'html_blob': appData['html_blob'],
       'backend_blob': appData['backend_blob'],
+      'periodic_backend_blob': appData['periodic_backend_blob'],
       'design_doc': appData['design_doc'],
       'release_notes': appData['release_notes'],
       'version': appData['version'],

@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
@@ -22,6 +21,7 @@ import '../providers/settings_provider.dart';
 class PreviewSheet extends StatefulWidget {
   final String code;
   final String? backendCode;
+  final String? periodicBackendCode;
   final String? designDoc;
   final String? releaseNotes;
   final String appId;
@@ -37,6 +37,7 @@ class PreviewSheet extends StatefulWidget {
     super.key, 
     required this.code, 
     this.backendCode,
+    this.periodicBackendCode,
     this.designDoc,
     this.releaseNotes,
     required this.appId,
@@ -69,6 +70,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   String? _currentVersion;
   String? _activeCode;
   String? _activeBackendCode;
+  String? _activePeriodicBackendCode;
   String? _activeDesignDoc;
   String? _activeReleaseNotes;
 
@@ -83,6 +85,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
     });
     _activeCode = widget.code;
     _activeBackendCode = widget.backendCode;
+    _activePeriodicBackendCode = widget.periodicBackendCode;
     _activeDesignDoc = widget.designDoc;
     _activeReleaseNotes = widget.releaseNotes;
     
@@ -122,6 +125,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       _currentVersion = version;
       _activeCode = v['html_blob'];
       _activeBackendCode = v['backend_blob'];
+      _activePeriodicBackendCode = v['periodic_backend_blob'];
       _activeDesignDoc = v['design_doc'];
       _activeReleaseNotes = v['release_notes'];
       _logs.clear();
@@ -481,6 +485,21 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
             data: '```javascript\n${_activeBackendCode ?? '// No backend code provided.'}\n```',
             selectable: true,
           ),
+          const SizedBox(height: 24),
+          const Divider(),
+          const SizedBox(height: 16),
+          Text(
+            'Background Periodic',
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+          ),
+          const SizedBox(height: 8),
+          MarkdownBody(
+            data: '```javascript\n${_activePeriodicBackendCode ?? '// No background periodic code provided.'}\n```',
+            selectable: true,
+          ),
         ],
       ),
     );
@@ -701,10 +720,13 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   @override
   void didUpdateWidget(PreviewSheet oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.code != widget.code || oldWidget.appId != widget.appId || oldWidget.backendCode != widget.backendCode) {
+    if (oldWidget.code != widget.code || oldWidget.appId != widget.appId || 
+        oldWidget.backendCode != widget.backendCode || 
+        oldWidget.periodicBackendCode != widget.periodicBackendCode) {
       setState(() {
         _activeCode = widget.code;
         _activeBackendCode = widget.backendCode;
+        _activePeriodicBackendCode = widget.periodicBackendCode;
         _activeDesignDoc = widget.designDoc;
         _activeReleaseNotes = widget.releaseNotes;
       });
