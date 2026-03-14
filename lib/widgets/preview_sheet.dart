@@ -151,7 +151,10 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
         final repository = context.read<MicroAppDataRepository>();
         final settings = context.read<SettingsProvider>();
 
-        if (action == 'saveData') {
+        if (action == 'log') {
+          _addLog('Backend Log', data['message'] ?? '');
+          return jsonEncode({'success': true});
+        } else if (action == 'saveData') {
           if (!settings.allowBackendDatabase) {
             return jsonEncode({'error': 'Database access disabled in settings.'});
           }
@@ -161,6 +164,16 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
             return jsonEncode({'error': 'Database access disabled in settings.'});
           }
           return repository.getData(widget.appId, data['key']).then((val) => jsonEncode({'value': val}));
+        } else if (action == 'deleteData') {
+          if (!settings.allowBackendDatabase) {
+            return jsonEncode({'error': 'Database access disabled in settings.'});
+          }
+          return repository.deleteData(widget.appId, data['key']).then((_) => jsonEncode({'success': true}));
+        } else if (action == 'listAll') {
+          if (!settings.allowBackendDatabase) {
+            return jsonEncode({'error': 'Database access disabled in settings.'});
+          }
+          return repository.listAll(widget.appId).then((data) => jsonEncode({'data': data}));
         } else if (action == 'showNotification') {
           if (!settings.allowNotifications) {
             return jsonEncode({'error': 'Notification access disabled in settings.'});
@@ -172,11 +185,23 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
 
       // Inject helper for backend JS
       final wrapper = '''
+        var window = this;
         var MicroForge = {
           saveData: (key, value) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'saveData', key, value})).then(r => JSON.parse(r)),
           getData: (key) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'getData', key})).then(r => JSON.parse(r).value),
+          deleteData: (key) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'deleteData', key})).then(r => JSON.parse(r)),
+          listAll: () => sendMessage('MicroForgeBridge', JSON.stringify({action: 'listAll'})).then(r => JSON.parse(r).data),
           showNotification: (title, body, payload) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'showNotification', title, body, payload})).then(r => JSON.parse(r))
         };
+        window.MicroForge = MicroForge;
+        
+        var console = {
+          log: (...args) => sendMessage('MicroForgeBridge', JSON.stringify({
+            action: 'log', 
+            message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : a).join(' ')
+          }))
+        };
+        
         $_activeBackendCode
       ''';
 
