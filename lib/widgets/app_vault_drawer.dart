@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../repositories/micro_app_repository.dart';
 import '../repositories/conversation_repository.dart';
+import '../providers/auth_provider.dart';
 
 class AppVaultDrawer extends StatefulWidget {
   final Function(Map<String, dynamic> app)? onAppSelected;
@@ -14,7 +15,6 @@ class AppVaultDrawer extends StatefulWidget {
 }
 
 class _AppVaultDrawerState extends State<AppVaultDrawer> {
-  static const userId = 'local-user';
   Future<List<Map<String, dynamic>>>? _appsFuture;
   Future<List<Map<String, dynamic>>>? _convsFuture;
 
@@ -25,12 +25,15 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     // We use context.watch to trigger didChangeDependencies on notifyListeners()
     Provider.of<MicroAppRepository>(context);
     Provider.of<ConversationRepository>(context);
+    Provider.of<AuthProvider>(context);
     _refresh();
   }
 
   void _refresh() {
     final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
     final convRepository = Provider.of<ConversationRepository>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final userId = authProvider.user?.uid ?? 'local-user';
     
     setState(() {
       _appsFuture = appRepository.getAppsForOwner(userId);
@@ -56,39 +59,80 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               ),
             ),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(4),
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.surface,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Image.asset(
-                        'brand/logo.png',
-                        height: 32,
-                        errorBuilder: (context, error, stackTrace) => Icon(
-                          Icons.auto_awesome_motion, 
-                          size: 32, 
-                          color: Theme.of(context).colorScheme.primary
+            child: Consumer<AuthProvider>(
+              builder: (context, auth, _) => Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.surface,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Image.asset(
+                          'brand/logo.png',
+                          height: 32,
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.auto_awesome_motion, 
+                            size: 32, 
+                            color: Theme.of(context).colorScheme.primary
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      'AppVault',
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.onPrimaryContainer,
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                      const SizedBox(width: 10),
+                      Text(
+                        'AppVault',
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ],
+                    ],
+                  ),
+                  const Spacer(),
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        radius: 16,
+                        child: Text(auth.user?.displayName?.substring(0, 1).toUpperCase() ?? 'U'),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              auth.user?.displayName ?? 'User',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 14,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            Text(
+                              auth.user?.email ?? '',
+                              style: TextStyle(
+                                color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                                fontSize: 11,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           const ListTile(
@@ -168,6 +212,18 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                   onLongPress: () => _confirmDelete(context, app),
                 )).toList(),
               );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout, color: Colors.red),
+            title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
+            onTap: () async {
+              final auth = context.read<AuthProvider>();
+              await auth.signOut();
+              if (mounted) {
+                Navigator.pop(context);
+              }
             },
           ),
         ],

@@ -3,19 +3,25 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:appforge/widgets/app_vault_drawer.dart';
 import 'package:appforge/repositories/micro_app_repository.dart';
 import 'package:appforge/repositories/conversation_repository.dart';
+import 'package:appforge/providers/auth_provider.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:provider/provider.dart';
 
 class MockMicroAppRepository extends Mock implements MicroAppRepository {}
 class MockConversationRepository extends Mock implements ConversationRepository {}
+class MockAuthProvider extends Mock implements AuthProvider {}
 
 void main() {
   late MockMicroAppRepository mockAppRepository;
   late MockConversationRepository mockConvRepository;
+  late MockAuthProvider mockAuthProvider;
 
   setUp(() {
     mockAppRepository = MockMicroAppRepository();
     mockConvRepository = MockConversationRepository();
+    mockAuthProvider = MockAuthProvider();
+    
+    when(() => mockAuthProvider.user).thenReturn(null);
   });
 
   testWidgets('AppVaultDrawer shows list of apps from repository', (WidgetTester tester) async {
@@ -34,6 +40,7 @@ void main() {
         providers: [
           ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
           ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
         ],
         child: const Scaffold(
           drawer: AppVaultDrawer(),
@@ -65,6 +72,7 @@ void main() {
         providers: [
           ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
           ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
         ],
         child: const Scaffold(
           drawer: AppVaultDrawer(),
@@ -108,6 +116,7 @@ void main() {
         providers: [
           ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
           ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
         ],
         child: const Scaffold(
           drawer: AppVaultDrawer(),
@@ -154,6 +163,7 @@ void main() {
         providers: [
           ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
           ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
         ],
         child: const Scaffold(
           drawer: AppVaultDrawer(),

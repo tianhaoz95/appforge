@@ -25,6 +25,7 @@ import 'providers/hybrid_inference_manager.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'screens/settings_screen.dart';
+import 'screens/auth/login_screen.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
@@ -217,9 +218,26 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
           ),
           themeMode: settings.themeMode,
-          home: const MicroForgeHomePage(),
+          home: const AuthWrapper(),
         ),
       ),
+    );
+  }
+}
+
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<AuthProvider>(
+      builder: (context, auth, _) {
+        if (auth.isAuthenticated) {
+          return const MicroForgeHomePage();
+        } else {
+          return const LoginScreen();
+        }
+      },
     );
   }
 }
@@ -471,7 +489,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
 
     if (settings.suggestExistingApps) {
-      final apps = await repository.getAppsForOwner('local-user');
+      final auth = context.read<AuthProvider>();
+      final apps = await repository.getAppsForOwner(auth.user?.uid ?? 'local-user');
       if (apps.isNotEmpty) {
         systemPrompt += '\n\nPREVIOUSLY DEPLOYED MICRO-APPS:\n';
         for (final app in apps) {
@@ -780,7 +799,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     // Automatically save app locally
     try {
       final repository = context.read<MicroAppRepository>();
-      const userId = 'local-user';
+      final auth = context.read<AuthProvider>();
+      final userId = auth.user?.uid ?? 'local-user';
 
       String finalAppId = const Uuid().v4();
       String resolvedName = finalName;

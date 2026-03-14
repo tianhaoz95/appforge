@@ -23,9 +23,13 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> signUp(String email, String password) async {
+  Future<void> signUp(String email, String password, String displayName) async {
     try {
-      await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      final credential = await _auth.createUserWithEmailAndPassword(email: email, password: password);
+      await credential.user?.updateDisplayName(displayName);
+      await credential.user?.reload();
+      _user = _auth.currentUser;
+      notifyListeners();
     } catch (e) {
       rethrow;
     }
