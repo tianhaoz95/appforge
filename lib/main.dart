@@ -1000,18 +1000,28 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   Widget _buildEnhancementIndicator() {
     if (_enhancementCode == null) return const SizedBox.shrink();
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Container(
       width: double.infinity,
-      color: Colors.blueGrey[50],
+      color: isDark ? Colors.blueGrey[900] : Colors.blueGrey[50],
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
-          const Icon(Icons.auto_awesome, size: 20, color: Colors.indigo),
+          Icon(
+            Icons.auto_awesome, 
+            size: 20, 
+            color: isDark ? Colors.indigoAccent[100] : Colors.indigo
+          ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Text(
               'Micro app code and design are included. You can start customizing.',
-              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500),
+              style: TextStyle(
+                fontSize: 13, 
+                fontWeight: FontWeight.w500,
+                color: isDark ? Colors.blueGrey[100] : Colors.blueGrey[900],
+              ),
             ),
           ),
           TextButton(
@@ -1102,72 +1112,66 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                       child: ListenableBuilder(
                         listenable: _provider!,
                         builder: (context, _) {
+                          final isDark = Theme.of(context).brightness == Brightness.dark;
+                          final colorScheme = Theme.of(context).colorScheme;
+
                           return Stack(
                             children: [
                               LlmChatView(
                                 provider: _provider!,
                                 style: LlmChatViewStyle(
-                                  backgroundColor: Theme.of(context).brightness == Brightness.dark 
-                                    ? Colors.black 
-                                    : null,
-                                  chatInputStyle: ChatInputStyle(
-                                    backgroundColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.grey[900]
-                                        : null,
-                                    textStyle: TextStyle(
-                                      color: Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.white
-                                          : null,
+                                  backgroundColor: isDark ? Colors.black : Colors.white,
+                                  progressIndicatorColor: colorScheme.primary,
+                                  userMessageStyle: UserMessageStyle(
+                                    decoration: BoxDecoration(
+                                      color: colorScheme.primary,
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
-                                    hintStyle: TextStyle(
-                                      color: Theme.of(context).brightness == Brightness.dark
-                                          ? Colors.grey[400]
-                                          : null,
+                                    textStyle: TextStyle(color: colorScheme.onPrimary),
+                                  ),
+                                  llmMessageStyle: LlmMessageStyle(
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.grey[900] : Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                  ),
+                                  chatInputStyle: ChatInputStyle(
+                                    backgroundColor: isDark ? Colors.grey[900] : Colors.white,
+                                    textStyle: TextStyle(color: isDark ? Colors.white : Colors.black),
+                                    hintStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.grey[900] : Colors.white,
+                                      borderRadius: BorderRadius.circular(28),
+                                      border: Border.all(
+                                        color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                                      ),
                                     ),
                                   ),
                                   submitButtonStyle: ActionButtonStyle(
-                                    iconColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white
-                                        : null,
+                                    iconColor: isDark ? Colors.white : colorScheme.primary,
                                   ),
                                   addButtonStyle: ActionButtonStyle(
-                                    iconColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white70
-                                        : null,
+                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
                                   ),
                                   attachFileButtonStyle: ActionButtonStyle(
-                                    iconColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white70
-                                        : null,
+                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
                                   ),
                                   cameraButtonStyle: ActionButtonStyle(
-                                    iconColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white70
-                                        : null,
+                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
                                   ),
                                   galleryButtonStyle: ActionButtonStyle(
-                                    iconColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white70
-                                        : null,
+                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
                                   ),
                                   recordButtonStyle: ActionButtonStyle(
-                                    iconColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white70
-                                        : null,
+                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
                                   ),
                                   stopButtonStyle: ActionButtonStyle(
-                                    iconColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white
-                                        : null,
+                                    iconColor: isDark ? Colors.white : colorScheme.error,
                                   ),
                                   cancelButtonStyle: ActionButtonStyle(
-                                    iconColor: Theme.of(context).brightness == Brightness.dark
-                                        ? Colors.white70
-                                        : null,
+                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
                                   ),
-                                  menuColor: Theme.of(context).brightness == Brightness.dark
-                                      ? Colors.grey[850]
-                                      : null,
+                                  menuColor: isDark ? Colors.grey[850] : Colors.white,
                                 ),
                                 responseBuilder: (context, message) => VibeDetector(
                                   message: message,
