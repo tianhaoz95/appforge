@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
@@ -121,6 +123,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _pickAvatar() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Update Avatar'),
+        content: const Text(
+          'Choose a new profile picture. This only applies to this device and won\'t sync to other devices with the same account.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Continue'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final picker = ImagePicker();
+    final image = await picker.pickImage(
+      source: ImageSource.gallery,
+      maxWidth: 512,
+      maxHeight: 512,
+      imageQuality: 85,
+    );
+
+    if (image != null && mounted) {
+      final appDir = await getApplicationDocumentsDirectory();
+      if (!mounted) return;
+      
+      final fileName = 'avatar_${DateTime.now().millisecondsSinceEpoch}.png';
+      final localFile = File('${appDir.path}/$fileName');
+      
+      // Clean up old avatar if exists
+      final oldPath = context.read<SettingsProvider>().localAvatarPath;
+      if (oldPath.isNotEmpty) {
+        final oldFile = File(oldPath);
+        if (await oldFile.exists()) {
+          await oldFile.delete();
+        }
+      }
+
+      await File(image.path).copy(localFile.path);
+      if (mounted) {
+        context.read<SettingsProvider>().setLocalAvatarPath(localFile.path);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Avatar updated locally'),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authProvider = context.watch<AuthProvider>();
@@ -138,7 +200,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           : ListView(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               children: [
-                _buildProfileHeader(user, theme),
+                _buildProfileHeader(user, theme, settingsProvider),
                 const SizedBox(height: 32),
                 _buildSectionHeader('Preferences'),
                 const SizedBox(height: 12),
@@ -299,7 +361,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildProfileHeader(dynamic user, ThemeData theme) {
+  Widget _buildProfileHeader(dynamic user, ThemeData theme, SettingsProvider settingsProvider) {
     final initials = (user?.displayName ?? user?.email ?? 'U')
         .toString()
         .substring(0, 1)
@@ -308,15 +370,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
     return Row(
       crossAxisAlignment: _isEditingProfile ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
-        CircleAvatar(
-          radius: 36,
-          backgroundColor: theme.colorScheme.primaryContainer,
-          child: Text(
-            initials,
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: theme.colorScheme.onPrimaryContainer,
-              fontWeight: FontWeight.bold,
-            ),
+        GestureDetector(
+          onTap: _pickAvatar,
+          child: Stack(
+            children: [
+              CircleAvatar(
+                radius: 36,
+                backgroundColor: theme.colorScheme.primaryContainer,
+                backgroundImage: settingsProvider.localAvatarPath.isNotEmpty
+                    ? FileImage(File(settingsProvider.localAvatarPath))
+                    : null,
+                child: settingsProvider.localAvatarPath.isEmpty
+                    ? Text(
+                        initials,
+                        style: theme.textTheme.headlineMedium?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      )
+                    : null,
+              ),
+              Positioned(
+                bottom: 0,
+                right: 0,
+                child: Container(
+                  padding: const EdgeInsets.all(4),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
+                  ),
+                  child: Icon(
+                    Icons.camera_alt,
+                    size: 14,
+                    color: theme.colorScheme.onPrimary,
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
         const SizedBox(width: 20),

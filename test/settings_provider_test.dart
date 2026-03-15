@@ -54,5 +54,14 @@ void main() {
       await newProvider.loadSettings();
       expect(newProvider.rememberedEmail, email);
     });
+
+    test('localAvatarPath persists across loadSettings', () async {
+      const path = '/path/to/avatar.png';
+      await settingsProvider.setLocalAvatarPath(path);
+
+      final newProvider = SettingsProvider();
+      await newProvider.loadSettings();
+      expect(newProvider.localAvatarPath, path);
+    });
   });
 }

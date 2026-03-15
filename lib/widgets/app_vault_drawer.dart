@@ -3,6 +3,8 @@ import 'package:provider/provider.dart';
 import '../repositories/micro_app_repository.dart';
 import '../repositories/conversation_repository.dart';
 import '../providers/auth_provider.dart';
+import '../providers/settings_provider.dart';
+import 'dart:io';
 
 class AppVaultDrawer extends StatefulWidget {
   final Function(Map<String, dynamic> app)? onAppSelected;
@@ -30,6 +32,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     Provider.of<MicroAppRepository>(context);
     Provider.of<ConversationRepository>(context);
     Provider.of<AuthProvider>(context);
+    Provider.of<SettingsProvider>(context);
     _refresh();
   }
 
@@ -62,8 +65,8 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               ),
             ),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Consumer<AuthProvider>(
-              builder: (context, auth, _) => Column(
+            child: Consumer2<AuthProvider, SettingsProvider>(
+              builder: (context, auth, settings, _) => Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -102,7 +105,12 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                         backgroundColor: Theme.of(context).colorScheme.primary,
                         foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         radius: 16,
-                        child: Text(auth.user?.displayName?.substring(0, 1).toUpperCase() ?? 'U'),
+                        backgroundImage: settings.localAvatarPath.isNotEmpty
+                            ? FileImage(File(settings.localAvatarPath))
+                            : null,
+                        child: settings.localAvatarPath.isEmpty
+                            ? Text(auth.user?.displayName?.substring(0, 1).toUpperCase() ?? 'U')
+                            : null,
                       ),
                       const SizedBox(width: 12),
                       Expanded(
@@ -505,6 +513,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         final convRepository = Provider.of<ConversationRepository>(context, listen: false);
         await convRepository.deleteConversations(_selectedConversationIds.toList());
       }
+      if (!context.mounted) return;
       if (_selectedAppIds.isNotEmpty) {
         final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
         await appRepository.deleteApps(_selectedAppIds.toList());

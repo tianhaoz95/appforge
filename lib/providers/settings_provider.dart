@@ -12,6 +12,7 @@ class SettingsProvider with ChangeNotifier {
   bool _allowBackgroundDatabase = false;
   bool _rememberMe = false;
   String _rememberedEmail = '';
+  String _localAvatarPath = '';
   ThemeMode _themeMode = ThemeMode.system;
 
   static const String _keySuggestExistingApps = 'suggest_existing_apps';
@@ -24,6 +25,7 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyAllowBackgroundDatabase = 'allow_background_database';
   static const String _keyRememberMe = 'remember_me';
   static const String _keyRememberedEmail = 'remembered_email';
+  static const String _keyLocalAvatarPath = 'local_avatar_path';
   static const String _keyThemeMode = 'theme_mode';
 
   bool get suggestExistingApps => _suggestExistingApps;
@@ -36,6 +38,7 @@ class SettingsProvider with ChangeNotifier {
   bool get allowBackgroundDatabase => _allowBackgroundDatabase;
   bool get rememberMe => _rememberMe;
   String get rememberedEmail => _rememberedEmail;
+  String get localAvatarPath => _localAvatarPath;
   ThemeMode get themeMode => _themeMode;
 
   Future<void> loadSettings() async {
@@ -50,11 +53,21 @@ class SettingsProvider with ChangeNotifier {
     _allowBackgroundDatabase = prefs.getBool(_keyAllowBackgroundDatabase) ?? false;
     _rememberMe = prefs.getBool(_keyRememberMe) ?? false;
     _rememberedEmail = prefs.getString(_keyRememberedEmail) ?? '';
+    _localAvatarPath = prefs.getString(_keyLocalAvatarPath) ?? '';
     
     final themeIndex = prefs.getInt(_keyThemeMode) ?? ThemeMode.system.index;
     _themeMode = ThemeMode.values[themeIndex];
     
     notifyListeners();
+  }
+
+  Future<void> setLocalAvatarPath(String value) async {
+    if (_localAvatarPath != value) {
+      _localAvatarPath = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyLocalAvatarPath, value);
+    }
   }
 
   Future<void> setThemeMode(ThemeMode value) async {
