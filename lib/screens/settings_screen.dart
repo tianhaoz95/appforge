@@ -16,6 +16,7 @@ class SettingsScreen extends StatefulWidget {
 class _SettingsScreenState extends State<SettingsScreen> {
   final _nameController = TextEditingController();
   bool _isLoading = false;
+  bool _isEditingProfile = false;
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
@@ -40,43 +41,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             badge: true,
             sound: true,
           );
-    }
-  }
-
-  Future<void> _showEditProfileDialog() async {
-    final user = context.read<AuthProvider>().user;
-    if (user != null) {
-      _nameController.text = user.displayName ?? '';
-    }
-    
-    final result = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Edit Profile'),
-        content: TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(
-            labelText: 'Display Name',
-            hintText: 'Enter your name',
-            prefixIcon: Icon(Icons.person_outline),
-          ),
-          autofocus: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
-    );
-
-    if (result == true) {
-      await _updateProfile();
     }
   }
 
@@ -269,7 +233,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
                   icon: Icons.storage_outlined,
-                  title: 'Allow Backend Database',
+                  title: 'Allow database access',
                   subtitle: 'Enable database access for the backend engine',
                   trailing: Switch(
                     value: settingsProvider.allowBackendDatabase,
@@ -290,7 +254,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _buildPreferenceItem(
                   icon: Icons.notification_important_outlined,
-                  title: 'Background: Notifications',
+                  title: 'Allow notifications toggles',
                   subtitle: 'Allow background tasks to show notifications',
                   trailing: Switch(
                     value: settingsProvider.allowBackgroundNotifications,
@@ -304,7 +268,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _buildPreferenceItem(
                   icon: Icons.cloud_done_outlined,
-                  title: 'Background: Database',
+                  title: 'Allow database access',
                   subtitle: 'Allow background tasks to access the database',
                   trailing: Switch(
                     value: settingsProvider.allowBackgroundDatabase,
@@ -342,6 +306,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         .toUpperCase();
 
     return Row(
+      crossAxisAlignment: _isEditingProfile ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
         CircleAvatar(
           radius: 36,
@@ -356,26 +321,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         const SizedBox(width: 20),
         Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                user?.displayName ?? 'Forgemaster',
-                style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                user?.email ?? 'anonymous@microforge.ai',
-                style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
-              ),
-            ],
+          child: _isEditingProfile
+              ? Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        labelText: 'Display Name',
+                        hintText: 'Enter your name',
+                        isDense: true,
+                        contentPadding: EdgeInsets.symmetric(vertical: 8),
+                      ),
+                      autofocus: true,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () {
+                            setState(() {
+                              _isEditingProfile = false;
+                              _nameController.text = user?.displayName ?? '';
+                            });
+                          },
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton.tonal(
+                          onPressed: () async {
+                            await _updateProfile();
+                            setState(() => _isEditingProfile = false);
+                          },
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
+                            visualDensity: VisualDensity.compact,
+                          ),
+                          child: const Text('Save'),
+                        ),
+                      ],
+                    ),
+                  ],
+                )
+              : Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      user?.displayName ?? 'Forgemaster',
+                      style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      user?.email ?? 'anonymous@microforge.ai',
+                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
+                    ),
+                  ],
+                ),
+        ),
+        if (!_isEditingProfile)
+          IconButton(
+            onPressed: () => setState(() => _isEditingProfile = true),
+            icon: const Icon(Icons.edit_outlined),
+            tooltip: 'Edit Profile',
           ),
-        ),
-        IconButton(
-          onPressed: _showEditProfileDialog,
-          icon: const Icon(Icons.edit_outlined),
-          tooltip: 'Edit Profile',
-        ),
       ],
     );
   }

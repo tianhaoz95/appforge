@@ -216,6 +216,7 @@ class MyApp extends StatelessWidget {
           ),
           darkTheme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.dark),
+            scaffoldBackgroundColor: Colors.black,
             useMaterial3: true,
           ),
           themeMode: settings.themeMode,
@@ -1105,6 +1106,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                             children: [
                               LlmChatView(
                                 provider: _provider!,
+                                style: LlmChatViewStyle(
+                                  backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                                    ? Colors.black 
+                                    : null,
+                                ),
                                 responseBuilder: (context, message) => VibeDetector(
                                   message: message,
                                 onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon) => 
