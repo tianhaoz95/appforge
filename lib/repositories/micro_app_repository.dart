@@ -94,4 +94,25 @@ class MicroAppRepository extends ChangeNotifier {
     });
     notifyListeners();
   }
+
+  Future<void> deleteApps(List<String> appIds) async {
+    final db = await _dbHelper.database;
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final id in appIds) {
+        batch.delete(
+          'micro_apps',
+          where: 'appId = ?',
+          whereArgs: [id],
+        );
+        batch.delete(
+          'micro_app_data',
+          where: 'appId = ?',
+          whereArgs: [id],
+        );
+      }
+      await batch.commit(noResult: true);
+    });
+    notifyListeners();
+  }
 }

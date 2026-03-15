@@ -19,6 +19,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
   Future<List<Map<String, dynamic>>>? _convsFuture;
   bool _isSelectionMode = false;
   final Set<String> _selectedConversationIds = {};
+  final Set<String> _selectedAppIds = {};
   bool _isOlderExpanded = false;
 
   @override
@@ -52,7 +53,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         children: [
           DrawerHeader(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surface,
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
               border: Border(
                 bottom: BorderSide(
                   color: Theme.of(context).dividerColor.withOpacity(0.1),
@@ -70,7 +71,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceVariant,
+                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Image.asset(
@@ -212,16 +213,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                 return const ListTile(title: Text('No apps forged yet.'));
               }
               return Column(
-                children: apps.map((app) => ListTile(
-                  leading: Icon(_getIcon(app['icon'])),
-                  title: Text(app['name'] ?? 'Unnamed App'),
-                  subtitle: Text('v${app['version']}'),
-                  onTap: () {
-                    widget.onAppSelected?.call(app);
-                    Navigator.pop(context);
-                  },
-                  onLongPress: () => _confirmDelete(context, app),
-                )).toList(),
+                children: apps.map((app) => _buildAppTile(app)).toList(),
               );
             },
           ),
@@ -230,18 +222,79 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     );
   }
 
+  Widget _buildAppTile(Map<String, dynamic> app) {
+    final String id = app['appId'];
+    final bool isSelected = _selectedAppIds.contains(id);
+
+    return ListTile(
+      dense: true,
+      leading: _isSelectionMode
+          ? Checkbox(
+              value: isSelected,
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    _selectedAppIds.add(id);
+                  } else {
+                    _selectedAppIds.remove(id);
+                  }
+                });
+              },
+            )
+          : Icon(_getIcon(app['icon']), size: 20),
+      title: Text(
+        app['name'] ?? 'Unnamed App',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      subtitle: Text('v${app['version']}', style: const TextStyle(fontSize: 11)),
+      onTap: () {
+        if (_isSelectionMode) {
+          setState(() {
+            if (isSelected) {
+              _selectedAppIds.remove(id);
+            } else {
+              _selectedAppIds.add(id);
+            }
+          });
+        } else {
+          widget.onAppSelected?.call(app);
+          Navigator.pop(context);
+        }
+      },
+      onLongPress: () {
+        if (!_isSelectionMode) {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedAppIds.add(id);
+          });
+        } else {
+          _confirmDelete(context, app);
+        }
+      },
+      selected: isSelected,
+      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+    );
+  }
+
   Widget _buildSelectionModeHeader() {
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: _convsFuture,
+    return FutureBuilder<List<dynamic>>(
+      future: Future.wait([_convsFuture ?? Future.value([]), _appsFuture ?? Future.value([])]),
       builder: (context, snapshot) {
-        final convs = snapshot.data ?? [];
-        final allIds = convs.map((c) => c['conversationId'] as String).toSet();
-        final isAllSelected = _selectedConversationIds.length == allIds.length && allIds.isNotEmpty;
+        final convs = snapshot.data?[0] as List<Map<String, dynamic>>? ?? [];
+        final apps = snapshot.data?[1] as List<Map<String, dynamic>>? ?? [];
+        
+        final allConvIds = convs.map((c) => c['conversationId'] as String).toSet();
+        final allAppIds = apps.map((a) => a['appId'] as String).toSet();
+        
+        final totalSelected = _selectedConversationIds.length + _selectedAppIds.length;
+        final totalItems = allConvIds.length + allAppIds.length;
+        final isAllSelected = totalSelected == totalItems && totalItems > 0;
 
         return ListTile(
           dense: true,
           title: Text(
-            '${_selectedConversationIds.length} Selected',
+            '$totalSelected Selected',
             style: const TextStyle(fontWeight: FontWeight.bold),
           ),
           leading: IconButton(
@@ -249,6 +302,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
             onPressed: () => setState(() {
               _isSelectionMode = false;
               _selectedConversationIds.clear();
+              _selectedAppIds.clear();
               _isOlderExpanded = false;
             }),
           ),
@@ -260,8 +314,10 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                   setState(() {
                     if (isAllSelected) {
                       _selectedConversationIds.clear();
+                      _selectedAppIds.clear();
                     } else {
-                      _selectedConversationIds.addAll(allIds);
+                      _selectedConversationIds.addAll(allConvIds);
+                      _selectedAppIds.addAll(allAppIds);
                     }
                   });
                 },
@@ -269,7 +325,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               ),
               IconButton(
                 icon: const Icon(Icons.delete_outline, color: Colors.red),
-                onPressed: _selectedConversationIds.isEmpty ? null : () => _confirmBulkDelete(context),
+                onPressed: totalSelected == 0 ? null : () => _confirmBulkDelete(context),
               ),
             ],
           ),
@@ -337,11 +393,12 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
   }
 
   Future<void> _confirmBulkDelete(BuildContext context) async {
+    final total = _selectedConversationIds.length + _selectedAppIds.length;
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete ${_selectedConversationIds.length} Conversations?'),
-        content: const Text('Are you sure you want to delete the selected conversations? This action cannot be undone.'),
+        title: Text('Delete $total Items?'),
+        content: const Text('Are you sure you want to delete the selected items? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -357,11 +414,18 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     );
 
     if (shouldDelete == true && context.mounted) {
-      final convRepository = Provider.of<ConversationRepository>(context, listen: false);
-      await convRepository.deleteConversations(_selectedConversationIds.toList());
+      if (_selectedConversationIds.isNotEmpty) {
+        final convRepository = Provider.of<ConversationRepository>(context, listen: false);
+        await convRepository.deleteConversations(_selectedConversationIds.toList());
+      }
+      if (_selectedAppIds.isNotEmpty) {
+        final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
+        await appRepository.deleteApps(_selectedAppIds.toList());
+      }
       setState(() {
         _isSelectionMode = false;
         _selectedConversationIds.clear();
+        _selectedAppIds.clear();
       });
     }
   }

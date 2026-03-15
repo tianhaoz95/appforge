@@ -86,7 +86,11 @@ void main() {
     scaffoldState.openDrawer();
     await tester.pumpAndSettle();
 
-    // Long press on app
+    // Long press on app to enter selection mode
+    await tester.longPress(find.text('Deletable App'));
+    await tester.pumpAndSettle();
+
+    // Now long press AGAIN while in selection mode to show single delete dialog
     await tester.longPress(find.text('Deletable App'));
     await tester.pumpAndSettle();
 
@@ -151,13 +155,118 @@ void main() {
     await tester.pumpAndSettle();
 
     // Check dialog
-    expect(find.text('Delete 2 Conversations?'), findsOneWidget);
+    expect(find.text('Delete 2 Items?'), findsOneWidget);
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
     // Verify repository call
     verify(() => mockConvRepository.deleteConversations(['c1', 'c2'])).called(1);
     expect(find.text('Recent Chats'), findsOneWidget); // Back to normal mode
+  });
+
+  testWidgets('AppVaultDrawer enters selection mode on app long press and bulk deletes apps', (WidgetTester tester) async {
+    final apps = [
+      {'appId': 'a1', 'name': 'App 1', 'icon': 'rocket', 'version': '1.0.0'},
+      {'appId': 'a2', 'name': 'App 2', 'icon': 'speed', 'version': '1.0.0'},
+    ];
+    
+    when(() => mockAppRepository.getAppsForOwner(any()))
+        .thenAnswer((_) async => apps);
+    when(() => mockConvRepository.getConversations())
+        .thenAnswer((_) async => []);
+    when(() => mockAppRepository.deleteApps(any())).thenAnswer((_) async {});
+
+    await tester.pumpWidget(MaterialApp(
+      home: MultiProvider(
+        providers: [
+          ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
+          ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
+        ],
+        child: const Scaffold(
+          drawer: AppVaultDrawer(),
+          body: Center(child: Text('Body')),
+        ),
+      ),
+    ));
+
+    // Open drawer
+    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+    scaffoldState.openDrawer();
+    await tester.pumpAndSettle();
+
+    // Long press on App 1 to enter selection mode
+    await tester.longPress(find.text('App 1'));
+    await tester.pumpAndSettle();
+
+    // Verify selection mode header
+    expect(find.text('1 Selected'), findsOneWidget);
+    expect(find.byType(Checkbox), findsNWidgets(2)); // Checkboxes should appear
+
+    // Select App 2
+    await tester.tap(find.text('App 2'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 Selected'), findsOneWidget);
+
+    // Tap delete in header
+    await tester.tap(find.byIcon(Icons.delete_outline));
+    await tester.pumpAndSettle();
+
+    // Check dialog
+    expect(find.text('Delete 2 Items?'), findsOneWidget);
+    await tester.tap(find.text('Delete'));
+    await tester.pumpAndSettle();
+
+    // Verify repository call
+    verify(() => mockAppRepository.deleteApps(['a1', 'a2'])).called(1);
+  });
+
+  testWidgets('AppVaultDrawer "Select All" selects both apps and conversations', (WidgetTester tester) async {
+    final convs = [
+      {'conversationId': 'c1', 'title': 'Chat 1', 'updated_at': 1000},
+    ];
+    final apps = [
+      {'appId': 'a1', 'name': 'App 1', 'icon': 'rocket', 'version': '1.0.0'},
+    ];
+    
+    when(() => mockAppRepository.getAppsForOwner(any()))
+        .thenAnswer((_) async => apps);
+    when(() => mockConvRepository.getConversations())
+        .thenAnswer((_) async => convs);
+
+    await tester.pumpWidget(MaterialApp(
+      home: MultiProvider(
+        providers: [
+          ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
+          ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
+        ],
+        child: const Scaffold(
+          drawer: AppVaultDrawer(),
+          body: Center(child: Text('Body')),
+        ),
+      ),
+    ));
+
+    // Open drawer
+    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+    scaffoldState.openDrawer();
+    await tester.pumpAndSettle();
+
+    // Enter selection mode via App
+    await tester.longPress(find.text('App 1'));
+    await tester.pumpAndSettle();
+
+    // Tap Select All
+    await tester.tap(find.text('Select All'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 Selected'), findsOneWidget);
+    
+    // Tap Deselect All
+    await tester.tap(find.text('Deselect All'));
+    await tester.pumpAndSettle();
+    expect(find.text('0 Selected'), findsOneWidget);
   });
 
   testWidgets('AppVaultDrawer "Select All" selects all conversations', (WidgetTester tester) async {
