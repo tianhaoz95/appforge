@@ -55,103 +55,105 @@ class VibeDetector extends StatelessWidget {
       final version = versionMatch?.group(1)?.trim();
       final releaseNotes = releaseNotesMatch?.group(1)?.trim();
 
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (forgeMatch != null) ...[
-            Row(
-              children: [
-                const Icon(Icons.auto_awesome, color: Colors.orangeAccent, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  name != null ? 'Preview: $name' : 'App Preview',
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            MiniAppPreview(code: forgeCode ?? ''),
-            const SizedBox(height: 8),
-            Theme(
-              data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-              child: ExpansionTile(
-                title: const Text('Details & Description', style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
-                tilePadding: EdgeInsets.zero,
+      return SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (forgeMatch != null) ...[
+              Row(
                 children: [
-                  if (cleanMessage.isNotEmpty) MarkdownBody(data: cleanMessage),
-                  if (designDoc != null) ...[
-                    const SizedBox(height: 12),
-                    const Text('Design Document:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    MarkdownBody(data: designDoc),
-                  ],
-                  const SizedBox(height: 12),
-                  const Text('Source Code:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  MarkdownBody(data: '```html\n${forgeCode ?? ''}\n```'),
-                  if (backendCode != null && backendCode.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    const Text('Backend Code:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    MarkdownBody(data: '```javascript\n$backendCode\n```'),
-                  ],
-                  if (periodicBackendCode != null && periodicBackendCode.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    const Text('Background Periodic Code:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    MarkdownBody(data: '```javascript\n$periodicBackendCode\n```'),
-                  ],
+                  const Icon(Icons.auto_awesome, color: Colors.orangeAccent, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    name != null ? 'Preview: $name' : 'App Preview',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
                 ],
               ),
-            ),
-            const SizedBox(height: 8),
-            if (onAutoRefine != null) ...[
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => onAutoRefine?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes),
-                  icon: const Icon(Icons.auto_fix_high),
-                  label: const Text('Auto Refine'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.indigo,
-                    foregroundColor: Colors.white,
-                  ),
+              const SizedBox(height: 8),
+              MiniAppPreview(code: forgeCode ?? ''),
+              const SizedBox(height: 8),
+              Theme(
+                data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                child: ExpansionTile(
+                  title: const Text('Details & Description', style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                  tilePadding: EdgeInsets.zero,
+                  children: [
+                    if (cleanMessage.isNotEmpty) MarkdownBody(data: cleanMessage),
+                    if (designDoc != null) ...[
+                      const SizedBox(height: 12),
+                      const Text('Design Document:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      MarkdownBody(data: designDoc),
+                    ],
+                    const SizedBox(height: 12),
+                    const Text('Source Code:', style: TextStyle(fontWeight: FontWeight.bold)),
+                    MarkdownBody(data: '```html\n${forgeCode ?? ''}\n```'),
+                    if (backendCode != null && backendCode.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Text('Backend Code:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      MarkdownBody(data: '```javascript\n$backendCode\n```'),
+                    ],
+                    if (periodicBackendCode != null && periodicBackendCode.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      const Text('Background Periodic Code:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      MarkdownBody(data: '```javascript\n$periodicBackendCode\n```'),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(height: 8),
-            ],
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes),
-                icon: const Icon(Icons.rocket_launch),
-                label: Text(name != null ? 'Deploy $name' : 'Deploy App'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orangeAccent,
-                  foregroundColor: Colors.black,
-                ),
-              ),
-            ),
-          ] else if (cleanMessage.isNotEmpty) ...[
-            MarkdownBody(data: cleanMessage),
-          ],
-          if (suggestAppMatches.isNotEmpty)
-            ...suggestAppMatches.map((match) {
-              final appId = match.group(1);
-              final appName = match.group(2)?.trim();
-              return Padding(
-                padding: const EdgeInsets.only(top: 8.0),
-                child: SizedBox(
+              if (onAutoRefine != null) ...[
+                SizedBox(
                   width: double.infinity,
                   child: ElevatedButton.icon(
-                    onPressed: () => onOpenApp?.call(appId ?? ''),
-                    icon: const Icon(Icons.open_in_new),
-                    label: Text('Open ${appName ?? 'Existing App'}'),
+                    onPressed: () => onAutoRefine?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes),
+                    icon: const Icon(Icons.auto_fix_high),
+                    label: const Text('Auto Refine'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blueAccent,
+                      backgroundColor: Colors.indigo,
                       foregroundColor: Colors.white,
                     ),
                   ),
                 ),
-              );
-            }),
-        ],
+                const SizedBox(height: 8),
+              ],
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes),
+                  icon: const Icon(Icons.rocket_launch),
+                  label: Text(name != null ? 'Deploy $name' : 'Deploy App'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orangeAccent,
+                    foregroundColor: Colors.black,
+                  ),
+                ),
+              ),
+            ] else if (cleanMessage.isNotEmpty) ...[
+              MarkdownBody(data: cleanMessage),
+            ],
+            if (suggestAppMatches.isNotEmpty)
+              ...suggestAppMatches.map((match) {
+                final appId = match.group(1);
+                final appName = match.group(2)?.trim();
+                return Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => onOpenApp?.call(appId ?? ''),
+                      icon: const Icon(Icons.open_in_new),
+                      label: Text('Open ${appName ?? 'Existing App'}'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blueAccent,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                );
+              }),
+          ],
+        ),
       );
     }
 

@@ -208,6 +208,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     onChanged: (v) => settingsProvider.setSuggestExistingApps(v),
                   ),
                 ),
+                const SizedBox(height: 32),
+                _buildSectionHeader('App access control'),
+                const SizedBox(height: 12),
                 _buildPreferenceItem(
                   icon: Icons.location_on_outlined,
                   title: 'Allow Geolocation',
@@ -262,7 +265,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                _buildSectionHeader('Backend'),
+                _buildSectionHeader('Server access control'),
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
                   icon: Icons.storage_outlined,
@@ -274,7 +277,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                _buildSectionHeader('Background Execution'),
+                _buildSectionHeader('Background task access control'),
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
                   icon: Icons.running_with_errors_outlined,

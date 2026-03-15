@@ -72,10 +72,32 @@ class MicroAppRepository extends ChangeNotifier {
         WHERE ownerId = ?
         GROUP BY appId
       )
-      ORDER BY created_at DESC
+      ORDER BY is_pinned DESC, created_at DESC
     ''', [ownerId]);
 
     return maps;
+  }
+
+  Future<void> pinApp(String appId, bool pinned) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'micro_apps',
+      {'is_pinned': pinned ? 1 : 0},
+      where: 'appId = ?',
+      whereArgs: [appId],
+    );
+    notifyListeners();
+  }
+
+  Future<void> renameApp(String appId, String newName) async {
+    final db = await _dbHelper.database;
+    await db.update(
+      'micro_apps',
+      {'name': newName},
+      where: 'appId = ?',
+      whereArgs: [appId],
+    );
+    notifyListeners();
   }
 
   Future<void> deleteApp(String appId) async {

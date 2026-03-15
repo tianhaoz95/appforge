@@ -53,7 +53,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         children: [
           DrawerHeader(
             decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              color: Colors.transparent,
               border: Border(
                 bottom: BorderSide(
                   color: Theme.of(context).dividerColor.withOpacity(0.1),
@@ -225,6 +225,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
   Widget _buildAppTile(Map<String, dynamic> app) {
     final String id = app['appId'];
     final bool isSelected = _selectedAppIds.contains(id);
+    final bool isPinned = (app['is_pinned'] ?? 0) == 1;
 
     return ListTile(
       dense: true,
@@ -241,13 +242,69 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                 });
               },
             )
-          : Icon(_getIcon(app['icon']), size: 20),
+          : Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isPinned)
+                  Icon(Icons.push_pin, size: 12, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 4),
+                Icon(_getIcon(app['icon']), size: 20),
+              ],
+            ),
       title: Text(
         app['name'] ?? 'Unnamed App',
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text('v${app['version']}', style: const TextStyle(fontSize: 11)),
+      trailing: _isSelectionMode
+          ? null
+          : PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert, size: 18),
+              onSelected: (value) async {
+                final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
+                switch (value) {
+                  case 'pin':
+                    await appRepository.pinApp(id, !isPinned);
+                    break;
+                  case 'rename':
+                    await _showRenameDialog(context, app);
+                    break;
+                  case 'delete':
+                    await _confirmDelete(context, app);
+                    break;
+                }
+              },
+              itemBuilder: (context) => [
+                PopupMenuItem(
+                  value: 'pin',
+                  child: ListTile(
+                    leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin),
+                    title: Text(isPinned ? 'Unpin' : 'Pin'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'rename',
+                  child: ListTile(
+                    leading: Icon(Icons.edit_outlined),
+                    title: Text('Rename'),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'delete',
+                  child: ListTile(
+                    leading: Icon(Icons.delete_outline, color: Colors.red),
+                    title: Text('Delete', style: TextStyle(color: Colors.red)),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            ),
       onTap: () {
         if (_isSelectionMode) {
           setState(() {
@@ -275,6 +332,36 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
       selected: isSelected,
       selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
     );
+  }
+
+  Future<void> _showRenameDialog(BuildContext context, Map<String, dynamic> app) async {
+    final controller = TextEditingController(text: app['name']);
+    final bool? shouldRename = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Rename Micro App'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(labelText: 'App Name'),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Rename'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldRename == true && controller.text.trim().isNotEmpty && context.mounted) {
+      final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
+      await appRepository.renameApp(app['appId'], controller.text.trim());
+    }
   }
 
   Widget _buildSelectionModeHeader() {

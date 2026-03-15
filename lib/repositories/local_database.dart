@@ -36,7 +36,7 @@ class LocalDatabase {
 
     return await openDatabase(
       path,
-      version: 10,
+      version: 11,
       onCreate: _onCreate,
       onUpgrade: _onUpgrade,
     );
@@ -150,6 +150,13 @@ class LocalDatabase {
         // Column might already exist
       }
     }
+    if (oldVersion < 11) {
+      try {
+        await db.execute('ALTER TABLE micro_apps ADD COLUMN is_pinned INTEGER DEFAULT 0');
+      } catch (e) {
+        // Column might already exist
+      }
+    }
   }
 
   Future<void> _onCreate(Database db, int version) async {
@@ -167,6 +174,7 @@ class LocalDatabase {
         version TEXT,
         icon TEXT,
         created_at INTEGER,
+        is_pinned INTEGER DEFAULT 0,
         PRIMARY KEY (appId, version)
       )
     ''');
