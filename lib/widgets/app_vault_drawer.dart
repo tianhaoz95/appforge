@@ -248,7 +248,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                 if (isPinned)
                   Icon(Icons.push_pin, size: 12, color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 4),
-                Icon(_getIcon(app['icon']), size: 20),
+                _buildIcon(app['icon']),
               ],
             ),
       title: Text(
@@ -569,12 +569,13 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     }
   }
 
-  IconData _getIcon(String? iconName) {
-    switch (iconName) {
-      case 'rocket': return Icons.rocket_launch;
-      case 'speed': return Icons.speed;
-      case 'bolt': return Icons.bolt;
-      default: return Icons.apps;
+  Widget _buildIcon(String? icon) {
+    if (icon == null || icon.isEmpty) return const Icon(Icons.apps, size: 20);
+    switch (icon) {
+      case 'rocket': return const Icon(Icons.rocket_launch, size: 20);
+      case 'speed': return const Icon(Icons.speed, size: 20);
+      case 'bolt': return const Icon(Icons.bolt, size: 20);
+      default: return Text(icon, style: const TextStyle(fontSize: 20));
     }
   }
 }

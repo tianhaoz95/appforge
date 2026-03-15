@@ -64,4 +64,18 @@ void main() {
     await tester.tap(find.text('Open My Existing App'));
     expect(openedAppId, 'test-id');
   });
+
+  testWidgets('VibeDetector parses and shows emoji icon', (WidgetTester tester) async {
+    const message = '<icon>🚀</icon><name>Rocket App</name><forge><h1>Rocket</h1></forge>';
+    
+    await tester.pumpWidget(const MaterialApp(
+      home: Scaffold(
+        body: VibeDetector(message: message),
+      ),
+    ));
+
+    expect(find.text('🚀'), findsOneWidget);
+    expect(find.text('Preview: Rocket App'), findsOneWidget);
+    expect(find.text('Deploy Rocket App'), findsOneWidget);
+  });
 }

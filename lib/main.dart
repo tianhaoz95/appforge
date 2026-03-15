@@ -331,12 +331,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'Example: <forge><div class="p-4">Hello</div></forge>. '
         'Additionally, for every micro-app you forge, you MUST also provide: '
         '1. A concise name wrapped in <name>...</name> tags. '
-        '2. A brief design document in Markdown wrapped in <design>...</design> tags. '
-        '3. A version number (e.g., 1.0.0, 1.1.0) wrapped in <version>...</version> tags. '
+        '2. A suitable emoji to represent the app wrapped in <icon>...</icon> tags. '
+        '3. A brief design document in Markdown wrapped in <design>...</design> tags. '
+        '4. A version number (e.g., 1.0.0, 1.1.0) wrapped in <version>...</version> tags. '
         '   When enhancing an app, increment the version based on the complexity of changes. '
-        '4. A concise release note summarizing the improvements wrapped in <release_notes>...</release_notes> tags. '
+        '5. A concise release note summarizing the improvements wrapped in <release_notes>...</release_notes> tags. '
         '\nExample: '
         '<name>Task Master</name> '
+        '<icon>✅</icon> '
         '<design># Task Master\nA simple todo app with local persistence.</design> '
         '<version>1.0.0</version> '
         '<release_notes>Initial release with task creation and local storage.</release_notes> '
@@ -767,7 +769,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void onDeploy(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, {bool isTemporary = false}) async {
+  void onDeploy(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon, {bool isTemporary = false}) async {
     // Fallback to enhancement values if current ones are null
     final finalBackend = backendCode ?? _enhancementBackend;
     final finalPeriodicBackend = periodicBackendCode ?? _enhancementPeriodicBackend;
@@ -806,12 +808,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       String finalAppId = const Uuid().v4();
       String resolvedName = finalName;
       String finalVersion = version ?? '1.0.0';
+      String finalIcon = icon ?? 'rocket';
 
       if (_enhancementAppId != null) {
         final existingApp = await repository.getApp(_enhancementAppId!);
         if (existingApp != null) {
           finalAppId = _enhancementAppId!;
           resolvedName = name ?? existingApp['name'] ?? resolvedName;
+          finalIcon = icon ?? existingApp['icon'] ?? finalIcon;
           if (version == null) {
             finalVersion = _bumpVersion(existingApp['version']);
           }
@@ -829,7 +833,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         'design_doc': finalDesign,
         'release_notes': releaseNotes,
         'version': finalVersion,
-        'icon': 'rocket',
+        'icon': finalIcon,
       });
 
       setState(() {
@@ -1103,11 +1107,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                 provider: _provider!,
                                 responseBuilder: (context, message) => VibeDetector(
                                   message: message,
-                                onDeploy: onDeploy,
+                                onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon) => 
+                                    onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
                                   onOpenApp: _onOpenApp,
-                                  onAutoRefine: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes) async {
+                                  onAutoRefine: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon) async {
                                     if (!_showPreview) {
-                                      onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, isTemporary: true);
+                                      onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, isTemporary: true);
                                       // Give WebView some time to load before attempting to capture logs/screenshot
                                       await Future.delayed(const Duration(milliseconds: 1500));
                                     }
