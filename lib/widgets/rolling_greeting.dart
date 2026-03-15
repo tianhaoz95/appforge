@@ -66,7 +66,7 @@ class _RollingGreetingState extends State<RollingGreeting> {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         Text(
-          "let's build ",
+          "Let's build ",
           style: widget.style,
         ),
         AnimatedSize(

@@ -13,7 +13,7 @@ class MiniAppPreview extends StatefulWidget {
   const MiniAppPreview({
     super.key,
     required this.code,
-    this.height = 300,
+    this.height = 400,
   });
 
   @override
@@ -201,6 +201,7 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       height: widget.height,
       decoration: BoxDecoration(
         border: Border.all(color: Colors.grey[300]!),

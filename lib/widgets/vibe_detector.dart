@@ -56,7 +56,7 @@ class VibeDetector extends StatelessWidget {
       final releaseNotes = releaseNotesMatch?.group(1)?.trim();
 
       return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (forgeMatch != null) ...[
             Row(
@@ -137,13 +137,16 @@ class VibeDetector extends StatelessWidget {
               final appName = match.group(2)?.trim();
               return Padding(
                 padding: const EdgeInsets.only(top: 8.0),
-                child: ElevatedButton.icon(
-                  onPressed: () => onOpenApp?.call(appId ?? ''),
-                  icon: const Icon(Icons.open_in_new),
-                  label: Text('Open ${appName ?? 'Existing App'}'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.blueAccent,
-                    foregroundColor: Colors.white,
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => onOpenApp?.call(appId ?? ''),
+                    icon: const Icon(Icons.open_in_new),
+                    label: Text('Open ${appName ?? 'Existing App'}'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                    ),
                   ),
                 ),
               );
