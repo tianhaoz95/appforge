@@ -1110,6 +1110,64 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                   backgroundColor: Theme.of(context).brightness == Brightness.dark 
                                     ? Colors.black 
                                     : null,
+                                  chatInputStyle: ChatInputStyle(
+                                    backgroundColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.grey[900]
+                                        : null,
+                                    textStyle: TextStyle(
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.white
+                                          : null,
+                                    ),
+                                    hintStyle: TextStyle(
+                                      color: Theme.of(context).brightness == Brightness.dark
+                                          ? Colors.grey[400]
+                                          : null,
+                                    ),
+                                  ),
+                                  submitButtonStyle: ActionButtonStyle(
+                                    iconColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : null,
+                                  ),
+                                  addButtonStyle: ActionButtonStyle(
+                                    iconColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white70
+                                        : null,
+                                  ),
+                                  attachFileButtonStyle: ActionButtonStyle(
+                                    iconColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white70
+                                        : null,
+                                  ),
+                                  cameraButtonStyle: ActionButtonStyle(
+                                    iconColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white70
+                                        : null,
+                                  ),
+                                  galleryButtonStyle: ActionButtonStyle(
+                                    iconColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white70
+                                        : null,
+                                  ),
+                                  recordButtonStyle: ActionButtonStyle(
+                                    iconColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white70
+                                        : null,
+                                  ),
+                                  stopButtonStyle: ActionButtonStyle(
+                                    iconColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white
+                                        : null,
+                                  ),
+                                  cancelButtonStyle: ActionButtonStyle(
+                                    iconColor: Theme.of(context).brightness == Brightness.dark
+                                        ? Colors.white70
+                                        : null,
+                                  ),
+                                  menuColor: Theme.of(context).brightness == Brightness.dark
+                                      ? Colors.grey[850]
+                                      : null,
                                 ),
                                 responseBuilder: (context, message) => VibeDetector(
                                   message: message,
