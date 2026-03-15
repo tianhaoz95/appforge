@@ -102,14 +102,17 @@ void main() {
     verify(() => mockAppRepository.deleteApp('1')).called(1);
   });
 
-  testWidgets('AppVaultDrawer shows delete dialog on long press and deletes conversation', (WidgetTester tester) async {
-    final conv = {'conversationId': 'c1', 'title': 'Deletable Chat', 'updated_at': 12345};
+  testWidgets('AppVaultDrawer enters selection mode on long press and bulk deletes', (WidgetTester tester) async {
+    final convs = [
+      {'conversationId': 'c1', 'title': 'Chat 1', 'updated_at': 1000},
+      {'conversationId': 'c2', 'title': 'Chat 2', 'updated_at': 900},
+    ];
     
     when(() => mockAppRepository.getAppsForOwner(any()))
         .thenAnswer((_) async => []);
     when(() => mockConvRepository.getConversations())
-        .thenAnswer((_) async => [conv]);
-    when(() => mockConvRepository.deleteConversation(any())).thenAnswer((_) async {});
+        .thenAnswer((_) async => convs);
+    when(() => mockConvRepository.deleteConversations(any())).thenAnswer((_) async {});
 
     await tester.pumpWidget(MaterialApp(
       home: MultiProvider(
@@ -130,20 +133,104 @@ void main() {
     scaffoldState.openDrawer();
     await tester.pumpAndSettle();
 
-    // Long press on conversation
-    await tester.longPress(find.text('Deletable Chat'));
+    // Long press on Chat 1 to enter selection mode
+    await tester.longPress(find.text('Chat 1'));
+    await tester.pumpAndSettle();
+
+    // Verify selection mode header
+    expect(find.text('1 Selected'), findsOneWidget);
+    expect(find.byType(Checkbox), findsNWidgets(2)); // Checkboxes should appear
+
+    // Select Chat 2
+    await tester.tap(find.text('Chat 2'));
+    await tester.pumpAndSettle();
+    expect(find.text('2 Selected'), findsOneWidget);
+
+    // Tap delete in header
+    await tester.tap(find.byIcon(Icons.delete_outline));
     await tester.pumpAndSettle();
 
     // Check dialog
-    expect(find.text('Delete Conversation?'), findsOneWidget);
-    expect(find.text('Delete'), findsOneWidget);
-
-    // Tap delete
+    expect(find.text('Delete 2 Conversations?'), findsOneWidget);
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
     // Verify repository call
-    verify(() => mockConvRepository.deleteConversation('c1')).called(1);
+    verify(() => mockConvRepository.deleteConversations(['c1', 'c2'])).called(1);
+    expect(find.text('Recent Chats'), findsOneWidget); // Back to normal mode
+  });
+
+  testWidgets('AppVaultDrawer "Select All" selects all conversations', (WidgetTester tester) async {
+    final convs = [
+      {'conversationId': 'c1', 'title': 'Chat 1', 'updated_at': 1000},
+      {'conversationId': 'c2', 'title': 'Chat 2', 'updated_at': 900},
+      {'conversationId': 'c3', 'title': 'Chat 3', 'updated_at': 800},
+      {'conversationId': 'c4', 'title': 'Chat 4', 'updated_at': 700},
+    ];
+    
+    when(() => mockAppRepository.getAppsForOwner(any()))
+        .thenAnswer((_) async => []);
+    when(() => mockConvRepository.getConversations())
+        .thenAnswer((_) async => convs);
+
+    await tester.pumpWidget(MaterialApp(
+      home: MultiProvider(
+        providers: [
+          ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
+          ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
+        ],
+        child: const Scaffold(
+          drawer: AppVaultDrawer(),
+          body: Center(child: Text('Body')),
+        ),
+      ),
+    ));
+
+    // Open drawer
+    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+    scaffoldState.openDrawer();
+    await tester.pumpAndSettle();
+
+    // Enter selection mode
+    await tester.longPress(find.text('Chat 1'));
+    await tester.pumpAndSettle();
+
+    // Tap Select All
+    await tester.tap(find.text('Select All'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('4 Selected'), findsOneWidget);
+    
+    // Tap Deselect All
+    await tester.tap(find.text('Deselect All'));
+    await tester.pumpAndSettle();
+    expect(find.text('0 Selected'), findsOneWidget);
+  });
+
+  testWidgets('AppVaultDrawer does not show Sign Out button', (WidgetTester tester) async {
+    when(() => mockAppRepository.getAppsForOwner(any())).thenAnswer((_) async => []);
+    when(() => mockConvRepository.getConversations()).thenAnswer((_) async => []);
+
+    await tester.pumpWidget(MaterialApp(
+      home: MultiProvider(
+        providers: [
+          ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepository),
+          ChangeNotifierProvider<ConversationRepository>.value(value: mockConvRepository),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuthProvider),
+        ],
+        child: const Scaffold(
+          drawer: AppVaultDrawer(),
+          body: Center(child: Text('Body')),
+        ),
+      ),
+    ));
+
+    final scaffoldState = tester.state<ScaffoldState>(find.byType(Scaffold));
+    scaffoldState.openDrawer();
+    await tester.pumpAndSettle();
+
+    expect(find.text('Sign Out'), findsNothing);
   });
 
   testWidgets('AppVaultDrawer shows only 3 recent chats directly and others in ExpansionTile', (WidgetTester tester) async {

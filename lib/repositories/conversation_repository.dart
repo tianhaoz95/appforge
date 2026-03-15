@@ -105,4 +105,20 @@ class ConversationRepository extends ChangeNotifier {
     );
     notifyListeners();
   }
+
+  Future<void> deleteConversations(List<String> conversationIds) async {
+    final db = await _dbHelper.database;
+    await db.transaction((txn) async {
+      final batch = txn.batch();
+      for (final id in conversationIds) {
+        batch.delete(
+          'conversations',
+          where: 'conversationId = ?',
+          whereArgs: [id],
+        );
+      }
+      await batch.commit(noResult: true);
+    });
+    notifyListeners();
+  }
 }

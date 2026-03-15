@@ -17,6 +17,9 @@ class AppVaultDrawer extends StatefulWidget {
 class _AppVaultDrawerState extends State<AppVaultDrawer> {
   Future<List<Map<String, dynamic>>>? _appsFuture;
   Future<List<Map<String, dynamic>>>? _convsFuture;
+  bool _isSelectionMode = false;
+  final Set<String> _selectedConversationIds = {};
+  bool _isOlderExpanded = false;
 
   @override
   void didChangeDependencies() {
@@ -49,13 +52,12 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         children: [
           DrawerHeader(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  Theme.of(context).colorScheme.primaryContainer,
-                  Theme.of(context).colorScheme.secondaryContainer,
-                ],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
+              color: Theme.of(context).colorScheme.surface,
+              border: Border(
+                bottom: BorderSide(
+                  color: Theme.of(context).dividerColor.withOpacity(0.1),
+                  width: 1,
+                ),
               ),
             ),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
@@ -68,7 +70,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
+                          color: Theme.of(context).colorScheme.surfaceVariant,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Image.asset(
@@ -85,7 +87,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                       Text(
                         'AppVault',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onPrimaryContainer,
+                          color: Theme.of(context).colorScheme.onSurface,
                           fontSize: 20,
                           fontWeight: FontWeight.bold,
                         ),
@@ -110,7 +112,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                             Text(
                               auth.user?.displayName ?? 'User',
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.onPrimaryContainer,
+                                color: Theme.of(context).colorScheme.onSurface,
                                 fontWeight: FontWeight.bold,
                                 fontSize: 14,
                               ),
@@ -120,7 +122,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                             Text(
                               auth.user?.email ?? '',
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.onPrimaryContainer.withOpacity(0.7),
+                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
                                 fontSize: 11,
                               ),
                               maxLines: 1,
@@ -135,12 +137,15 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               ),
             ),
           ),
-          const ListTile(
-            title: Text(
-              'Recent Chats',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
+          if (!_isSelectionMode)
+            const ListTile(
+              title: Text(
+                'Recent Chats',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          else
+            _buildSelectionModeHeader(),
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _convsFuture,
             builder: (context, snapshot) {
@@ -163,6 +168,12 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                       child: ExpansionTile(
                         dense: true,
+                        initiallyExpanded: _isOlderExpanded || _isSelectionMode,
+                        onExpansionChanged: (val) {
+                          if (!_isSelectionMode) {
+                            setState(() => _isOlderExpanded = val);
+                          }
+                        },
                         visualDensity: VisualDensity.compact,
                         title: Text(
                           'Older Chats (${older.length})',
@@ -214,43 +225,145 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               );
             },
           ),
-          const Divider(),
-          ListTile(
-            leading: const Icon(Icons.logout, color: Colors.red),
-            title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
-            onTap: () async {
-              final auth = context.read<AuthProvider>();
-              await auth.signOut();
-              if (mounted) {
-                Navigator.pop(context);
-              }
-            },
-          ),
         ],
       ),
     );
   }
 
+  Widget _buildSelectionModeHeader() {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _convsFuture,
+      builder: (context, snapshot) {
+        final convs = snapshot.data ?? [];
+        final allIds = convs.map((c) => c['conversationId'] as String).toSet();
+        final isAllSelected = _selectedConversationIds.length == allIds.length && allIds.isNotEmpty;
+
+        return ListTile(
+          dense: true,
+          title: Text(
+            '${_selectedConversationIds.length} Selected',
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: () => setState(() {
+              _isSelectionMode = false;
+              _selectedConversationIds.clear();
+              _isOlderExpanded = false;
+            }),
+          ),
+          trailing: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    if (isAllSelected) {
+                      _selectedConversationIds.clear();
+                    } else {
+                      _selectedConversationIds.addAll(allIds);
+                    }
+                  });
+                },
+                child: Text(isAllSelected ? 'Deselect All' : 'Select All'),
+              ),
+              IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red),
+                onPressed: _selectedConversationIds.isEmpty ? null : () => _confirmBulkDelete(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   Widget _buildConversationTile(Map<String, dynamic> conv) {
-    return Builder(builder: (context) {
-      return ListTile(
-        dense: true,
-        leading: const Icon(Icons.chat_bubble_outline, size: 20),
-        title: Text(
-          conv['title'] ?? 'Untitled Chat',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        onTap: () {
+    final String id = conv['conversationId'];
+    final bool isSelected = _selectedConversationIds.contains(id);
+
+    return ListTile(
+      dense: true,
+      leading: _isSelectionMode
+          ? Checkbox(
+              value: isSelected,
+              onChanged: (val) {
+                setState(() {
+                  if (val == true) {
+                    _selectedConversationIds.add(id);
+                  } else {
+                    _selectedConversationIds.remove(id);
+                  }
+                });
+              },
+            )
+          : const Icon(Icons.chat_bubble_outline, size: 20),
+      title: Text(
+        conv['title'] ?? 'Untitled Chat',
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      onTap: () {
+        if (_isSelectionMode) {
+          setState(() {
+            if (isSelected) {
+              _selectedConversationIds.remove(id);
+            } else {
+              _selectedConversationIds.add(id);
+            }
+          });
+        } else {
           widget.onConversationSelected?.call(
-            conv['conversationId'],
+            id,
             conv['title'] ?? 'Untitled Chat',
           );
           Navigator.pop(context);
-        },
-        onLongPress: () => _confirmDeleteConversation(context, conv),
-      );
-    });
+        }
+      },
+      onLongPress: () {
+        if (!_isSelectionMode) {
+          setState(() {
+            _isSelectionMode = true;
+            _selectedConversationIds.add(id);
+            _isOlderExpanded = true;
+          });
+        } else {
+          _confirmDeleteConversation(context, conv);
+        }
+      },
+      selected: isSelected,
+      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+    );
+  }
+
+  Future<void> _confirmBulkDelete(BuildContext context) async {
+    final bool? shouldDelete = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Delete ${_selectedConversationIds.length} Conversations?'),
+        content: const Text('Are you sure you want to delete the selected conversations? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDelete == true && context.mounted) {
+      final convRepository = Provider.of<ConversationRepository>(context, listen: false);
+      await convRepository.deleteConversations(_selectedConversationIds.toList());
+      setState(() {
+        _isSelectionMode = false;
+        _selectedConversationIds.clear();
+      });
+    }
   }
 
   Future<void> _confirmDelete(BuildContext context, Map<String, dynamic> app) async {
