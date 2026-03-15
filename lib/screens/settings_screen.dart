@@ -43,6 +43,43 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  Future<void> _showEditProfileDialog() async {
+    final user = context.read<AuthProvider>().user;
+    if (user != null) {
+      _nameController.text = user.displayName ?? '';
+    }
+    
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Profile'),
+        content: TextField(
+          controller: _nameController,
+          decoration: const InputDecoration(
+            labelText: 'Display Name',
+            hintText: 'Enter your name',
+            prefixIcon: Icon(Icons.person_outline),
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (result == true) {
+      await _updateProfile();
+    }
+  }
+
   Future<void> _updateProfile() async {
     if (_nameController.text.trim().isEmpty) return;
     
@@ -56,7 +93,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             behavior: SnackBarBehavior.floating,
           ),
         );
-        FocusScope.of(context).unfocus();
       }
     } catch (e) {
       if (mounted) {
@@ -139,10 +175,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               children: [
                 _buildProfileHeader(user, theme),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Profile Settings'),
-                const SizedBox(height: 16),
-                _buildProfileForm(theme),
                 const SizedBox(height: 32),
                 _buildSectionHeader('Preferences'),
                 const SizedBox(height: 12),
@@ -229,6 +261,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                 ),
+                const SizedBox(height: 32),
+                _buildSectionHeader('Backend'),
+                const SizedBox(height: 12),
                 _buildPreferenceItem(
                   icon: Icons.storage_outlined,
                   title: 'Allow Backend Database',
@@ -333,6 +368,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
+        IconButton(
+          onPressed: _showEditProfileDialog,
+          icon: const Icon(Icons.edit_outlined),
+          tooltip: 'Edit Profile',
+        ),
       ],
     );
   }
@@ -346,38 +386,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         letterSpacing: 1.2,
         color: Colors.blueGrey,
       ),
-    );
-  }
-
-  Widget _buildProfileForm(ThemeData theme) {
-    return Column(
-      children: [
-        TextField(
-          controller: _nameController,
-          decoration: InputDecoration(
-            labelText: 'Display Name',
-            hintText: 'Enter your name',
-            prefixIcon: const Icon(Icons.person_outline),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-            filled: true,
-            fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          height: 50,
-          child: FilledButton(
-            onPressed: _updateProfile,
-            style: FilledButton.styleFrom(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-            ),
-            child: const Text('Save Changes'),
-          ),
-        ),
-      ],
     );
   }
 
