@@ -452,18 +452,41 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
     );
   }
 
+  void _copyToClipboard(String text, String label) {
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No $label to copy.')),
+      );
+      return;
+    }
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$label copied to clipboard.')),
+    );
+  }
+
   Widget _buildMergedCodeView() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Frontend',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Frontend',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy, size: 18),
+                onPressed: () => _copyToClipboard(_activeCode ?? '', 'Frontend code'),
+                tooltip: 'Copy Frontend Code',
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           MarkdownBody(
@@ -473,12 +496,22 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-          Text(
-            'Backend',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Backend',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy, size: 18),
+                onPressed: () => _copyToClipboard(_activeBackendCode ?? '', 'Backend code'),
+                tooltip: 'Copy Backend Code',
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           MarkdownBody(
@@ -488,12 +521,22 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           const SizedBox(height: 24),
           const Divider(),
           const SizedBox(height: 16),
-          Text(
-            'Background Periodic',
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Background Periodic',
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.copy, size: 18),
+                onPressed: () => _copyToClipboard(_activePeriodicBackendCode ?? '', 'Background periodic code'),
+                tooltip: 'Copy Background Periodic Code',
+              ),
+            ],
           ),
           const SizedBox(height: 8),
           MarkdownBody(

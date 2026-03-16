@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
@@ -958,6 +959,19 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
   }
 
+  void _copyToClipboard(String text, String label) {
+    if (text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No $label to copy.')),
+      );
+      return;
+    }
+    Clipboard.setData(ClipboardData(text: text));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('$label copied to clipboard.')),
+    );
+  }
+
   void _showContextDialog() {
     showModalBottomSheet(
       context: context,
@@ -978,21 +992,68 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Original Code', style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Original Code', style: Theme.of(context).textTheme.titleLarge),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    onPressed: () => _copyToClipboard(_enhancementCode ?? '', 'Original code'),
+                    tooltip: 'Copy Original Code',
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               MarkdownBody(
                 data: '```html\n${_enhancementCode ?? ''}\n```',
                 selectable: true,
               ),
               const SizedBox(height: 16),
-              Text('Original Backend', style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Original Backend', style: Theme.of(context).textTheme.titleLarge),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    onPressed: () => _copyToClipboard(_enhancementBackend ?? '', 'Original backend'),
+                    tooltip: 'Copy Original Backend',
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               MarkdownBody(
                 data: '```javascript\n${_enhancementBackend ?? ''}\n```',
                 selectable: true,
               ),
+              const SizedBox(height: 16),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Background Periodic', style: Theme.of(context).textTheme.titleLarge),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    onPressed: () => _copyToClipboard(_enhancementPeriodicBackend ?? '', 'Background periodic code'),
+                    tooltip: 'Copy Background Periodic Code',
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              MarkdownBody(
+                data: '```javascript\n${_enhancementPeriodicBackend ?? ''}\n```',
+                selectable: true,
+              ),
               const SizedBox(height: 24),
-              Text('Design Document', style: Theme.of(context).textTheme.titleLarge),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('Design Document', style: Theme.of(context).textTheme.titleLarge),
+                  IconButton(
+                    icon: const Icon(Icons.copy, size: 18),
+                    onPressed: () => _copyToClipboard(_enhancementDesign ?? '', 'Design document'),
+                    tooltip: 'Copy Design Document',
+                  ),
+                ],
+              ),
               const SizedBox(height: 8),
               MarkdownBody(
                 data: _enhancementDesign ?? 'No design document provided.',
