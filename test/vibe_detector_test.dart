@@ -78,4 +78,37 @@ void main() {
     expect(find.text('Preview: Rocket App'), findsOneWidget);
     expect(find.text('Deploy Rocket App'), findsOneWidget);
   });
+
+  testWidgets('MiniAppPreview has a full screen button that triggers onDeploy with isTemporary: true', (WidgetTester tester) async {
+    const message = '<name>Test App</name><forge><h1>Test</h1></forge>';
+    bool onDeployCalled = false;
+    bool isTemp = false;
+
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: VibeDetector(
+          message: message,
+          onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, {isTemporary = false}) {
+            onDeployCalled = true;
+            isTemp = isTemporary;
+          },
+        ),
+      ),
+    ));
+
+    // Initially should show MiniAppPreview
+    expect(find.byType(MiniAppPreview), findsOneWidget);
+
+    // Find the full screen button in the overlay
+    final fullScreenButton = find.byIcon(Icons.fullscreen);
+    expect(fullScreenButton, findsOneWidget);
+
+    // Tap it
+    await tester.tap(fullScreenButton);
+    await tester.pump();
+
+    // Verify callback was triggered correctly
+    expect(onDeployCalled, isTrue);
+    expect(isTemp, isTrue);
+  });
 }

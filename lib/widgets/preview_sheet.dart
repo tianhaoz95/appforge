@@ -1094,18 +1094,18 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                       constraints: const BoxConstraints(),
                                     ),
                                   const SizedBox(width: 8),
-                                  if (isFullScreen)
-                                    IconButton(
-                                      icon: const Icon(Icons.fullscreen_exit, size: 20),
-                                      onPressed: _toggleFullScreen,
-                                      padding: EdgeInsets.zero,
-                                      constraints: const BoxConstraints(),
-                                    ),
                                   IconButton(
-                                    icon: const Icon(Icons.close, size: 20),
+                                    icon: Icon(isFullScreen ? Icons.fullscreen_exit : Icons.fullscreen, size: 22),
+                                    onPressed: _toggleFullScreen,
+                                    tooltip: isFullScreen ? 'Exit Full Screen' : 'Full Screen',
+                                    padding: const EdgeInsets.all(4),
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.close, size: 22),
                                     onPressed: widget.onClose ?? () => Navigator.pop(context),
-                                    padding: EdgeInsets.zero,
-                                    constraints: const BoxConstraints(),
+                                    padding: const EdgeInsets.all(4),
+                                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
                                   ),
                                 ],
                               ),

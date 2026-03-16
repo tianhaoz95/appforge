@@ -4,7 +4,7 @@ import 'mini_app_preview.dart';
 
 class VibeDetector extends StatelessWidget {
   final String message;
-  final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon)? onDeploy;
+  final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon, {bool isTemporary})? onDeploy;
   final Function(String appId)? onOpenApp;
   final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon)? onAutoRefine;
 
@@ -81,7 +81,20 @@ class VibeDetector extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 8),
-              MiniAppPreview(code: forgeCode ?? ''),
+              MiniAppPreview(
+                code: forgeCode ?? '',
+                onFullScreen: () => onDeploy?.call(
+                  forgeCode ?? '',
+                  backendCode,
+                  periodicBackendCode,
+                  name,
+                  designDoc,
+                  version,
+                  releaseNotes,
+                  icon,
+                  isTemporary: true,
+                ),
+              ),
               const SizedBox(height: 8),
               Theme(
                 data: Theme.of(context).copyWith(dividerColor: Colors.transparent),

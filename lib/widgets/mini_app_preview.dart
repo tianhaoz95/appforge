@@ -7,6 +7,7 @@ import '../providers/settings_provider.dart';
 class MiniAppPreview extends StatefulWidget {
   final String code;
   final double height;
+  final VoidCallback? onFullScreen;
   
   static bool skipWebViewForTesting = false;
 
@@ -14,6 +15,7 @@ class MiniAppPreview extends StatefulWidget {
     super.key,
     required this.code,
     this.height = 400,
+    this.onFullScreen,
   });
 
   @override
@@ -216,9 +218,29 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
         ],
       ),
       clipBehavior: Clip.antiAlias,
-      child: _controller != null 
-          ? WebViewWidget(controller: _controller!)
-          : const Center(child: Text('WebView Placeholder')),
+      child: Stack(
+        children: [
+          _controller != null 
+              ? WebViewWidget(controller: _controller!)
+              : const Center(child: Text('WebView Placeholder')),
+          if (widget.onFullScreen != null)
+            Positioned(
+              top: 8,
+              right: 8,
+              child: Material(
+                color: Colors.black.withOpacity(0.5),
+                borderRadius: BorderRadius.circular(20),
+                child: IconButton(
+                  icon: const Icon(Icons.fullscreen, color: Colors.white, size: 20),
+                  onPressed: widget.onFullScreen,
+                  tooltip: 'Full Screen',
+                  constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  padding: EdgeInsets.zero,
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 }

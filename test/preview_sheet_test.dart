@@ -209,4 +209,45 @@ void main() {
     final tabBarView = tester.widget<TabBarView>(find.byType(TabBarView));
     expect(tabBarView.physics, isA<NeverScrollableScrollPhysics>());
   });
+
+  testWidgets('PreviewSheet shows Full Screen button and toggles it', (WidgetTester tester) async {
+    final mockDataRepo = MockMicroAppDataRepository();
+    final mockAppRepo = MockMicroAppRepository();
+    when(() => mockAppRepo.getAppVersions(any())).thenAnswer((_) async => []);
+    
+    await tester.pumpWidget(MaterialApp(
+      home: Scaffold(
+        body: MultiProvider(
+          providers: [
+            Provider<MicroAppDataRepository>.value(value: mockDataRepo),
+            ChangeNotifierProvider<MicroAppRepository>.value(value: mockAppRepo),
+          ],
+          child: const PreviewSheet(
+            code: '<h1>Hello</h1>',
+            appId: 'test-app',
+          ),
+        ),
+      ),
+    ));
+
+    // Initially should show Full Screen button
+    expect(find.byTooltip('Full Screen'), findsOneWidget);
+    expect(find.byIcon(Icons.fullscreen), findsOneWidget);
+
+    // Tap to enter full screen
+    await tester.tap(find.byTooltip('Full Screen'));
+    await tester.pumpAndSettle();
+
+    // After toggle, should show Exit Full Screen button
+    expect(find.byTooltip('Exit Full Screen'), findsOneWidget);
+    expect(find.byIcon(Icons.fullscreen_exit), findsOneWidget);
+
+    // Tap to exit full screen
+    await tester.tap(find.byTooltip('Exit Full Screen'));
+    await tester.pumpAndSettle();
+
+    // Should be back to Full Screen
+    expect(find.byTooltip('Full Screen'), findsOneWidget);
+    expect(find.byIcon(Icons.fullscreen), findsOneWidget);
+  });
 }

@@ -1207,8 +1207,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                 ),
                                 responseBuilder: (context, message) => VibeDetector(
                                   message: message,
-                                onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon) => 
-                                    onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
+                                onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, {isTemporary = false}) => 
+                                    onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, isTemporary: isTemporary),
                                   onOpenApp: _onOpenApp,
                                   onAutoRefine: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon) async {
                                     if (!_showPreview) {
