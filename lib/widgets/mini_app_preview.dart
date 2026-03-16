@@ -133,11 +133,12 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
     }
     body {
       margin: 0;
-      padding: 12px;
+      padding: 0;
       font-family: sans-serif;
       background-color: var(--mf-bg);
       color: var(--mf-text);
       transition: background-color 0.2s ease, color 0.2s ease;
+      zoom: 0.6;
     }
     /* Hide scrollbars for mini preview if preferred, or keep them */
     ::-webkit-scrollbar { width: 4px; }
