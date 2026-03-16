@@ -1148,7 +1148,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     ),
                                   ),
                                   submitButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : colorScheme.primary,
+                                    iconColor: isDark ? Colors.white : Colors.black,
+                                    iconDecoration: BoxDecoration(
+                                      color: isDark ? Colors.black : Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                   addButtonStyle: ActionButtonStyle(
                                     iconColor: isDark ? Colors.grey[400] : Colors.black54,
@@ -1172,6 +1176,10 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     iconColor: isDark ? Colors.grey[400] : Colors.black54,
                                   ),
                                   menuColor: isDark ? Colors.grey[850] : Colors.white,
+                                  actionButtonBarDecoration: BoxDecoration(
+                                    color: isDark ? Colors.grey[900] : Colors.grey[200],
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                 ),
                                 responseBuilder: (context, message) => VibeDetector(
                                   message: message,
