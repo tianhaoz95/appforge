@@ -59,7 +59,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               color: Colors.transparent,
               border: Border(
                 bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withOpacity(0.1),
+                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
                   width: 1,
                 ),
               ),
@@ -131,7 +131,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                             Text(
                               auth.user?.email ?? '',
                               style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
                                 fontSize: 11,
                               ),
                               maxLines: 1,
@@ -338,7 +338,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         }
       },
       selected: isSelected,
-      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
     );
   }
 
@@ -386,44 +386,54 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         final totalItems = allConvIds.length + allAppIds.length;
         final isAllSelected = totalSelected == totalItems && totalItems > 0;
 
-        return ListTile(
-          dense: true,
-          title: Text(
-            '$totalSelected Selected',
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          leading: IconButton(
-            icon: const Icon(Icons.close),
-            onPressed: () => setState(() {
-              _isSelectionMode = false;
-              _selectedConversationIds.clear();
-              _selectedAppIds.clear();
-              _isOlderExpanded = false;
-            }),
-          ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    if (isAllSelected) {
-                      _selectedConversationIds.clear();
-                      _selectedAppIds.clear();
-                    } else {
-                      _selectedConversationIds.addAll(allConvIds);
-                      _selectedAppIds.addAll(allAppIds);
-                    }
-                  });
-                },
-                child: Text(isAllSelected ? 'Deselect All' : 'Select All'),
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              dense: true,
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => setState(() {
+                  _isSelectionMode = false;
+                  _selectedConversationIds.clear();
+                  _selectedAppIds.clear();
+                  _isOlderExpanded = false;
+                }),
               ),
-              IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red),
-                onPressed: totalSelected == 0 ? null : () => _confirmBulkDelete(context),
+              title: Text(
+                '$totalSelected Selected',
+                style: const TextStyle(fontWeight: FontWeight.bold),
               ),
-            ],
-          ),
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        if (isAllSelected) {
+                          _selectedConversationIds.clear();
+                          _selectedAppIds.clear();
+                        } else {
+                          _selectedConversationIds.addAll(allConvIds);
+                          _selectedAppIds.addAll(allAppIds);
+                        }
+                      });
+                    },
+                    icon: Icon(isAllSelected ? Icons.deselect : Icons.select_all, size: 20),
+                    label: Text(isAllSelected ? 'Deselect All' : 'Select All'),
+                  ),
+                ),
+                Expanded(
+                  child: IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: totalSelected == 0 ? null : () => _confirmBulkDelete(context),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(),
+          ],
         );
       },
     );
@@ -483,7 +493,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         }
       },
       selected: isSelected,
-      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withOpacity(0.3),
+      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
     );
   }
 
