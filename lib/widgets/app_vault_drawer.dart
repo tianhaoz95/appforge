@@ -67,20 +67,26 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
             ),
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
             child: Consumer2<AuthProvider, SettingsProvider>(
-              builder: (context, auth, settings, _) => Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+              builder: (context, auth, settings, _) {
+                final isDark = Theme.of(context).brightness == Brightness.dark;
+                final logoBackground = isDark ? Colors.black : Colors.white;
+                final logoColor = isDark ? Colors.white : Colors.black;
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                   Row(
                     children: [
                       Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                          color: logoBackground,
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Image.asset(
                           'brand/logo.png',
                           height: 32,
+                          color: logoColor,
+                          colorBlendMode: BlendMode.srcIn,
                           errorBuilder: (context, error, stackTrace) => Icon(
                             Icons.auto_awesome_motion, 
                             size: 32, 
@@ -143,8 +149,9 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                       ),
                     ],
                   ),
-                ],
-              ),
+                  ],
+                );
+              },
             ),
           ),
           _buildSectionHeader(

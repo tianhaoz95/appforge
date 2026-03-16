@@ -202,7 +202,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               children: [
                 _buildProfileHeader(user, theme, settingsProvider),
                 const SizedBox(height: 32),
-                _buildSectionHeader('Preferences'),
+                _buildSectionHeader('App preferences'),
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
                   icon: Icons.palette_outlined,
@@ -225,6 +225,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ),
+                const SizedBox(height: 32),
+                _buildSectionHeader('AI agent preferences'),
+                const SizedBox(height: 12),
                 _buildPreferenceItem(
                   icon: Icons.lightbulb_outline,
                   title: 'Suggest Existing Apps',
@@ -551,4 +554,3 @@ class _SettingsScreenState extends State<SettingsScreen> {
     super.dispose();
   }
 }
-

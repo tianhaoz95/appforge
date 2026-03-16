@@ -1041,24 +1041,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
   }
 
-  void _toggleTheme() {
-    final settings = context.read<SettingsProvider>();
-    final currentTheme = settings.themeMode;
-    ThemeMode nextTheme;
-    switch (currentTheme) {
-      case ThemeMode.system:
-        nextTheme = ThemeMode.light;
-        break;
-      case ThemeMode.light:
-        nextTheme = ThemeMode.dark;
-        break;
-      case ThemeMode.dark:
-        nextTheme = ThemeMode.system;
-        break;
-    }
-    settings.setThemeMode(nextTheme);
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -1068,27 +1050,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
             title: const Text('MicroForge'),
             actions: [
               IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
-              Consumer<SettingsProvider>(
-                builder: (context, settings, _) {
-                  IconData icon;
-                  switch (settings.themeMode) {
-                    case ThemeMode.system:
-                      icon = Icons.brightness_auto;
-                      break;
-                    case ThemeMode.light:
-                      icon = Icons.light_mode;
-                      break;
-                    case ThemeMode.dark:
-                      icon = Icons.dark_mode;
-                      break;
-                  }
-                  return IconButton(
-                    icon: Icon(icon),
-                    onPressed: _toggleTheme,
-                    tooltip: 'Toggle Theme',
-                  );
-                },
-              ),
               IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () async {
