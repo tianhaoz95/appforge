@@ -606,10 +606,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final periodicBackendToEnhance = _activePeriodicBackendCode;
     final designToEnhance = _activeDesignDoc;
     final appIdToEnhance = _activeAppId;
+    final existingHistory = _provider?.history.toList() ?? [];
 
     setState(() {
       _showPreview = false;
-      _currentConversationId = const Uuid().v4();
+      // Keep current conversation ID
       _conversationTitle = 'Enhance $name';
       _enhancementCode = codeToEnhance;
       _enhancementBackend = backendToEnhance;
@@ -624,6 +625,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
       enhancementAppId: appIdToEnhance,
+      history: existingHistory,
     );
 
     // Give it a moment for AI to be ready with new provider
@@ -631,6 +633,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       if (_provider != null) {
         setState(() {
           _provider!.history = [
+            ...existingHistory,
             ChatMessage(
               origin: MessageOrigin.llm,
               text: "I've loaded your app '$name'. How would you like to enhance it?",
@@ -642,7 +645,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Starting new conversation to enhance $name...')),
+      SnackBar(content: Text('Enhancing $name in current conversation...')),
     );
   }
 
@@ -654,10 +657,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final backendToEnhance = _activeBackendCode;
     final periodicBackendToEnhance = _activePeriodicBackendCode;
     final designToEnhance = _activeDesignDoc;
+    final existingHistory = _provider?.history.toList() ?? [];
 
     setState(() {
       _showPreview = false;
-      _currentConversationId = const Uuid().v4();
+      // Keep current conversation ID
       _conversationTitle = 'Feedback on $name';
       _enhancementCode = codeToEnhance;
       _enhancementBackend = backendToEnhance;
@@ -670,6 +674,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementBackend: backendToEnhance,
       enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
+      history: existingHistory,
     );
 
     // Give it a moment for AI to be ready with new provider
@@ -677,6 +682,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       if (_provider != null) {
         setState(() {
           _provider!.history = [
+            ...existingHistory,
             ChatMessage(
               origin: MessageOrigin.user,
               text: "I have some feedback for this app:\n\n$text",
@@ -694,7 +700,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Starting new conversation with feedback for $name...')),
+      SnackBar(content: Text('Analyzing feedback for $name in current conversation...')),
     );
   }
 
@@ -706,10 +712,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final backendToEnhance = _activeBackendCode;
     final periodicBackendToEnhance = _activePeriodicBackendCode;
     final designToEnhance = _activeDesignDoc;
+    final existingHistory = _provider?.history.toList() ?? [];
 
     setState(() {
       _showPreview = false;
-      _currentConversationId = const Uuid().v4();
+      // Keep current conversation ID to stay in the same conversation
       _conversationTitle = 'Refining $name';
       _enhancementCode = codeToEnhance;
       _enhancementBackend = backendToEnhance;
@@ -722,6 +729,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementBackend: backendToEnhance,
       enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
+      history: existingHistory,
     );
 
     // Prepare logs text
@@ -730,29 +738,29 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     // Give it a moment for AI to be ready with new provider
     Future.delayed(const Duration(milliseconds: 100), () {
       if (_provider != null) {
-        setState(() {
-          _provider!.history = [
-            ChatMessage(
-              origin: MessageOrigin.user,
-              text: "AUTO REFINE: Please analyze this app for flaws and potential improvements based on the following context:\n\n"
-                  "1. App Console Logs:\n$logsText\n\n"
-                  "2. App Screenshot (attached below).\n\n"
-                  "Please look for visual inconsistencies, bugs indicated by logs, or UX improvements and implement the necessary changes in the code and design doc.",
-              attachments: [
-                ImageFileAttachment(
-                  name: 'app_screenshot.png',
-                  mimeType: 'image/png',
-                  bytes: screenshot,
-                ),
-              ],
+        final autoRefineMessage = ChatMessage(
+          origin: MessageOrigin.user,
+          text: "AUTO REFINE: Please analyze this app for flaws and potential improvements based on the following context:\n\n"
+              "1. App Console Logs:\n$logsText\n\n"
+              "2. App Screenshot (attached below).\n\n"
+              "Please look for visual inconsistencies, bugs indicated by logs, or UX improvements and implement the necessary changes in the code and design doc.",
+          attachments: [
+            ImageFileAttachment(
+              name: 'app_screenshot.png',
+              mimeType: 'image/png',
+              bytes: screenshot,
             ),
-          ];
+          ],
+        );
+
+        setState(() {
+          _provider!.history = [...existingHistory, autoRefineMessage];
         });
       }
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Analyzing app for refinements...')),
+      SnackBar(content: Text('Analyzing app for refinements in current conversation...')),
     );
   }
 

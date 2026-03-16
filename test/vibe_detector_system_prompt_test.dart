@@ -24,7 +24,7 @@ Hope you like it!
       home: Scaffold(
         body: VibeDetector(
           message: message,
-          onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon) => capturedCode = code,
+          onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, {bool isTemporary = false}) => capturedCode = code,
         ),
       ),
     ));

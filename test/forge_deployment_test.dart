@@ -48,7 +48,7 @@ void main() {
                   children: [
                     VibeDetector(
                       message: 'Here is your app: <forge><h1>Hello</h1></forge>',
-                      onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon) {
+                      onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, {bool isTemporary = false}) {
                         setState(() {
                           deployedCode = code;
                           showPreview = true;
