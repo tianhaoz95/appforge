@@ -1155,25 +1155,49 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     ),
                                   ),
                                   addButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
+                                    iconColor: isDark ? Colors.white : Colors.black,
+                                    iconDecoration: BoxDecoration(
+                                      color: isDark ? Colors.black : Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                   attachFileButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
+                                    iconColor: isDark ? Colors.white : Colors.black,
+                                    iconDecoration: BoxDecoration(
+                                      color: isDark ? Colors.black : Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                   cameraButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
+                                    iconColor: isDark ? Colors.white : Colors.black,
+                                    iconDecoration: BoxDecoration(
+                                      color: isDark ? Colors.black : Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                   galleryButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
+                                    iconColor: isDark ? Colors.white : Colors.black,
+                                    iconDecoration: BoxDecoration(
+                                      color: isDark ? Colors.black : Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                   recordButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
+                                    iconColor: isDark ? Colors.white : Colors.black,
+                                    iconDecoration: BoxDecoration(
+                                      color: isDark ? Colors.black : Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                   stopButtonStyle: ActionButtonStyle(
                                     iconColor: isDark ? Colors.white : colorScheme.error,
                                   ),
                                   cancelButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.grey[400] : Colors.black54,
+                                    iconColor: isDark ? Colors.white : Colors.black,
+                                    iconDecoration: BoxDecoration(
+                                      color: isDark ? Colors.black : Colors.white,
+                                      shape: BoxShape.circle,
+                                    ),
                                   ),
                                   menuColor: isDark ? Colors.grey[850] : Colors.white,
                                   actionButtonBarDecoration: BoxDecoration(
