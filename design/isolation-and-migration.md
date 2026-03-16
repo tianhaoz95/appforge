@@ -60,7 +60,17 @@ If a version was migrated, the UI allows the user to peek at the "Parent Data." 
 
 ---
 
-## 4. Implementation Details
+## 4. Safety by Architecture
+
+The "Sandbox" is not a complex security layer, but a natural result of the Flutter-as-Middleman architecture:
+
+1.  **Value-Pass Isolation**: Dart fetches the data and passes it as a JSON value. The JS heap has its own copy; mutations to `oldData` in JS never propagate back to Dart or SQLite.
+2.  **Bridge Enforcement**: The `MicroForgeBridge` used during migration is initialized with the `newAppId`. All `saveData` calls are hard-coded in Dart to write only to this new bucket.
+3.  **Lack of Direct Access**: QuickJS has no `sqlite3` bindings. It is physically incapable of "reaching around" the bridge to touch other tables or rows.
+
+---
+
+## 5. Implementation Details
 
 ### 4.1 Schema Update (LocalDatabase)
 - Table: `micro_apps`
