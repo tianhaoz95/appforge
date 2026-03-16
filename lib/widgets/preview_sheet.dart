@@ -814,7 +814,6 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       color: var(--mf-text);
       opacity: 0;
       transition: opacity 0.3s ease-in, background-color 0.2s ease, color 0.2s ease;
-      zoom: 0.6;
     }
     body.ready { opacity: 1; }
   </style>
