@@ -19,7 +19,8 @@ class AppVaultDrawer extends StatefulWidget {
 class _AppVaultDrawerState extends State<AppVaultDrawer> {
   Future<List<Map<String, dynamic>>>? _appsFuture;
   Future<List<Map<String, dynamic>>>? _convsFuture;
-  bool _isSelectionMode = false;
+  bool _isChatSelectionMode = false;
+  bool _isAppSelectionMode = false;
   final Set<String> _selectedConversationIds = {};
   final Set<String> _selectedAppIds = {};
   bool _isOlderExpanded = false;
@@ -146,15 +147,26 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               ),
             ),
           ),
-          if (!_isSelectionMode)
-            const ListTile(
-              title: Text(
-                'Recent Chats',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            )
-          else
-            _buildSelectionModeHeader(),
+          _buildSectionHeader(
+            title: 'Recent Chats',
+            isSelectionMode: _isChatSelectionMode,
+            selectedCount: _selectedConversationIds.length,
+            onCancel: () => setState(() {
+              _isChatSelectionMode = false;
+              _selectedConversationIds.clear();
+              _isOlderExpanded = false;
+            }),
+            onSelectAll: (allIds) => setState(() {
+              if (_selectedConversationIds.length == allIds.length) {
+                _selectedConversationIds.clear();
+              } else {
+                _selectedConversationIds.addAll(allIds);
+              }
+            }),
+            onDelete: () => _confirmBulkDelete(context, 'chats'),
+            allItemsFuture: _convsFuture,
+            idKey: 'conversationId',
+          ),
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _convsFuture,
             builder: (context, snapshot) {
@@ -177,9 +189,9 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                       data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                       child: ExpansionTile(
                         dense: true,
-                        initiallyExpanded: _isOlderExpanded || _isSelectionMode,
+                        initiallyExpanded: _isOlderExpanded || _isChatSelectionMode,
                         onExpansionChanged: (val) {
-                          if (!_isSelectionMode) {
+                          if (!_isChatSelectionMode) {
                             setState(() => _isOlderExpanded = val);
                           }
                         },
@@ -201,11 +213,24 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
             },
           ),
           const Divider(),
-          const ListTile(
-            title: Text(
-              'Forged Apps',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
+          _buildSectionHeader(
+            title: 'Forged Apps',
+            isSelectionMode: _isAppSelectionMode,
+            selectedCount: _selectedAppIds.length,
+            onCancel: () => setState(() {
+              _isAppSelectionMode = false;
+              _selectedAppIds.clear();
+            }),
+            onSelectAll: (allIds) => setState(() {
+              if (_selectedAppIds.length == allIds.length) {
+                _selectedAppIds.clear();
+              } else {
+                _selectedAppIds.addAll(allIds);
+              }
+            }),
+            onDelete: () => _confirmBulkDelete(context, 'apps'),
+            allItemsFuture: _appsFuture,
+            idKey: 'appId',
           ),
           FutureBuilder<List<Map<String, dynamic>>>(
             future: _appsFuture,
@@ -230,6 +255,80 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     );
   }
 
+  Widget _buildSectionHeader({
+    required String title,
+    required bool isSelectionMode,
+    required int selectedCount,
+    required VoidCallback onCancel,
+    required Function(Set<String>) onSelectAll,
+    required VoidCallback onDelete,
+    required Future<List<Map<String, dynamic>>>? allItemsFuture,
+    required String idKey,
+  }) {
+    if (!isSelectionMode) {
+      return ListTile(
+        title: Text(
+          title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+      );
+    }
+
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: allItemsFuture,
+      builder: (context, snapshot) {
+        final items = snapshot.data ?? [];
+        final allIds = items.map((i) => i[idKey] as String).toSet();
+        final isAllSelected = selectedCount == allIds.length && allIds.isNotEmpty;
+
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              dense: true,
+              leading: IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: onCancel,
+              ),
+              title: Text(
+                '$selectedCount Selected',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              ),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
+                onPressed: selectedCount == 0 ? null : onDelete,
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        visualDensity: VisualDensity.compact,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      onPressed: () => onSelectAll(allIds),
+                      icon: Icon(isAllSelected ? Icons.deselect : Icons.select_all, size: 16),
+                      label: Text(
+                        isAllSelected ? 'Deselect All' : 'Select All',
+                        style: const TextStyle(fontSize: 11),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Divider(height: 1),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildAppTile(Map<String, dynamic> app) {
     final String id = app['appId'];
     final bool isSelected = _selectedAppIds.contains(id);
@@ -237,7 +336,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
 
     return ListTile(
       dense: true,
-      leading: _isSelectionMode
+      leading: _isAppSelectionMode
           ? Checkbox(
               value: isSelected,
               onChanged: (val) {
@@ -265,7 +364,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         overflow: TextOverflow.ellipsis,
       ),
       subtitle: Text('v${app['version']}', style: const TextStyle(fontSize: 11)),
-      trailing: _isSelectionMode
+      trailing: _isAppSelectionMode
           ? null
           : PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert, size: 18),
@@ -314,7 +413,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
               ],
             ),
       onTap: () {
-        if (_isSelectionMode) {
+        if (_isAppSelectionMode) {
           setState(() {
             if (isSelected) {
               _selectedAppIds.remove(id);
@@ -328,9 +427,9 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         }
       },
       onLongPress: () {
-        if (!_isSelectionMode) {
+        if (!_isAppSelectionMode) {
           setState(() {
-            _isSelectionMode = true;
+            _isAppSelectionMode = true;
             _selectedAppIds.add(id);
           });
         } else {
@@ -372,80 +471,13 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     }
   }
 
-  Widget _buildSelectionModeHeader() {
-    return FutureBuilder<List<dynamic>>(
-      future: Future.wait([_convsFuture ?? Future.value([]), _appsFuture ?? Future.value([])]),
-      builder: (context, snapshot) {
-        final convs = snapshot.data?[0] as List<Map<String, dynamic>>? ?? [];
-        final apps = snapshot.data?[1] as List<Map<String, dynamic>>? ?? [];
-        
-        final allConvIds = convs.map((c) => c['conversationId'] as String).toSet();
-        final allAppIds = apps.map((a) => a['appId'] as String).toSet();
-        
-        final totalSelected = _selectedConversationIds.length + _selectedAppIds.length;
-        final totalItems = allConvIds.length + allAppIds.length;
-        final isAllSelected = totalSelected == totalItems && totalItems > 0;
-
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              dense: true,
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: () => setState(() {
-                  _isSelectionMode = false;
-                  _selectedConversationIds.clear();
-                  _selectedAppIds.clear();
-                  _isOlderExpanded = false;
-                }),
-              ),
-              title: Text(
-                '$totalSelected Selected',
-                style: const TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            Row(
-              children: [
-                Expanded(
-                  child: TextButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        if (isAllSelected) {
-                          _selectedConversationIds.clear();
-                          _selectedAppIds.clear();
-                        } else {
-                          _selectedConversationIds.addAll(allConvIds);
-                          _selectedAppIds.addAll(allAppIds);
-                        }
-                      });
-                    },
-                    icon: Icon(isAllSelected ? Icons.deselect : Icons.select_all, size: 20),
-                    label: Text(isAllSelected ? 'Deselect All' : 'Select All'),
-                  ),
-                ),
-                Expanded(
-                  child: IconButton(
-                    icon: const Icon(Icons.delete_outline, color: Colors.red),
-                    onPressed: totalSelected == 0 ? null : () => _confirmBulkDelete(context),
-                  ),
-                ),
-              ],
-            ),
-            const Divider(),
-          ],
-        );
-      },
-    );
-  }
-
   Widget _buildConversationTile(Map<String, dynamic> conv) {
     final String id = conv['conversationId'];
     final bool isSelected = _selectedConversationIds.contains(id);
 
     return ListTile(
       dense: true,
-      leading: _isSelectionMode
+      leading: _isChatSelectionMode
           ? Checkbox(
               value: isSelected,
               onChanged: (val) {
@@ -465,7 +497,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         overflow: TextOverflow.ellipsis,
       ),
       onTap: () {
-        if (_isSelectionMode) {
+        if (_isChatSelectionMode) {
           setState(() {
             if (isSelected) {
               _selectedConversationIds.remove(id);
@@ -482,9 +514,9 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         }
       },
       onLongPress: () {
-        if (!_isSelectionMode) {
+        if (!_isChatSelectionMode) {
           setState(() {
-            _isSelectionMode = true;
+            _isChatSelectionMode = true;
             _selectedConversationIds.add(id);
             _isOlderExpanded = true;
           });
@@ -497,13 +529,13 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     );
   }
 
-  Future<void> _confirmBulkDelete(BuildContext context) async {
-    final total = _selectedConversationIds.length + _selectedAppIds.length;
+  Future<void> _confirmBulkDelete(BuildContext context, String type) async {
+    final int count = type == 'chats' ? _selectedConversationIds.length : _selectedAppIds.length;
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete $total Items?'),
-        content: const Text('Are you sure you want to delete the selected items? This action cannot be undone.'),
+        title: Text('Delete $count $type?'),
+        content: Text('Are you sure you want to delete the selected $type? This action cannot be undone.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
@@ -519,20 +551,21 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     );
 
     if (shouldDelete == true && context.mounted) {
-      if (_selectedConversationIds.isNotEmpty) {
+      if (type == 'chats' && _selectedConversationIds.isNotEmpty) {
         final convRepository = Provider.of<ConversationRepository>(context, listen: false);
         await convRepository.deleteConversations(_selectedConversationIds.toList());
-      }
-      if (!context.mounted) return;
-      if (_selectedAppIds.isNotEmpty) {
+        setState(() {
+          _isChatSelectionMode = false;
+          _selectedConversationIds.clear();
+        });
+      } else if (type == 'apps' && _selectedAppIds.isNotEmpty) {
         final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
         await appRepository.deleteApps(_selectedAppIds.toList());
+        setState(() {
+          _isAppSelectionMode = false;
+          _selectedAppIds.clear();
+        });
       }
-      setState(() {
-        _isSelectionMode = false;
-        _selectedConversationIds.clear();
-        _selectedAppIds.clear();
-      });
     }
   }
 

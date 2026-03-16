@@ -163,7 +163,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Check dialog
-    expect(find.text('Delete 2 Items?'), findsOneWidget);
+    expect(find.text('Delete 2 chats?'), findsOneWidget);
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
@@ -222,7 +222,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Check dialog
-    expect(find.text('Delete 2 Items?'), findsOneWidget);
+    expect(find.text('Delete 2 apps?'), findsOneWidget);
     await tester.tap(find.text('Delete'));
     await tester.pumpAndSettle();
 
@@ -230,7 +230,7 @@ void main() {
     verify(() => mockAppRepository.deleteApps(['a1', 'a2'])).called(1);
   });
 
-  testWidgets('AppVaultDrawer "Select All" selects both apps and conversations', (WidgetTester tester) async {
+  testWidgets('AppVaultDrawer "Select All" in apps does not affect conversations', (WidgetTester tester) async {
     final convs = [
       {'conversationId': 'c1', 'title': 'Chat 1', 'updated_at': 1000},
     ];
@@ -267,16 +267,16 @@ void main() {
     await tester.longPress(find.text('App 1'));
     await tester.pumpAndSettle();
 
+    // Tap Deselect All (it should show Deselect All because the only app is already selected)
+    await tester.tap(find.text('Deselect All'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('0 Selected'), findsOneWidget);
+    
     // Tap Select All
     await tester.tap(find.text('Select All'));
     await tester.pumpAndSettle();
-
-    expect(find.text('2 Selected'), findsOneWidget);
-    
-    // Tap Deselect All
-    await tester.tap(find.text('Deselect All'));
-    await tester.pumpAndSettle();
-    expect(find.text('0 Selected'), findsOneWidget);
+    expect(find.text('1 Selected'), findsOneWidget);
   });
 
   testWidgets('AppVaultDrawer "Select All" selects all conversations', (WidgetTester tester) async {
