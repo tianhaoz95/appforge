@@ -1,7 +1,11 @@
 # GEMINI.md - MicroForge Context
 
 ## Project Overview
-**MicroForge** is a "Vibe Coding" platform built with Flutter that enables users to "forge" functional micro-apps using natural language via Gemini AI. The project leverages the **Flutter AI Toolkit** for a high-fidelity chat interface and a **Firebase-backed architecture** for persistence and intelligence.
+**MicroForge** is a "Vibe Coding" platform built with Flutter that enables users to "forge" functional micro-apps using natural language via Gemini AI. The project consists of two primary components:
+- **Mobile App (`/app`):** The core chat interface for forging and interacting with micro-apps.
+- **Admin Portal (`/portal`):** A landing page and management interface for configuring AI models and subscriptions.
+
+The project leverages the **Flutter AI Toolkit** for a high-fidelity chat interface and a **Firebase-backed architecture** for persistence and intelligence.
 
 ### Key Technologies
 - **Frontend:** Flutter (Dart)
@@ -16,16 +20,20 @@
 ### Architecture
 - **Repositories:** `MicroAppRepository` handles Firestore interactions for saving and retrieving forged apps.
 - **Providers:** `FallbackLlmProvider` manages the logic for switching between primary and secondary AI models. `HybridInferenceManager` handles on-device AI capabilities.
-- **Widgets:** 
+- **Widgets (App):** 
   - `VibeDetector`: Intercepts AI responses to identify code wrapped in `<forge>...</forge>` tags.
   - `PreviewSheet`: A sliding sheet containing a WebView to render and interact with forged apps.
   - `AppVaultDrawer`: Side drawer for accessing history and the gallery of forged apps.
+- **Portal:** 
+  - **Landing Page:** Public-facing site for the MicroForge project.
+  - **Admin Interface:** Allows users to choose the AI backbone model and subscribe to paid AI quota and other settings.
 
 ---
 
 ## Building and Running
 To get started with development or to run the project:
 
+### Mobile App
 - **Fetch Dependencies:**
   ```bash
   cd app && flutter pub get
@@ -38,9 +46,15 @@ To get started with development or to run the project:
   ```bash
   cd app && flutter test
   ```
-- **Static Analysis:**
+
+### Admin Portal
+- **Fetch Dependencies:**
   ```bash
-  cd app && flutter analyze
+  cd portal && flutter pub get
+  ```
+- **Run the Portal:**
+  ```bash
+  cd portal && flutter run -d chrome
   ```
 
 ---
@@ -76,7 +90,8 @@ Follow these steps to deploy a new Android build to Firebase App Distribution:
 ---
 
 ## Key Files
-- `app/lib/main.dart`: Entry point and UI scaffold.
+- `app/lib/main.dart`: Entry point for the mobile app UI scaffold.
+- `portal/lib/main.dart`: Entry point for the landing page and admin portal.
 - `app/lib/providers/fallback_llm_provider.dart`: Multi-model fallback logic.
 - `app/lib/providers/hybrid_inference_manager.dart`: Interface for on-device AI.
 - `app/lib/repositories/micro_app_repository.dart`: Firestore data layer.
