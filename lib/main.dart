@@ -270,6 +270,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String? _enhancementPeriodicBackend;
   String? _enhancementDesign;
   String? _enhancementAppId;
+  bool _enhancementContextInPrompt = false;
   final GlobalKey<PreviewSheetState> _previewSheetKey = GlobalKey();
   late MicroAppRepository _repository;
 
@@ -308,11 +309,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     if (settings.suggestExistingApps) {
       debugPrint('Apps changed, re-initializing AI to update system prompt...');
       _initializeAI(
-        enhancementCode: _enhancementCode,
-        enhancementBackend: _enhancementBackend,
-        enhancementPeriodicBackend: _enhancementPeriodicBackend,
-        enhancementDesign: _enhancementDesign,
-        enhancementAppId: _enhancementAppId,
+        enhancementCode: _enhancementContextInPrompt ? _enhancementCode : null,
+        enhancementBackend: _enhancementContextInPrompt ? _enhancementBackend : null,
+        enhancementPeriodicBackend: _enhancementContextInPrompt ? _enhancementPeriodicBackend : null,
+        enhancementDesign: _enhancementContextInPrompt ? _enhancementDesign : null,
+        enhancementAppId: _enhancementContextInPrompt ? _enhancementAppId : null,
         history: _provider?.history.toList(),
       );
     }
@@ -472,7 +473,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           '@submit.prevent="await window.MicroForge.showNotification(title, body, \'my-payload\')"';
     }
 
-    if (enhancementCode != null) {
+    final includesEnhancementContext = enhancementCode != null;
+
+    if (includesEnhancementContext) {
       systemPrompt += '\n\nCONTEXT FOR ENHANCEMENT:\n'
           'You are currently enhancing an existing micro-app.\n'
           'Current Implementation:\n<forge>$enhancementCode</forge>\n'
@@ -524,6 +527,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _enhancementBackend = enhancementBackend;
         _enhancementDesign = enhancementDesign;
         _enhancementAppId = enhancementAppId;
+        _enhancementContextInPrompt = includesEnhancementContext;
       });
       return;
     }
@@ -561,6 +565,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementBackend = enhancementBackend;
       _enhancementDesign = enhancementDesign;
       _enhancementAppId = enhancementAppId;
+      _enhancementContextInPrompt = includesEnhancementContext;
     });
   }
 
@@ -607,6 +612,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementPeriodicBackend = null;
       _enhancementDesign = null;
       _enhancementAppId = null;
+      _enhancementContextInPrompt = false;
       if (_provider != null) {
         _provider!.history = [];
       }
@@ -1072,7 +1078,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   }
 
   Widget _buildEnhancementIndicator() {
-    if (_enhancementCode == null) return const SizedBox.shrink();
+    if (!_enhancementContextInPrompt || _enhancementCode == null) {
+      return const SizedBox.shrink();
+    }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
