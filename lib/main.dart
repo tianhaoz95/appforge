@@ -1115,6 +1115,47 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
   }
 
+  Widget _buildModeToggle() {
+    if (_provider == null || _provider is! FallbackLlmProvider) {
+      return const SizedBox.shrink();
+    }
+    
+    final provider = _provider as FallbackLlmProvider;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      width: double.infinity,
+      color: isDark ? Colors.black : Colors.white,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Center(
+        child: SegmentedButton<ForgeMode>(
+          segments: const [
+            ButtonSegment<ForgeMode>(
+              value: ForgeMode.plan,
+              label: Text('Plan'),
+              icon: Icon(Icons.architecture_outlined, size: 18),
+            ),
+            ButtonSegment<ForgeMode>(
+              value: ForgeMode.build,
+              label: Text('Build'),
+              icon: Icon(Icons.bolt, size: 18),
+            ),
+          ],
+          selected: {provider.currentMode},
+          onSelectionChanged: (Set<ForgeMode> newSelection) {
+            provider.setMode(newSelection.first);
+          },
+          showSelectedIcon: false,
+          style: ButtonStyle(
+            visualDensity: VisualDensity.compact,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 12)),
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -1151,6 +1192,10 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               : Column(
                   children: [
                     _buildEnhancementIndicator(),
+                    ListenableBuilder(
+                      listenable: _provider!,
+                      builder: (context, _) => _buildModeToggle(),
+                    ),
                     Expanded(
                       child: ListenableBuilder(
                         listenable: _provider!,
