@@ -266,6 +266,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   ),
                 ),
+                _buildPreferenceItem(
+                  icon: Icons.terminal_outlined,
+                  title: 'View System Prompt',
+                  subtitle: 'Inspect the instructions sent to the AI',
+                  trailing: IconButton(
+                    icon: const Icon(Icons.visibility_outlined),
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('System Prompt'),
+                          content: SizedBox(
+                            width: double.maxFinite,
+                            child: SingleChildScrollView(
+                              child: SelectableText(
+                                settingsProvider.systemPrompt.isEmpty
+                                    ? 'No system prompt available yet. Start a conversation to initialize it.'
+                                    : settingsProvider.systemPrompt,
+                                style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Close'),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
                 const SizedBox(height: 32),
                 _buildSectionHeader('App access control'),
                 const SizedBox(height: 12),

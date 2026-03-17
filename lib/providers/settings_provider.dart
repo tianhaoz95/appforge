@@ -14,6 +14,7 @@ class SettingsProvider with ChangeNotifier {
   bool _rememberMe = false;
   String _rememberedEmail = '';
   String _localAvatarPath = '';
+  String _systemPrompt = '';
   ThemeMode _themeMode = ThemeMode.system;
   ForgeMode _defaultForgeMode = ForgeMode.build;
 
@@ -42,6 +43,7 @@ class SettingsProvider with ChangeNotifier {
   bool get rememberMe => _rememberMe;
   String get rememberedEmail => _rememberedEmail;
   String get localAvatarPath => _localAvatarPath;
+  String get systemPrompt => _systemPrompt;
   ThemeMode get themeMode => _themeMode;
   ForgeMode get defaultForgeMode => _defaultForgeMode;
 
@@ -66,6 +68,13 @@ class SettingsProvider with ChangeNotifier {
     _defaultForgeMode = ForgeMode.values[modeIndex];
     
     notifyListeners();
+  }
+
+  void setSystemPrompt(String value) {
+    if (_systemPrompt != value) {
+      _systemPrompt = value;
+      notifyListeners();
+    }
   }
 
   Future<void> setLocalAvatarPath(String value) async {

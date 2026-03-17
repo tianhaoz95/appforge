@@ -596,6 +596,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       provider.history = history;
     }
 
+    settings.setSystemPrompt(systemPrompt);
+
     setState(() {
       _provider = provider;
       _enhancementCode = enhancementCode;
