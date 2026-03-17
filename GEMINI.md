@@ -63,6 +63,20 @@ To get started with development or to run the project:
   ```
 - **Note on Linux Native:** Firebase initialization on Linux native may fail if the C++ SDK is not correctly configured. For development, prefer running on Web (Chrome).
 
+### Widget Catalog (AppForge Catalog)
+- **Fetch Dependencies:**
+  ```bash
+  cd catalog && flutter pub get
+  ```
+- **Generate Directories:**
+  ```bash
+  cd catalog && flutter pub run build_runner build --delete-conflicting-outputs
+  ```
+- **Run the Catalog:**
+  ```bash
+  cd catalog && flutter run -d chrome
+  ```
+
 ---
 
 ## Deployment to Firebase App Distribution
