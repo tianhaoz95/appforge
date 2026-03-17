@@ -217,11 +217,24 @@ class MyApp extends StatelessWidget {
           title: 'MicroForge',
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.light),
+            scaffoldBackgroundColor: Colors.white,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.white,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              surfaceTintColor: Colors.transparent,
+            ),
             useMaterial3: true,
           ),
           darkTheme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.dark),
             scaffoldBackgroundColor: Colors.black,
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.black,
+              elevation: 0,
+              scrolledUnderElevation: 0,
+              surfaceTintColor: Colors.transparent,
+            ),
             useMaterial3: true,
           ),
           themeMode: settings.themeMode,
@@ -1114,7 +1127,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     return Container(
       width: double.infinity,
-      color: isDark ? Colors.blueGrey[900] : Colors.blueGrey[50],
+      color: isDark ? Colors.black : Colors.white,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
         children: [
@@ -1204,11 +1217,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
                           return Stack(
                             children: [
-                              LlmChatView(
-                                provider: _provider!,
-                                style: LlmChatViewStyle(
-                                  backgroundColor: isDark ? Colors.black : Colors.white,
-                                  progressIndicatorColor: colorScheme.primary,
+                              MediaQuery.removePadding(
+                                context: context,
+                                removeTop: true,
+                                child: LlmChatView(
+                                  provider: _provider!,
+                                  style: LlmChatViewStyle(
+                                    backgroundColor: Colors.transparent,
+                                    progressIndicatorColor: colorScheme.primary,
                                   userMessageStyle: UserMessageStyle(
                                     decoration: BoxDecoration(
                                       color: colorScheme.primary,
@@ -1317,6 +1333,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                   },
                                 ),
                               ),
+                            ),
+
                               if (_provider!.history.isEmpty)
                                 IgnorePointer(
                                   child: Center(
