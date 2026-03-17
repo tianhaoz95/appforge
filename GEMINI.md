@@ -28,19 +28,19 @@ To get started with development or to run the project:
 
 - **Fetch Dependencies:**
   ```bash
-  flutter pub get
+  cd app && flutter pub get
   ```
 - **Run the App:**
   ```bash
-  flutter run
+  cd app && flutter run
   ```
 - **Run Tests:**
   ```bash
-  flutter test
+  cd app && flutter test
   ```
 - **Static Analysis:**
   ```bash
-  flutter analyze
+  cd app && flutter analyze
   ```
 
 ---
@@ -48,15 +48,15 @@ To get started with development or to run the project:
 ## Deployment to Firebase App Distribution
 Follow these steps to deploy a new Android build to Firebase App Distribution:
 
-1. **Boost Version:** Before building, increase the version name and build number in `pubspec.yaml` (e.g., `1.1.2+5` becomes `1.1.3+6`).
+1. **Boost Version:** Before building, increase the version name and build number in `app/pubspec.yaml` (e.g., `1.1.2+5` becomes `1.1.3+6`).
 2. **Build APK:**
    ```bash
-   flutter build apk
+   cd app && flutter build apk
    ```
 3. **Distribute:**
-   Use the Android App ID (from `lib/firebase_options.dart`) and run:
+   Use the Android App ID (from `app/lib/firebase_options.dart`) and run from the project root:
    ```bash
-   firebase appdistribution:distribute build/app/outputs/flutter-apk/app-release.apk \
+   firebase appdistribution:distribute app/build/app/outputs/flutter-apk/app-release.apk \
         --app 1:146390824855:android:34ecddc19ce2738da436d2 \
         --release-notes "Detailed description of the current feature or improvement" \
         --groups "dev"
@@ -71,16 +71,16 @@ Follow these steps to deploy a new Android build to Firebase App Distribution:
 - **Interoperability:** The micro-apps can communicate back to the Flutter layer using a `window.MicroForge` JavaScript bridge (e.g., `saveData`, `closeApp`).
 - **Error Handling:** Use the `FallbackLlmProvider` to gracefully handle transient AI model failures.
 - **On-Device AI:** Check model status before attempting on-device operations.
-- **Firebase Configuration:** Firebase is initialized in `lib/main.dart` using `DefaultFirebaseOptions` from `lib/firebase_options.dart`.
+- **Firebase Configuration:** Firebase is initialized in `app/lib/main.dart` using `DefaultFirebaseOptions` from `app/lib/firebase_options.dart`.
 
 ---
 
 ## Key Files
-- `lib/main.dart`: Entry point and UI scaffold.
-- `lib/providers/fallback_llm_provider.dart`: Multi-model fallback logic.
-- `lib/providers/hybrid_inference_manager.dart`: Interface for on-device AI.
-- `lib/repositories/micro_app_repository.dart`: Firestore data layer.
-- `lib/widgets/vibe_detector.dart`: AI response parsing and deployment trigger.
-- `lib/widgets/preview_sheet.dart`: WebView-based app runner.
-- `android/app/build.gradle.kts`: Android configuration and App ID.
-- `ios/Runner.xcodeproj/project.pbxproj`: iOS configuration and Bundle ID.
+- `app/lib/main.dart`: Entry point and UI scaffold.
+- `app/lib/providers/fallback_llm_provider.dart`: Multi-model fallback logic.
+- `app/lib/providers/hybrid_inference_manager.dart`: Interface for on-device AI.
+- `app/lib/repositories/micro_app_repository.dart`: Firestore data layer.
+- `app/lib/widgets/vibe_detector.dart`: AI response parsing and deployment trigger.
+- `app/lib/widgets/preview_sheet.dart`: WebView-based app runner.
+- `app/android/app/build.gradle.kts`: Android configuration and App ID.
+- `app/ios/Runner.xcodeproj/project.pbxproj`: iOS configuration and Bundle ID.

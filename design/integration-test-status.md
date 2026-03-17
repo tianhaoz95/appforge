@@ -1,7 +1,7 @@
 # Integration Test Status Report: Todo App & Migration
 
 ## 1. Test Overview
-**File**: `integration_test/todo_app_test.dart`  
+**File**: `app/integration_test/todo_app_test.dart`  
 **Purpose**: To verify the end-to-end flow of creating a micro-app, persisting data, enhancing it to a new version, and successfully migrating data between isolated versions.
 
 ## 2. Mocking Strategy
