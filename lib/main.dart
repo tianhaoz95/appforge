@@ -623,17 +623,20 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final periodicBackendToEnhance = _activePeriodicBackendCode;
     final designToEnhance = _activeDesignDoc;
     final appIdToEnhance = _activeAppId;
-    final existingHistory = _provider?.history.toList() ?? [];
+    final newConversationId = const Uuid().v4();
 
     setState(() {
       _showPreview = false;
-      // Keep current conversation ID
+      _currentConversationId = newConversationId;
       _conversationTitle = 'Enhance $name';
       _enhancementCode = codeToEnhance;
       _enhancementBackend = backendToEnhance;
       _enhancementPeriodicBackend = periodicBackendToEnhance;
       _enhancementDesign = designToEnhance;
       _enhancementAppId = appIdToEnhance;
+      if (_provider != null) {
+        _provider!.history = [];
+      }
     });
 
     _initializeAI(
@@ -642,7 +645,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
       enhancementAppId: appIdToEnhance,
-      history: existingHistory,
     );
 
     // Give it a moment for AI to be ready with new provider
@@ -650,7 +652,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       if (_provider != null) {
         setState(() {
           _provider!.history = [
-            ...existingHistory,
             ChatMessage(
               origin: MessageOrigin.llm,
               text: "I've loaded your app '$name'. How would you like to enhance it?",
@@ -662,7 +663,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Enhancing $name in current conversation...')),
+      SnackBar(content: Text('Enhancing $name in a new conversation...')),
     );
   }
 
@@ -735,19 +736,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _showPreview = false;
       // Keep current conversation ID to stay in the same conversation
       _conversationTitle = 'Refining $name';
-      _enhancementCode = codeToEnhance;
-      _enhancementBackend = backendToEnhance;
-      _enhancementPeriodicBackend = periodicBackendToEnhance;
-      _enhancementDesign = designToEnhance;
     });
-
-    _initializeAI(
-      enhancementCode: codeToEnhance, 
-      enhancementBackend: backendToEnhance,
-      enhancementPeriodicBackend: periodicBackendToEnhance,
-      enhancementDesign: designToEnhance,
-      history: existingHistory,
-    );
 
     // Prepare logs text
     final logsText = logs.isNotEmpty ? logs.join('\n') : 'No logs captured.';
