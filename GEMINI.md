@@ -56,6 +56,11 @@ To get started with development or to run the project:
   ```bash
   cd portal && flutter run -d chrome
   ```
+- **Deploy to Firebase Hosting:**
+  ```bash
+  cd portal && flutter build web --release
+  cd .. && firebase deploy --only hosting
+  ```
 - **Note on Linux Native:** Firebase initialization on Linux native may fail if the C++ SDK is not correctly configured. For development, prefer running on Web (Chrome).
 
 ---
