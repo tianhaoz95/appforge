@@ -56,6 +56,7 @@ To get started with development or to run the project:
   ```bash
   cd portal && flutter run -d chrome
   ```
+- **Note on Linux Native:** Firebase initialization on Linux native may fail if the C++ SDK is not correctly configured. For development, prefer running on Web (Chrome).
 
 ---
 

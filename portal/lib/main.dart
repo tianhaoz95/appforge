@@ -1,12 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  try {
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+  } catch (e) {
+    if (kDebugMode && defaultTargetPlatform == TargetPlatform.linux) {
+      debugPrint("Firebase initialization failed on Linux: $e");
+      debugPrint(
+        "Note: Firebase on Linux native requires the C++ SDK to be compiled. Use 'flutter run -d chrome' for full web support.",
+      );
+    } else {
+      rethrow;
+    }
+  }
   runApp(const MyApp());
 }
 
