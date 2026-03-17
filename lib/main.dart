@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
@@ -13,6 +14,8 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:workmanager/workmanager.dart';
 import 'package:flutter_js/flutter_js.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:share_plus/share_plus.dart';
 import 'firebase_options.dart';
 import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
@@ -1179,6 +1182,22 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                     enhancementDesign: _enhancementDesign,
                     history: currentHistory,
                   );
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.feedback_outlined),
+                onPressed: () {
+                  BetterFeedback.of(context).show((feedback) async {
+                    final directory = await getTemporaryDirectory();
+                    final imagePath = '${directory.path}/feedback_screenshot.png';
+                    final imageFile = File(imagePath);
+                    await imageFile.writeAsBytes(feedback.screenshot);
+
+                    await Share.shareXFiles(
+                      [XFile(imagePath)],
+                      text: feedback.text,
+                    );
+                  });
                 },
               ),
             ],
