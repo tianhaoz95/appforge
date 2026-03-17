@@ -133,8 +133,8 @@ class VibeDetector extends StatelessWidget {
                     icon: const Icon(Icons.auto_fix_high),
                     label: const Text('Auto Refine'),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.indigo,
-                      foregroundColor: Colors.white,
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
                     ),
                   ),
                 ),

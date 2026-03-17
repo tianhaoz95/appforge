@@ -1121,7 +1121,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                 children: [
                                   if (widget.onEnhance != null)
                                     IconButton(
-                                      icon: const Icon(Icons.auto_awesome, size: 18, color: Colors.indigo),
+                                      icon: Icon(Icons.auto_awesome, size: 18, color: Theme.of(context).colorScheme.primary),
                                       onPressed: widget.onEnhance,
                                       tooltip: 'Enhance',
                                       padding: EdgeInsets.zero,

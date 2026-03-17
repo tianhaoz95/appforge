@@ -60,7 +60,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
         title: const Text('Reset Password'),
         backgroundColor: Colors.transparent,
         elevation: 0,
-        foregroundColor: Colors.indigo,
+        foregroundColor: Theme.of(context).colorScheme.primary,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -72,17 +72,23 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  const Icon(
-                    Icons.auto_awesome,
-                    size: 48,
-                    color: Colors.indigo,
+                  Image.asset(
+                    'brand/logo.png',
+                    height: 48,
+                    color: Theme.of(context).colorScheme.primary,
+                    colorBlendMode: BlendMode.srcIn,
+                    errorBuilder: (context, error, stackTrace) => Icon(
+                      Icons.auto_awesome,
+                      size: 48,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   Text(
                     'Password Recovery',
                     style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: Colors.indigo,
+                          color: Theme.of(context).colorScheme.primary,
                         ),
                     textAlign: TextAlign.center,
                   ),
@@ -107,8 +113,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.indigo,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -147,8 +153,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       onPressed: _isLoading ? null : _resetPassword,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.indigo,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),

@@ -89,17 +89,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     // Logo or App Name
-                    const Icon(
-                      Icons.auto_awesome,
-                      size: 64,
-                      color: Colors.indigo,
+                    Image.asset(
+                      'brand/logo.png',
+                      height: 64,
+                      color: Theme.of(context).colorScheme.primary,
+                      colorBlendMode: BlendMode.srcIn,
+                      errorBuilder: (context, error, stackTrace) => Icon(
+                        Icons.auto_awesome,
+                        size: 64,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     Text(
                       'MicroForge',
                       style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                             fontWeight: FontWeight.bold,
-                            color: Colors.indigo,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                       textAlign: TextAlign.center,
                     ),
@@ -205,8 +211,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _isLoading ? null : _signIn,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.indigo,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),

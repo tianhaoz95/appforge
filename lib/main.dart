@@ -1096,7 +1096,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           Icon(
             Icons.auto_awesome, 
             size: 20, 
-            color: isDark ? Colors.indigoAccent[100] : Colors.indigo
+            color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(width: 12),
           Expanded(
