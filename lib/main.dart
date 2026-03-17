@@ -155,7 +155,7 @@ void callbackDispatcher() {
   });
 }
 
-void main() async {
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -246,6 +246,8 @@ class AuthWrapper extends StatelessWidget {
 }
 
 class MicroForgeHomePage extends StatefulWidget {
+  static LlmProvider? mockProvider;
+  
   const MicroForgeHomePage({super.key});
 
   @override
@@ -510,6 +512,20 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
             'Example: "You already have a Task Master app that might work for this: <suggest_app id="123">Task Master</suggest_app>" '
             '\nONLY proceed to forging a NEW micro-app if the user explicitly requests a new one or if none of the existing apps are suitable.';
       }
+    }
+
+    if (MicroForgeHomePage.mockProvider != null) {
+      if (history != null) {
+        MicroForgeHomePage.mockProvider!.history = history;
+      }
+      setState(() {
+        _provider = MicroForgeHomePage.mockProvider;
+        _enhancementCode = enhancementCode;
+        _enhancementBackend = enhancementBackend;
+        _enhancementDesign = enhancementDesign;
+        _enhancementAppId = enhancementAppId;
+      });
+      return;
     }
 
     final primaryModel = FirebaseAI.googleAI().generativeModel(

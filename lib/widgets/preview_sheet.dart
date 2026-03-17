@@ -251,9 +251,15 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
     super.dispose();
   }
 
+  bool _controllerLoaded = false;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_controller != null && _activeCode != null && !_controllerLoaded) {
+      _controller!.loadHtmlString(_buildHtmlShell(_activeCode!));
+      _controllerLoaded = true;
+    }
     _syncThemeToWebView();
   }
 
@@ -299,8 +305,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           onMessageReceived: (JavaScriptMessage message) {
             _addLog('Frontend', message.message);
           },
-        )
-        ..loadHtmlString(_buildHtmlShell(_activeCode!));
+        );
     }
   }
 

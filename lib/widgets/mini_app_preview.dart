@@ -32,8 +32,7 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
     if (!MiniAppPreview.skipWebViewForTesting) {
       _controller = WebViewController()
         ..setJavaScriptMode(JavaScriptMode.unrestricted)
-        ..setBackgroundColor(Colors.transparent)
-        ..loadHtmlString(_buildHtmlShell(widget.code));
+        ..setBackgroundColor(Colors.transparent);
     }
   }
 
@@ -49,6 +48,9 @@ class _MiniAppPreviewState extends State<MiniAppPreview> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    if (_controller != null && _lastThemeSignature == null) {
+      _controller!.loadHtmlString(_buildHtmlShell(widget.code));
+    }
     _syncThemeToWebView();
   }
 
