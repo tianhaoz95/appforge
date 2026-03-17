@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 class MockBaseLlmProvider extends LlmProvider with ChangeNotifier {
   String? lastPrompt;
   final List<ChatMessage> _history = [];
+  bool shouldFailWithOverloaded = false;
 
   @override
   List<ChatMessage> get history => _history;
@@ -20,6 +21,9 @@ class MockBaseLlmProvider extends LlmProvider with ChangeNotifier {
   @override
   Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
     lastPrompt = prompt;
+    if (shouldFailWithOverloaded) {
+      throw Exception('503: Service overloaded');
+    }
     yield "Response to: $prompt";
   }
 
@@ -40,60 +44,23 @@ void main() {
     fallback = FallbackLlmProvider(primary: primary, secondary: secondary);
   });
 
-  test('FallbackLlmProvider injects plan instruction on first message in Plan Mode', () async {
-    fallback.setMode(ForgeMode.plan);
-    
+  test('FallbackLlmProvider uses primary provider by default', () async {
     final stream = fallback.sendMessageStream('Hello');
     await stream.drain();
 
-    expect(primary.lastPrompt, contains('Hello'));
-    expect(primary.lastPrompt, contains('[MODE: PLAN]'));
+    expect(primary.lastPrompt, equals('Hello'));
+    expect(secondary.lastPrompt, isNull);
   });
 
-  test('FallbackLlmProvider does not inject instruction on subsequent messages in same mode', () async {
-    fallback.setMode(ForgeMode.plan);
-    
-    // First message
-    await fallback.sendMessageStream('First').drain();
-    expect(primary.lastPrompt, contains('[MODE: PLAN]'));
+  test('FallbackLlmProvider falls back to secondary when primary is overloaded', () async {
+    // Primary provider throws an overloaded error
+    primary.shouldFailWithOverloaded = true;
 
-    // Second message
-    await fallback.sendMessageStream('Second').drain();
-    expect(primary.lastPrompt, isNot(contains('[MODE: PLAN]')));
-    expect(primary.lastPrompt, equals('Second'));
-  });
+    final stream = fallback.sendMessageStream('Failover Test');
+    final results = await stream.toList();
 
-  test('FallbackLlmProvider injects build instruction when switching from Plan to Build', () async {
-    fallback.setMode(ForgeMode.plan);
-    await fallback.sendMessageStream('Plan request').drain();
-
-    fallback.setMode(ForgeMode.build);
-    await fallback.sendMessageStream('Build request').drain();
-
-    expect(primary.lastPrompt, contains('Build request'));
-    expect(primary.lastPrompt, contains('[MODE: BUILD]'));
-  });
-
-  test('FallbackLlmProvider defaults to Build Mode and injects instruction on first message', () async {
-    // Default is build mode
-    expect(fallback.currentMode, ForgeMode.build);
-
-    await fallback.sendMessageStream('Initial').drain();
-    expect(primary.lastPrompt, contains('[MODE: BUILD]'));
-
-    await fallback.sendMessageStream('Next').drain();
-    expect(primary.lastPrompt, equals('Next'));
-  });
-
-  test('FallbackLlmProvider resets lastModeSent when history is cleared', () async {
-    fallback.setMode(ForgeMode.plan);
-    await fallback.sendMessageStream('First').drain();
-    expect(primary.lastPrompt, contains('[MODE: PLAN]'));
-
-    // Clear history (new conversation)
-    fallback.history = [];
-    
-    await fallback.sendMessageStream('New conversation first message').drain();
-    expect(primary.lastPrompt, contains('[MODE: PLAN]'));
+    expect(results.first, contains('Response to: Failover Test'));
+    expect(primary.lastPrompt, equals('Failover Test'));
+    expect(secondary.lastPrompt, equals('Failover Test'));
   });
 }

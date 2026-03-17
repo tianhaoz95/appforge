@@ -29,6 +29,7 @@ import 'providers/fallback_llm_provider.dart';
 import 'providers/hybrid_inference_manager.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
+import 'providers/forge_mode.dart';
 import 'screens/settings_screen.dart';
 import 'screens/auth/login_screen.dart';
 
@@ -274,6 +275,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String? _enhancementDesign;
   String? _enhancementAppId;
   bool _enhancementContextInPrompt = false;
+  ForgeMode _currentMode = ForgeMode.build;
   final GlobalKey<PreviewSheetState> _previewSheetKey = GlobalKey();
   late MicroAppRepository _repository;
 
@@ -318,6 +320,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         enhancementDesign: _enhancementContextInPrompt ? _enhancementDesign : null,
         enhancementAppId: _enhancementContextInPrompt ? _enhancementAppId : null,
         history: _provider?.history.toList(),
+        mode: _currentMode,
       );
     }
   }
@@ -329,15 +332,33 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     String? enhancementDesign,
     String? enhancementAppId,
     List<ChatMessage>? history,
+    ForgeMode? mode,
   }) async {
     final settings = context.read<SettingsProvider>();
     final repository = context.read<MicroAppRepository>();
 
-    String systemPrompt = 'You are MicroForge AI. You help users "forge" micro-apps. '
-        'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
-        'you MUST wrap it inside <forge>...</forge> tags. '
-        'Example: <forge><div class="p-4">Hello</div></forge>. '
-        'Additionally, for every micro-app you forge, you MUST also provide: '
+    if (mode != null) {
+      _currentMode = mode;
+    } else if (history == null || history.isEmpty) {
+      _currentMode = settings.defaultForgeMode;
+    }
+
+    String systemPrompt = 'You are MicroForge AI. You help users "forge" micro-apps. ';
+
+    if (_currentMode == ForgeMode.plan) {
+      systemPrompt += '\n\n[MODE: PLAN] Iteratively work with the user to refine the design. '
+          'Ask for permission to build when the design is mature enough. '
+          'Do NOT provide any micro-app code or <forge> tags yet in this mode unless explicitly asked to build. '
+          'Focus on discussing requirements, architecture, and user experience first. '
+          'In this mode, you should help the user think through their app before implementation.';
+    } else {
+      systemPrompt += '\n\n[MODE: BUILD] Immediately start building the micro-app with <forge> tags. '
+          'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
+          'you MUST wrap it inside <forge>...</forge> tags. '
+          'Example: <forge><div class="p-4">Hello</div></forge>. ';
+    }
+
+    systemPrompt += '\n\nAdditionally, for every micro-app you forge, you MUST also provide: '
         '1. A concise name wrapped in <name>...</name> tags. '
         '2. A suitable emoji to represent the app wrapped in <icon>...</icon> tags. '
         '3. A brief design document in Markdown wrapped in <design>...</design> tags. '
@@ -599,6 +620,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementPeriodicBackend: _enhancementPeriodicBackend,
       enhancementDesign: _enhancementDesign,
       enhancementAppId: _enhancementAppId,
+      forgeMode: _currentMode,
     );
   }
 
@@ -616,11 +638,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementDesign = null;
       _enhancementAppId = null;
       _enhancementContextInPrompt = false;
+      _currentMode = context.read<SettingsProvider>().defaultForgeMode;
       if (_provider != null) {
         _provider!.history = [];
       }
     });
-    _initializeAI();
+    _initializeAI(mode: _currentMode);
   }
 
   void onEnhance() {
@@ -961,6 +984,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementPeriodicBackend = data.enhancementPeriodicBackend;
       _enhancementDesign = data.enhancementDesign;
       _enhancementAppId = data.enhancementAppId;
+      _currentMode = data.forgeMode;
     });
 
     _initializeAI(
@@ -970,6 +994,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementDesign: data.enhancementDesign,
       enhancementAppId: data.enhancementAppId,
       history: data.history.toList(),
+      mode: data.forgeMode,
     );
   }
 
@@ -1118,47 +1143,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
   }
 
-  Widget _buildModeToggle() {
-    if (_provider == null || _provider is! FallbackLlmProvider) {
-      return const SizedBox.shrink();
-    }
-    
-    final provider = _provider as FallbackLlmProvider;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      width: double.infinity,
-      color: isDark ? Colors.black : Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Center(
-        child: SegmentedButton<ForgeMode>(
-          segments: const [
-            ButtonSegment<ForgeMode>(
-              value: ForgeMode.plan,
-              label: Text('Plan'),
-              icon: Icon(Icons.architecture_outlined, size: 18),
-            ),
-            ButtonSegment<ForgeMode>(
-              value: ForgeMode.build,
-              label: Text('Build'),
-              icon: Icon(Icons.bolt, size: 18),
-            ),
-          ],
-          selected: {provider.currentMode},
-          onSelectionChanged: (Set<ForgeMode> newSelection) {
-            provider.setMode(newSelection.first);
-          },
-          showSelectedIcon: false,
-          style: ButtonStyle(
-            visualDensity: VisualDensity.compact,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            padding: WidgetStateProperty.all(const EdgeInsets.symmetric(horizontal: 12)),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -1211,10 +1195,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               : Column(
                   children: [
                     _buildEnhancementIndicator(),
-                    ListenableBuilder(
-                      listenable: _provider!,
-                      builder: (context, _) => _buildModeToggle(),
-                    ),
                     Expanded(
                       child: ListenableBuilder(
                         listenable: _provider!,

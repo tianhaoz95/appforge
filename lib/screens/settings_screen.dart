@@ -7,6 +7,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
+import '../providers/forge_mode.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -235,6 +236,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   trailing: Switch(
                     value: settingsProvider.suggestExistingApps,
                     onChanged: (v) => settingsProvider.setSuggestExistingApps(v),
+                  ),
+                ),
+                _buildPreferenceItem(
+                  icon: Icons.auto_fix_high_outlined,
+                  title: 'Default Mode',
+                  subtitle: 'Initial mode for new conversations',
+                  trailing: SegmentedButton<ForgeMode>(
+                    segments: const [
+                      ButtonSegment<ForgeMode>(
+                        value: ForgeMode.plan,
+                        label: Text('Plan'),
+                        icon: Icon(Icons.architecture_outlined, size: 18),
+                      ),
+                      ButtonSegment<ForgeMode>(
+                        value: ForgeMode.build,
+                        label: Text('Build'),
+                        icon: Icon(Icons.bolt, size: 18),
+                      ),
+                    ],
+                    selected: {settingsProvider.defaultForgeMode},
+                    onSelectionChanged: (Set<ForgeMode> newSelection) {
+                      settingsProvider.setDefaultForgeMode(newSelection.first);
+                    },
+                    showSelectedIcon: false,
+                    style: SegmentedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),

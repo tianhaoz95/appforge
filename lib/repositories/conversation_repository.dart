@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'local_database.dart';
 import 'package:sqflite/sqflite.dart';
+import '../providers/forge_mode.dart';
 
 class ConversationData {
   final List<ChatMessage> history;
@@ -11,6 +12,7 @@ class ConversationData {
   final String? enhancementPeriodicBackend;
   final String? enhancementDesign;
   final String? enhancementAppId;
+  final ForgeMode forgeMode;
 
   ConversationData({
     required this.history, 
@@ -19,6 +21,7 @@ class ConversationData {
     this.enhancementPeriodicBackend,
     this.enhancementDesign,
     this.enhancementAppId,
+    this.forgeMode = ForgeMode.build,
   });
 }
 
@@ -37,6 +40,7 @@ class ConversationRepository extends ChangeNotifier {
     String? enhancementPeriodicBackend,
     String? enhancementDesign,
     String? enhancementAppId,
+    ForgeMode? forgeMode,
   }) async {
     final db = await _dbHelper.database;
     final messages = history.map((m) => m.toJson()).toList();
@@ -52,6 +56,7 @@ class ConversationRepository extends ChangeNotifier {
         'enhancement_periodic_backend': enhancementPeriodicBackend,
         'enhancement_design': enhancementDesign,
         'enhancement_app_id': enhancementAppId,
+        'forge_mode': forgeMode?.index,
         'updated_at': DateTime.now().millisecondsSinceEpoch,
       },
       conflictAlgorithm: ConflictAlgorithm.replace,
@@ -86,6 +91,9 @@ class ConversationRepository extends ChangeNotifier {
         .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
         .toList();
 
+    final modeIndex = data['forge_mode'] as int?;
+    final forgeMode = modeIndex != null ? ForgeMode.values[modeIndex] : ForgeMode.build;
+
     return ConversationData(
       history: history,
       enhancementCode: data['enhancement_code'] as String?,
@@ -93,6 +101,7 @@ class ConversationRepository extends ChangeNotifier {
       enhancementPeriodicBackend: data['enhancement_periodic_backend'] as String?,
       enhancementDesign: data['enhancement_design'] as String?,
       enhancementAppId: data['enhancement_app_id'] as String?,
+      forgeMode: forgeMode,
     );
   }
 

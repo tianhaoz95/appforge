@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'forge_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider with ChangeNotifier {
@@ -14,6 +15,7 @@ class SettingsProvider with ChangeNotifier {
   String _rememberedEmail = '';
   String _localAvatarPath = '';
   ThemeMode _themeMode = ThemeMode.system;
+  ForgeMode _defaultForgeMode = ForgeMode.build;
 
   static const String _keySuggestExistingApps = 'suggest_existing_apps';
   static const String _keyAllowGeolocation = 'allow_geolocation';
@@ -27,6 +29,7 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyRememberedEmail = 'remembered_email';
   static const String _keyLocalAvatarPath = 'local_avatar_path';
   static const String _keyThemeMode = 'theme_mode';
+  static const String _keyDefaultForgeMode = 'default_forge_mode';
 
   bool get suggestExistingApps => _suggestExistingApps;
   bool get allowGeolocation => _allowGeolocation;
@@ -40,6 +43,7 @@ class SettingsProvider with ChangeNotifier {
   String get rememberedEmail => _rememberedEmail;
   String get localAvatarPath => _localAvatarPath;
   ThemeMode get themeMode => _themeMode;
+  ForgeMode get defaultForgeMode => _defaultForgeMode;
 
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -57,6 +61,9 @@ class SettingsProvider with ChangeNotifier {
     
     final themeIndex = prefs.getInt(_keyThemeMode) ?? ThemeMode.system.index;
     _themeMode = ThemeMode.values[themeIndex];
+
+    final modeIndex = prefs.getInt(_keyDefaultForgeMode) ?? ForgeMode.build.index;
+    _defaultForgeMode = ForgeMode.values[modeIndex];
     
     notifyListeners();
   }
@@ -76,6 +83,15 @@ class SettingsProvider with ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt(_keyThemeMode, value.index);
+    }
+  }
+
+  Future<void> setDefaultForgeMode(ForgeMode value) async {
+    if (_defaultForgeMode != value) {
+      _defaultForgeMode = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_keyDefaultForgeMode, value.index);
     }
   }
 
