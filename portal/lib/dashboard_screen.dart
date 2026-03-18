@@ -52,19 +52,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ],
       ),
-      body: Row(
+      body: Theme(
+        data: Theme.of(context).copyWith(
+          navigationRailTheme: const NavigationRailThemeData(
+            elevation: 0,
+            indicatorShape: StadiumBorder(),
+          ),
+          dividerTheme: const DividerThemeData(color: Colors.transparent),
+        ),
+        child: Row(
         children: [
           NavigationRail(
             selectedIndex: _tab,
             onDestinationSelected: (i) => setState(() => _tab = i),
             labelType: NavigationRailLabelType.all,
+            useIndicator: true,
             destinations: const [
               NavigationRailDestination(icon: Icon(Icons.credit_card_outlined), label: Text('Plan')),
               NavigationRailDestination(icon: Icon(Icons.smart_toy_outlined), label: Text('Model')),
               NavigationRailDestination(icon: Icon(Icons.person_outline), label: Text('Profile')),
             ],
           ),
-          const VerticalDivider(width: 1),
           Expanded(
             child: StreamBuilder<DocumentSnapshot>(
               stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
@@ -82,6 +90,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ],
+        ),
       ),
     );
   }
