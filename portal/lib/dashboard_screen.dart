@@ -68,11 +68,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onDestinationSelected: (i) => setState(() => _tab = i),
               labelType: _minimized ? NavigationRailLabelType.none : NavigationRailLabelType.all,
               useIndicator: true,
-              destinations: const [
-                NavigationRailDestination(icon: Icon(Icons.credit_card_outlined), label: Text('Plan')),
-                NavigationRailDestination(icon: Icon(Icons.receipt_long_outlined), label: Text('Billing')),
-                NavigationRailDestination(icon: Icon(Icons.smart_toy_outlined), label: Text('Model')),
-                NavigationRailDestination(icon: Icon(Icons.person_outline), label: Text('Profile')),
+              minWidth: _minimized ? 56 : 80,
+              destinations: [
+                NavigationRailDestination(
+                  icon: Icon(Icons.credit_card_outlined, size: _minimized ? 20 : 24),
+                  label: const Text('Plan'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.receipt_long_outlined, size: _minimized ? 20 : 24),
+                  label: const Text('Billing'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.smart_toy_outlined, size: _minimized ? 20 : 24),
+                  label: const Text('Model'),
+                ),
+                NavigationRailDestination(
+                  icon: Icon(Icons.person_outline, size: _minimized ? 20 : 24),
+                  label: const Text('Profile'),
+                ),
               ],
               trailing: Expanded(
                 child: Align(
@@ -80,6 +93,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   child: Padding(
                     padding: const EdgeInsets.only(bottom: 20),
                     child: IconButton(
+                      iconSize: _minimized ? 20 : 24,
                       icon: Icon(_minimized ? Icons.chevron_right : Icons.chevron_left),
                       onPressed: () => setState(() => _minimized = !_minimized),
                       tooltip: _minimized ? 'Expand' : 'Minimize',
