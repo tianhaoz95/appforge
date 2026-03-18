@@ -23,8 +23,20 @@ void main() async {
   runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  static _MyAppState? of(BuildContext context) =>
+      context.findAncestorStateOfType<_MyAppState>();
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+
+  void setThemeMode(ThemeMode mode) => setState(() => _themeMode = mode);
 
   @override
   Widget build(BuildContext context) {
@@ -32,22 +44,30 @@ class MyApp extends StatelessWidget {
       title: 'MicroForge',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blueGrey,
-          brightness: Brightness.light,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.light),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
         ),
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.blueGrey,
-          brightness: Brightness.dark,
+        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.dark),
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          surfaceTintColor: Colors.transparent,
         ),
         useMaterial3: true,
         fontFamily: 'Roboto',
       ),
-      themeMode: ThemeMode.system,
+      themeMode: _themeMode,
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
         builder: (context, snap) {
@@ -152,6 +172,19 @@ class LandingHeader extends StatelessWidget {
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
                   ),
                   child: const Text('Get Started'),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  tooltip: 'Toggle theme',
+                  icon: Icon(Theme.of(context).brightness == Brightness.dark
+                      ? Icons.light_mode_outlined
+                      : Icons.dark_mode_outlined),
+                  onPressed: () {
+                    final app = MyApp.of(context);
+                    if (app == null) return;
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark);
+                  },
                 ),
               ],
             ),

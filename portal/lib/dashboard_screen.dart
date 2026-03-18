@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'main.dart' show MyApp;
 
 const _plans = ['Free', 'Pro', 'Ultra'];
 const _models = [
@@ -32,6 +33,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const Text('MicroForge Portal', style: TextStyle(fontWeight: FontWeight.bold)),
         ]),
         actions: [
+          IconButton(
+            tooltip: 'Toggle theme',
+            icon: Icon(Theme.of(context).brightness == Brightness.dark
+                ? Icons.light_mode_outlined
+                : Icons.dark_mode_outlined),
+            onPressed: () {
+              final app = MyApp.of(context);
+              if (app == null) return;
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark);
+            },
+          ),
           IconButton(
             tooltip: 'Sign Out',
             icon: const Icon(Icons.logout),
