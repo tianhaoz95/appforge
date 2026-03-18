@@ -7,6 +7,7 @@ class VibeDetector extends StatelessWidget {
   final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon, {bool isTemporary})? onDeploy;
   final Function(String appId)? onOpenApp;
   final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon)? onAutoRefine;
+  final VoidCallback? onViewContext;
 
   const VibeDetector({
     super.key,
@@ -14,10 +15,34 @@ class VibeDetector extends StatelessWidget {
     this.onDeploy,
     this.onOpenApp,
     this.onAutoRefine,
+    this.onViewContext,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (message.contains('<enhancement_context/>')) {
+      final colorScheme = Theme.of(context).colorScheme;
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.auto_awesome, size: 16, color: colorScheme.primary),
+              const SizedBox(width: 6),
+              const Text('App code & design included.', style: TextStyle(fontSize: 13)),
+            ],
+          ),
+          const Text('You can start customizing.', style: TextStyle(fontSize: 13)),
+          if (onViewContext != null)
+            GestureDetector(
+              onTap: onViewContext,
+              child: Text('View code & design', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colorScheme.primary)),
+            ),
+        ],
+      );
+    }
     final forgeRegex = RegExp(r'<forge>([\s\S]*?)<\/forge>');
     final backendRegex = RegExp(r'<backend>([\s\S]*?)<\/backend>');
     final periodicBackendRegex = RegExp(r'<periodic_backend>([\s\S]*?)<\/periodic_backend>');

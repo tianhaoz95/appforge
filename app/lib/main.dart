@@ -704,6 +704,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               text: "I've loaded your app '$name'. How would you like to enhance it?",
               attachments: const [],
             ),
+            ChatMessage(
+              origin: MessageOrigin.llm,
+              text: '<enhancement_context/>',
+              attachments: const [],
+            ),
           ];
         });
       }
@@ -1120,44 +1125,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
   }
 
-  Widget _buildEnhancementIndicator() {
-    if (!_enhancementContextInPrompt || _enhancementCode == null) {
-      return const SizedBox.shrink();
-    }
-
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-    return Container(
-      width: double.infinity,
-      color: isDark ? Colors.black : Colors.white,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        children: [
-          Icon(
-            Icons.auto_awesome, 
-            size: 20, 
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              'Micro app code and design are included. You can start customizing.',
-              style: TextStyle(
-                fontSize: 13, 
-                fontWeight: FontWeight.w500,
-                color: isDark ? Colors.blueGrey[100] : Colors.blueGrey[900],
-              ),
-            ),
-          ),
-          TextButton(
-            onPressed: _showContextDialog,
-            child: const Text('VIEW'),
-          ),
-        ],
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Stack(
@@ -1207,22 +1174,20 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           ),
           body: _provider == null
               ? const Center(child: CircularProgressIndicator())
-              : Column(
-                  children: [
-                    _buildEnhancementIndicator(),
-                    Expanded(
-                      child: ListenableBuilder(
-                        listenable: _provider!,
-                        builder: (context, _) {
-                          final isDark = Theme.of(context).brightness == Brightness.dark;
-                          final colorScheme = Theme.of(context).colorScheme;
+              : ListenableBuilder(
+                  listenable: _provider!,
+                  builder: (context, _) {
+                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    final colorScheme = Theme.of(context).colorScheme;
 
-                          return Stack(
+                    return Stack(
+                      children: [
+                        MediaQuery.removePadding(
+                          context: context,
+                          removeTop: true,
+                          child: Column(
                             children: [
-                              MediaQuery.removePadding(
-                                context: context,
-                                removeTop: true,
-                                child: LlmChatView(
+                              Expanded(child: LlmChatView(
                                   provider: _provider!,
                                   style: LlmChatViewStyle(
                                     backgroundColor: Colors.transparent,
@@ -1312,6 +1277,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                 ),
                                 responseBuilder: (context, message) => VibeDetector(
                                   message: message,
+                                  onViewContext: _showContextDialog,
                                 onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, {isTemporary = false}) => 
                                     onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, isTemporary: isTemporary),
                                   onOpenApp: _onOpenApp,
@@ -1336,41 +1302,41 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                 ),
                               ),
                             ),
-
-                              if (_provider!.history.isEmpty)
-                                IgnorePointer(
-                                  child: Center(
-                                    child: Consumer<AuthProvider>(
-                                      builder: (context, auth, _) {
-                                        final name = auth.user?.displayName ?? 'there';
-                                        return Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            Text(
-                                              'Hello! $name,',
-                                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                                    color: Colors.blueGrey[700],
-                                                    fontWeight: FontWeight.bold,
-                                                  ),
-                                            ),
-                                            const SizedBox(height: 8),
-                                            RollingGreeting(
-                                              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                                                    color: Colors.blueGrey[400],
-                                                  ),
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    ),
-                                  ),
-                                ),
                             ],
-                          );
-                        },
-                      ),
-                    ),
-                  ],
+                          ),
+                        ),
+
+                        if (_provider!.history.isEmpty)
+                          IgnorePointer(
+                            child: Center(
+                              child: Consumer<AuthProvider>(
+                                builder: (context, auth, _) {
+                                  final name = auth.user?.displayName ?? 'there';
+                                  return Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(
+                                        'Hello! $name,',
+                                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                              color: Colors.blueGrey[700],
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                      ),
+                                      const SizedBox(height: 8),
+                                      RollingGreeting(
+                                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                              color: Colors.blueGrey[400],
+                                            ),
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
         ),
         if (_showPreview && _activeForgeCode != null)
