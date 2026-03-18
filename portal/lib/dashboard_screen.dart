@@ -139,10 +139,120 @@ class _PlanTab extends StatelessWidget {
               );
             }).toList(),
           ),
+          const SizedBox(height: 48),
+          _BillingSection(uid: uid, data: data),
         ],
       ),
     );
   }
+}
+
+class _BillingSection extends StatefulWidget {
+  final String uid;
+  final Map<String, dynamic> data;
+  const _BillingSection({required this.uid, required this.data});
+
+  @override
+  State<_BillingSection> createState() => _BillingSectionState();
+}
+
+class _BillingSectionState extends State<_BillingSection> {
+  bool _editing = false;
+  bool _saving = false;
+  late final _nameCtrl = TextEditingController(text: widget.data['billing_name'] as String? ?? '');
+  late final _emailCtrl = TextEditingController(text: widget.data['billing_email'] as String? ?? '');
+  late final _addressCtrl = TextEditingController(text: widget.data['billing_address'] as String? ?? '');
+  late final _cityCtrl = TextEditingController(text: widget.data['billing_city'] as String? ?? '');
+  late final _countryCtrl = TextEditingController(text: widget.data['billing_country'] as String? ?? '');
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose(); _emailCtrl.dispose(); _addressCtrl.dispose();
+    _cityCtrl.dispose(); _countryCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await FirebaseFirestore.instance.collection('users').doc(widget.uid).set({
+      'billing_name': _nameCtrl.text.trim(),
+      'billing_email': _emailCtrl.text.trim(),
+      'billing_address': _addressCtrl.text.trim(),
+      'billing_city': _cityCtrl.text.trim(),
+      'billing_country': _countryCtrl.text.trim(),
+    }, SetOptions(merge: true));
+    if (mounted) setState(() { _saving = false; _editing = false; });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Text('Billing Information', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            const Spacer(),
+            if (!_editing)
+              TextButton.icon(
+                icon: const Icon(Icons.edit_outlined, size: 16),
+                label: const Text('Edit'),
+                onPressed: () => setState(() => _editing = true),
+              ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (_editing) ...[
+          _field(_nameCtrl, 'Full Name / Company'),
+          _field(_emailCtrl, 'Billing Email', type: TextInputType.emailAddress),
+          _field(_addressCtrl, 'Address'),
+          Row(children: [
+            Expanded(child: _field(_cityCtrl, 'City')),
+            const SizedBox(width: 12),
+            Expanded(child: _field(_countryCtrl, 'Country')),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            FilledButton(
+              onPressed: _saving ? null : _save,
+              child: _saving ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
+            ),
+            const SizedBox(width: 12),
+            TextButton(onPressed: () => setState(() => _editing = false), child: const Text('Cancel')),
+          ]),
+        ] else ...[
+          _infoRow('Name', _nameCtrl.text.isEmpty ? '—' : _nameCtrl.text, cs),
+          _infoRow('Email', _emailCtrl.text.isEmpty ? '—' : _emailCtrl.text, cs),
+          _infoRow('Address', _addressCtrl.text.isEmpty ? '—' : _addressCtrl.text, cs),
+          _infoRow('City', _cityCtrl.text.isEmpty ? '—' : _cityCtrl.text, cs),
+          _infoRow('Country', _countryCtrl.text.isEmpty ? '—' : _countryCtrl.text, cs),
+        ],
+      ],
+    );
+  }
+
+  Widget _field(TextEditingController ctrl, String label, {TextInputType? type}) => Padding(
+    padding: const EdgeInsets.only(bottom: 12),
+    child: TextFormField(
+      controller: ctrl,
+      keyboardType: type,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        isDense: true,
+      ),
+    ),
+  );
+
+  Widget _infoRow(String label, String value, ColorScheme cs) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(children: [
+      SizedBox(width: 80, child: Text(label, style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 13))),
+      const SizedBox(width: 12),
+      Text(value, style: const TextStyle(fontSize: 13)),
+    ]),
+  );
 }
 
 class _PlanCard extends StatelessWidget {
