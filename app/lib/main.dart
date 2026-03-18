@@ -1205,10 +1205,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     textStyle: TextStyle(color: colorScheme.onPrimary),
                                   ),
                                   llmMessageStyle: LlmMessageStyle(
-                                    decoration: BoxDecoration(
-                                      color: isDark ? Colors.grey[900] : Colors.grey[200],
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
+                                    icon: null,
+                                    iconDecoration: null,
+                                    decoration: null,
+                                    padding: EdgeInsets.zero,
+                                    margin: const EdgeInsets.only(left: -28, top: 4, bottom: 4),
+                                    maxWidth: double.infinity,
+                                    minWidth: 0,
+                                    flex: 100,
                                   ),
                                   chatInputStyle: ChatInputStyle(
                                     backgroundColor: isDark ? Colors.grey[900] : Colors.white,
