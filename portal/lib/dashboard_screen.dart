@@ -221,6 +221,30 @@ class _BillingSectionState extends State<_BillingSection> {
             const SizedBox(width: 12),
             TextButton(onPressed: () => setState(() => _editing = false), child: const Text('Cancel')),
           ]),
+        ] else if (_nameCtrl.text.isEmpty && _emailCtrl.text.isEmpty &&
+            _addressCtrl.text.isEmpty && _cityCtrl.text.isEmpty && _countryCtrl.text.isEmpty) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(vertical: 32),
+            decoration: BoxDecoration(
+              border: Border.all(color: cs.outlineVariant, style: BorderStyle.solid),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                Icon(Icons.receipt_long_outlined, size: 40, color: cs.onSurface.withOpacity(0.3)),
+                const SizedBox(height: 12),
+                Text('No billing information yet', style: TextStyle(color: cs.onSurface.withOpacity(0.5), fontWeight: FontWeight.w500)),
+                const SizedBox(height: 4),
+                Text('Add your details for invoicing and receipts.', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.35))),
+                const SizedBox(height: 16),
+                FilledButton.tonal(
+                  onPressed: () => setState(() => _editing = true),
+                  child: const Text('Add Billing Info'),
+                ),
+              ],
+            ),
+          ),
         ] else ...[
           _infoRow('Name', _nameCtrl.text.isEmpty ? '—' : _nameCtrl.text, cs),
           _infoRow('Email', _emailCtrl.text.isEmpty ? '—' : _emailCtrl.text, cs),
