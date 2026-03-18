@@ -2,7 +2,6 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'firebase_options.dart';
 
 void main() async {
@@ -51,20 +50,43 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class LandingPage extends StatelessWidget {
+class LandingPage extends StatefulWidget {
   const LandingPage({super.key});
 
   @override
+  State<LandingPage> createState() => _LandingPageState();
+}
+
+class _LandingPageState extends State<LandingPage> {
+  final _featuresKey = GlobalKey();
+  final _pricingKey = GlobalKey();
+
+  Future<void> _scrollTo(GlobalKey key) async {
+    final context = key.currentContext;
+    if (context == null) return;
+    await Scrollable.ensureVisible(
+      context,
+      duration: const Duration(milliseconds: 500),
+      curve: Curves.easeInOutCubic,
+      alignment: 0.08,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       body: SingleChildScrollView(
         child: Column(
           children: [
-            LandingHeader(),
-            HeroSection(),
-            FeaturesSection(),
-            HowItWorksSection(),
-            Footer(),
+            LandingHeader(
+              onFeaturesTap: () => _scrollTo(_featuresKey),
+              onPricingTap: () => _scrollTo(_pricingKey),
+            ),
+            const HeroSection(),
+            FeaturesSection(key: _featuresKey),
+            PricingSection(key: _pricingKey),
+            const HowItWorksSection(),
+            const Footer(),
           ],
         ),
       ),
@@ -73,11 +95,17 @@ class LandingPage extends StatelessWidget {
 }
 
 class LandingHeader extends StatelessWidget {
-  const LandingHeader({super.key});
+  final VoidCallback onFeaturesTap;
+  final VoidCallback onPricingTap;
+
+  const LandingHeader({
+    super.key,
+    required this.onFeaturesTap,
+    required this.onPricingTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
       child: Row(
@@ -87,17 +115,16 @@ class LandingHeader extends StatelessWidget {
           Text(
             'MicroForge',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  fontWeight: FontWeight.bold,
-                  letterSpacing: 1.2,
-                ),
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+            ),
           ),
           const Spacer(),
           if (!kIsWeb || MediaQuery.of(context).size.width > 700)
             Row(
               children: [
-                _HeaderLink(label: 'Features', onTap: () {}),
-                _HeaderLink(label: 'Pricing', onTap: () {}),
-                _HeaderLink(label: 'Docs', onTap: () {}),
+                _HeaderLink(label: 'Features', onTap: onFeaturesTap),
+                _HeaderLink(label: 'Pricing', onTap: onPricingTap),
                 const SizedBox(width: 16),
                 ElevatedButton(
                   onPressed: () {},
@@ -170,12 +197,19 @@ class HeroSection extends StatelessWidget {
           Expanded(
             flex: isMobile ? 0 : 5,
             child: Column(
-              crossAxisAlignment: isMobile ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+              crossAxisAlignment: isMobile
+                  ? CrossAxisAlignment.center
+                  : CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -192,43 +226,46 @@ class HeroSection extends StatelessWidget {
                   'Forge Your Ideas into Reality',
                   textAlign: isMobile ? TextAlign.center : TextAlign.left,
                   style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                        height: 1.1,
-                      ),
+                    fontWeight: FontWeight.w900,
+                    height: 1.1,
+                  ),
                 ),
                 const SizedBox(height: 24),
                 Text(
-                  'Build functional micro-apps instantly using natural language. No complex setup, no build times—just pure creativity powered by Gemini AI.',
+                  'Build functional micro-apps instantly using natural language. No complex setup, no build times, just pure creativity powered by flexible AI.',
                   textAlign: isMobile ? TextAlign.center : TextAlign.left,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
-                        height: 1.5,
-                      ),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
+                    height: 1.5,
+                  ),
                 ),
                 const SizedBox(height: 48),
                 Wrap(
                   spacing: 16,
                   runSpacing: 16,
-                  alignment: isMobile ? WrapAlignment.center : WrapAlignment.start,
+                  alignment: isMobile
+                      ? WrapAlignment.center
+                      : WrapAlignment.start,
                   children: [
                     ElevatedButton.icon(
                       onPressed: () {},
                       icon: const Icon(Icons.rocket_launch),
                       label: const Text('Start Forging Now'),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 32,
+                          vertical: 24,
+                        ),
+                        textStyle: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                         backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                      ),
-                    ),
-                    OutlinedButton.icon(
-                      onPressed: () {},
-                      icon: const FaIcon(FontAwesomeIcons.github, size: 20),
-                      label: const Text('View on GitHub'),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                        textStyle: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                        foregroundColor: Theme.of(
+                          context,
+                        ).colorScheme.onPrimary,
                       ),
                     ),
                   ],
@@ -237,11 +274,7 @@ class HeroSection extends StatelessWidget {
             ),
           ),
           if (!isMobile) const SizedBox(width: 64),
-          if (!isMobile)
-            const Expanded(
-              flex: 4,
-              child: MockAppInterface(),
-            ),
+          if (!isMobile) const Expanded(flex: 4, child: MockAppInterface()),
         ],
       ),
     );
@@ -261,10 +294,7 @@ class MockAppInterface extends StatelessWidget {
       decoration: BoxDecoration(
         color: isDark ? Colors.grey[900] : Colors.white,
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: colorScheme.outlineVariant,
-          width: 8,
-        ),
+        border: Border.all(color: colorScheme.outlineVariant, width: 8),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),
@@ -303,11 +333,13 @@ class MockAppInterface extends StatelessWidget {
                 children: [
                   _MockMessage(
                     isUser: true,
-                    text: 'Forge a minimalist pomodoro timer with local storage.',
+                    text:
+                        'Forge a minimalist pomodoro timer with local storage.',
                   ),
                   _MockMessage(
                     isUser: false,
-                    text: "I've forged your Pomodoro Timer! It includes persistence and a sleek dark theme.",
+                    text:
+                        "I've forged your Pomodoro Timer! It includes persistence and a sleek dark theme.",
                     hasForge: true,
                   ),
                 ],
@@ -317,13 +349,18 @@ class MockAppInterface extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                border: Border(top: BorderSide(color: colorScheme.outlineVariant)),
+                border: Border(
+                  top: BorderSide(color: colorScheme.outlineVariant),
+                ),
               ),
               child: Row(
                 children: [
                   Expanded(
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 12,
+                      ),
                       decoration: BoxDecoration(
                         color: isDark ? Colors.grey[800] : Colors.grey[100],
                         borderRadius: BorderRadius.circular(30),
@@ -334,7 +371,11 @@ class MockAppInterface extends StatelessWidget {
                   const SizedBox(width: 12),
                   CircleAvatar(
                     backgroundColor: colorScheme.primary,
-                    child: Icon(Icons.send, color: colorScheme.onPrimary, size: 20),
+                    child: Icon(
+                      Icons.send,
+                      color: colorScheme.onPrimary,
+                      size: 20,
+                    ),
                   ),
                 ],
               ),
@@ -365,7 +406,9 @@ class _MockMessage extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.only(bottom: 24),
       child: Column(
-        crossAxisAlignment: isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           Container(
             padding: const EdgeInsets.all(16),
@@ -392,7 +435,9 @@ class _MockMessage extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  border: Border.all(color: colorScheme.primary.withOpacity(0.5)),
+                  border: Border.all(
+                    color: colorScheme.primary.withOpacity(0.5),
+                  ),
                   borderRadius: BorderRadius.circular(12),
                   color: colorScheme.primary.withOpacity(0.05),
                 ),
@@ -404,8 +449,14 @@ class _MockMessage extends StatelessWidget {
                     const Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Pomodoro Timer', style: TextStyle(fontWeight: FontWeight.bold)),
-                        Text('v1.0.0 • Initial release', style: TextStyle(fontSize: 12)),
+                        Text(
+                          'Pomodoro Timer',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'v1.0.0 • Initial release',
+                          style: TextStyle(fontSize: 12),
+                        ),
                       ],
                     ),
                     const SizedBox(width: 24),
@@ -440,17 +491,17 @@ class FeaturesSection extends StatelessWidget {
           Text(
             'Powerful Features for Forgers',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
           Text(
             'Everything you need to build and deploy mini-tools in seconds.',
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-                ),
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            ),
           ),
           const SizedBox(height: 64),
           Wrap(
@@ -462,7 +513,7 @@ class FeaturesSection extends StatelessWidget {
                 icon: Icons.auto_fix_high,
                 title: 'AI-First Workflow',
                 description:
-                    'Powered by Gemini 1.5 Pro and Flash for rapid, accurate code generation.',
+                    'Model-flexible generation pipeline for rapid, accurate micro-app creation.',
               ),
               _FeatureCard(
                 icon: Icons.flash_on,
@@ -492,7 +543,80 @@ class FeaturesSection extends StatelessWidget {
                 icon: Icons.devices,
                 title: 'Cross-Platform',
                 description:
-                    'Available on Android, iOS, and Web. Forge anywhere, run everywhere.',
+                    'Available on iOS, Android, macOS, Windows, and Linux, with web support coming soon after.',
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class PricingSection extends StatelessWidget {
+  const PricingSection({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 96),
+      color: colorScheme.surfaceVariant.withOpacity(0.18),
+      child: Column(
+        children: [
+          Text(
+            'Simple Pricing',
+            textAlign: TextAlign.center,
+            style: Theme.of(
+              context,
+            ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'Dummy plans for early positioning. Swap pricing and quota details later.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+              color: colorScheme.onSurface.withOpacity(0.65),
+            ),
+          ),
+          const SizedBox(height: 56),
+          Wrap(
+            spacing: 24,
+            runSpacing: 24,
+            alignment: WrapAlignment.center,
+            children: const [
+              _PricingCard(
+                title: 'Free',
+                price: '\$0',
+                subtitle: 'For trying out MicroForge',
+                features: [
+                  'Basic app forging',
+                  'Community templates',
+                  'Local previews',
+                ],
+              ),
+              _PricingCard(
+                title: 'Pro',
+                price: '\$19',
+                subtitle: 'For regular builders',
+                badge: 'Popular',
+                highlighted: true,
+                features: [
+                  'Higher monthly quota',
+                  'Priority generation',
+                  'Saved projects and history',
+                ],
+              ),
+              _PricingCard(
+                title: 'Ultra',
+                price: '\$79',
+                subtitle: 'For power users and teams',
+                features: [
+                  'Largest quota pool',
+                  'Advanced model access',
+                  'Team collaboration controls',
+                ],
               ),
             ],
           ),
@@ -539,10 +663,7 @@ class _FeatureCard extends StatelessWidget {
           const SizedBox(height: 24),
           Text(
             title,
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 12),
           Text(
@@ -571,9 +692,9 @@ class HowItWorksSection extends StatelessWidget {
         children: [
           Text(
             'How It Works',
-            style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 64),
           _StepItem(
@@ -586,7 +707,7 @@ class HowItWorksSection extends StatelessWidget {
             number: '02',
             title: 'AI Forges the Code',
             description:
-                'Gemini AI generates the HTML, Alpine.js logic, and Tailwind CSS styles for your micro-app.',
+                'MicroForge generates the HTML, Alpine.js logic, and Tailwind CSS styles for your micro-app.',
           ),
           _StepItem(
             number: '03',
@@ -651,7 +772,9 @@ class _StepItem extends StatelessWidget {
                   description,
                   style: TextStyle(
                     fontSize: 18,
-                    color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.7),
                     height: 1.5,
                   ),
                 ),
@@ -673,9 +796,7 @@ class Footer extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 64),
       decoration: BoxDecoration(
         border: Border(
-          top: BorderSide(
-            color: Theme.of(context).colorScheme.outlineVariant,
-          ),
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
       ),
       child: Column(
@@ -687,16 +808,13 @@ class Footer extends StatelessWidget {
               const SizedBox(width: 12),
               const Text(
                 'MicroForge',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
             ],
           ),
           const SizedBox(height: 24),
           Text(
-            '© 2026 MicroForge. Built with Flutter and Gemini AI.',
+            '© 2026 MicroForge. Built with Flutter and AI-powered app generation.',
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
             ),
@@ -713,11 +831,148 @@ class Footer extends StatelessWidget {
                 onPressed: () {},
                 icon: const FaIcon(FontAwesomeIcons.discord, size: 20),
               ),
-              IconButton(
-                onPressed: () {},
-                icon: const FaIcon(FontAwesomeIcons.github, size: 20),
-              ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PricingCard extends StatelessWidget {
+  final String title;
+  final String price;
+  final String subtitle;
+  final List<String> features;
+  final String? badge;
+  final bool highlighted;
+
+  const _PricingCard({
+    required this.title,
+    required this.price,
+    required this.subtitle,
+    required this.features,
+    this.badge,
+    this.highlighted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final borderColor = highlighted
+        ? colorScheme.primary.withOpacity(0.6)
+        : colorScheme.outlineVariant.withOpacity(0.5);
+
+    return Container(
+      width: 320,
+      padding: const EdgeInsets.all(32),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? colorScheme.primaryContainer.withOpacity(0.35)
+            : colorScheme.surface,
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: borderColor, width: highlighted ? 2 : 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (badge != null) ...[
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: colorScheme.primary,
+                borderRadius: BorderRadius.circular(999),
+              ),
+              child: Text(
+                badge!,
+                style: TextStyle(
+                  color: colorScheme.onPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 20),
+          ],
+          Text(
+            title,
+            style: Theme.of(
+              context,
+            ).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          RichText(
+            text: TextSpan(
+              style: Theme.of(context).textTheme.bodyLarge,
+              children: [
+                TextSpan(
+                  text: price,
+                  style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    color: colorScheme.onSurface,
+                  ),
+                ),
+                TextSpan(
+                  text: '/mo',
+                  style: TextStyle(
+                    color: colorScheme.onSurface.withOpacity(0.6),
+                    fontSize: 18,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: colorScheme.onSurface.withOpacity(0.7),
+              height: 1.5,
+            ),
+          ),
+          const SizedBox(height: 24),
+          for (final feature in features)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    size: 20,
+                    color: colorScheme.primary,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      feature,
+                      style: TextStyle(
+                        color: colorScheme.onSurface.withOpacity(0.85),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () {},
+              style: ElevatedButton.styleFrom(
+                backgroundColor: highlighted
+                    ? colorScheme.primary
+                    : colorScheme.surface,
+                foregroundColor: highlighted
+                    ? colorScheme.onPrimary
+                    : colorScheme.onSurface,
+                side: highlighted
+                    ? null
+                    : BorderSide(color: colorScheme.outlineVariant),
+                padding: const EdgeInsets.symmetric(vertical: 18),
+              ),
+              child: Text(highlighted ? 'Choose Pro' : 'Select Plan'),
+            ),
           ),
         ],
       ),
