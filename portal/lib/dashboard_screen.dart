@@ -62,16 +62,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         child: Row(
         children: [
-          NavigationRail(
-            selectedIndex: _tab,
-            onDestinationSelected: (i) => setState(() => _tab = i),
-            labelType: NavigationRailLabelType.all,
-            useIndicator: true,
-            destinations: const [
-              NavigationRailDestination(icon: Icon(Icons.credit_card_outlined), label: Text('Plan')),
-              NavigationRailDestination(icon: Icon(Icons.smart_toy_outlined), label: Text('Model')),
-              NavigationRailDestination(icon: Icon(Icons.person_outline), label: Text('Profile')),
-            ],
+          ClipRRect(
+            borderRadius: const BorderRadius.only(
+              topRight: Radius.circular(24),
+              bottomRight: Radius.circular(24),
+            ),
+            child: NavigationRail(
+              selectedIndex: _tab,
+              onDestinationSelected: (i) => setState(() => _tab = i),
+              labelType: NavigationRailLabelType.all,
+              useIndicator: true,
+              destinations: const [
+                NavigationRailDestination(icon: Icon(Icons.credit_card_outlined), label: Text('Plan')),
+                NavigationRailDestination(icon: Icon(Icons.smart_toy_outlined), label: Text('Model')),
+                NavigationRailDestination(icon: Icon(Icons.person_outline), label: Text('Profile')),
+              ],
+            ),
           ),
           Expanded(
             child: StreamBuilder<DocumentSnapshot>(
