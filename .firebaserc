@@ -1,5 +1,17 @@
 {
   "projects": {
     "default": "appforge-app"
+  },
+  "targets": {
+    "appforge-app": {
+      "hosting": {
+        "portal": [
+          "microforge"
+        ],
+        "catalog": [
+          "appforge-app"
+        ]
+      }
+    }
   }
 }

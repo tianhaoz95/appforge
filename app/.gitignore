@@ -48,3 +48,4 @@ app.*.map.json
 # Extra
 /.venv
 /android/.kotlin
+/.firebase

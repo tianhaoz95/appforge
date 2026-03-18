@@ -59,8 +59,9 @@ To get started with development or to run the project:
 - **Deploy to Firebase Hosting:**
   ```bash
   cd portal && flutter build web --release
-  cd .. && firebase deploy --only hosting
+  cd .. && firebase deploy --only hosting:portal
   ```
+  The portal publishes to `https://microforge.web.app`.
 - **Note on Linux Native:** Firebase initialization on Linux native may fail if the C++ SDK is not correctly configured. For development, prefer running on Web (Chrome).
 
 ### Widget Catalog (AppForge Catalog)
@@ -76,6 +77,12 @@ To get started with development or to run the project:
   ```bash
   cd catalog && flutter run -d chrome
   ```
+- **Deploy the Catalog to Firebase Hosting:**
+  ```bash
+  cd catalog && flutter build web --release
+  cd .. && firebase deploy --only hosting:catalog
+  ```
+  The catalog publishes to `https://appforge-app.web.app`.
 
 ---
 
