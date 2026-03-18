@@ -912,25 +912,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _activeAppId = appId;
       });
 
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('$finalName (v$finalVersion) forged and saved locally!'),
-            duration: const Duration(seconds: 2),
-          ),
-        );
-      }
     } catch (e) {
       debugPrint('Failed to save app: $e');
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to save app: $e'),
-            backgroundColor: Colors.red,
-            duration: const Duration(seconds: 5),
-          ),
-        );
-      }
     }
   }
 
