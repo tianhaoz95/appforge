@@ -1,0 +1,333 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+
+const _plans = ['Free', 'Pro', 'Ultra'];
+const _models = [
+  'gemini-3.1-flash-lite-preview',
+  'gemini-2.0-flash',
+  'gemini-2.5-pro',
+];
+
+class DashboardScreen extends StatefulWidget {
+  const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> {
+  int _tab = 0;
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser!;
+    final cs = Theme.of(context).colorScheme;
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Row(children: [
+          Image.asset('assets/brand/logo.png', height: 32),
+          const SizedBox(width: 10),
+          const Text('MicroForge Portal', style: TextStyle(fontWeight: FontWeight.bold)),
+        ]),
+        actions: [
+          IconButton(
+            tooltip: 'Sign Out',
+            icon: const Icon(Icons.logout),
+            onPressed: () => FirebaseAuth.instance.signOut(),
+          ),
+        ],
+      ),
+      body: Row(
+        children: [
+          NavigationRail(
+            selectedIndex: _tab,
+            onDestinationSelected: (i) => setState(() => _tab = i),
+            labelType: NavigationRailLabelType.all,
+            destinations: const [
+              NavigationRailDestination(icon: Icon(Icons.credit_card_outlined), label: Text('Plan')),
+              NavigationRailDestination(icon: Icon(Icons.smart_toy_outlined), label: Text('Model')),
+              NavigationRailDestination(icon: Icon(Icons.person_outline), label: Text('Profile')),
+            ],
+          ),
+          const VerticalDivider(width: 1),
+          Expanded(
+            child: StreamBuilder<DocumentSnapshot>(
+              stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+              builder: (context, snap) {
+                final data = snap.data?.data() as Map<String, dynamic>? ?? {};
+                return IndexedStack(
+                  index: _tab,
+                  children: [
+                    _PlanTab(data: data, uid: user.uid),
+                    _ModelTab(data: data, uid: user.uid),
+                    _ProfileTab(user: user, data: data),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanTab extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String uid;
+  const _PlanTab({required this.data, required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    final current = data['plan'] as String? ?? 'Free';
+    final cs = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Subscription Plan', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text('Current plan: $current', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600)),
+          const SizedBox(height: 32),
+          Wrap(
+            spacing: 20,
+            runSpacing: 20,
+            children: _plans.map((plan) {
+              final selected = plan == current;
+              return _PlanCard(
+                plan: plan,
+                selected: selected,
+                onSelect: () async {
+                  await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                    {'plan': plan}, SetOptions(merge: true));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Switched to $plan plan')));
+                  }
+                },
+              );
+            }).toList(),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PlanCard extends StatelessWidget {
+  final String plan;
+  final bool selected;
+  final VoidCallback onSelect;
+  const _PlanCard({required this.plan, required this.selected, required this.onSelect});
+
+  static const _prices = {'Free': '\$0', 'Pro': '\$19', 'Ultra': '\$79'};
+  static const _descs = {
+    'Free': 'Basic forging, community templates, local previews.',
+    'Pro': 'Higher quota, priority generation, saved history.',
+    'Ultra': 'Largest quota, advanced models, team controls.',
+  };
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: 260,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: selected ? cs.primaryContainer.withOpacity(0.4) : cs.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(plan, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Text(_prices[plan]!, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900)),
+          const SizedBox(height: 8),
+          Text(_descs[plan]!, style: TextStyle(color: cs.onSurface.withOpacity(0.7), height: 1.5)),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton(
+              onPressed: selected ? null : onSelect,
+              child: Text(selected ? 'Current Plan' : 'Select'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModelTab extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String uid;
+  const _ModelTab({required this.data, required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    final current = data['model'] as String? ?? _models.first;
+    final cs = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('AI Model', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          Text('Choose the model used for app generation.', style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
+          const SizedBox(height: 32),
+          ..._models.map((model) {
+            final selected = model == current;
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: ListTile(
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14),
+                  side: BorderSide(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
+                ),
+                tileColor: selected ? cs.primaryContainer.withOpacity(0.3) : null,
+                leading: Icon(Icons.smart_toy_outlined, color: selected ? cs.primary : null),
+                title: Text(model, style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+                trailing: selected ? Icon(Icons.check_circle, color: cs.primary) : null,
+                onTap: () async {
+                  await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                    {'model': model}, SetOptions(merge: true));
+                },
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileTab extends StatefulWidget {
+  final User user;
+  final Map<String, dynamic> data;
+  const _ProfileTab({required this.user, required this.data});
+
+  @override
+  State<_ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<_ProfileTab> {
+  late final _nameCtrl = TextEditingController(text: widget.user.displayName ?? '');
+  bool _saving = false;
+
+  @override
+  void dispose() { _nameCtrl.dispose(); super.dispose(); }
+
+  Future<void> _save() async {
+    setState(() => _saving = true);
+    await widget.user.updateDisplayName(_nameCtrl.text.trim());
+    if (mounted) {
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated.')));
+    }
+  }
+
+  Future<void> _deleteAccount() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Delete Account'),
+        content: const Text('This will permanently delete your account and all data. This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    try {
+      await FirebaseFirestore.instance.collection('users').doc(widget.user.uid).delete();
+      await widget.user.delete();
+    } on FirebaseAuthException catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message ?? 'Error')));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 480),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Profile', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 32),
+            CircleAvatar(
+              radius: 36,
+              backgroundColor: cs.primaryContainer,
+              child: Text(
+                (widget.user.displayName?.isNotEmpty == true ? widget.user.displayName![0] : widget.user.email![0]).toUpperCase(),
+                style: TextStyle(fontSize: 28, color: cs.onPrimaryContainer, fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 24),
+            TextFormField(
+              controller: _nameCtrl,
+              decoration: InputDecoration(
+                labelText: 'Display Name',
+                prefixIcon: const Icon(Icons.person_outline),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              initialValue: widget.user.email,
+              readOnly: true,
+              decoration: InputDecoration(
+                labelText: 'Email',
+                prefixIcon: const Icon(Icons.email_outlined),
+                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: _saving ? null : _save,
+                child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save Changes'),
+              ),
+            ),
+            const SizedBox(height: 48),
+            const Divider(),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: const Icon(Icons.logout),
+                label: const Text('Sign Out'),
+                onPressed: () => FirebaseAuth.instance.signOut(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                icon: Icon(Icons.delete_forever, color: cs.error),
+                label: Text('Delete Account', style: TextStyle(color: cs.error)),
+                style: OutlinedButton.styleFrom(side: BorderSide(color: cs.error)),
+                onPressed: _deleteAccount,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
