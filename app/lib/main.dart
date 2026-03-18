@@ -714,9 +714,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       }
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Enhancing $name in a new conversation...')),
-    );
   }
 
   void _onFeedback(String text, Uint8List screenshot) {
@@ -770,7 +767,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Analyzing feedback for $name in current conversation...')),
+      SnackBar(
+        content: Text('Analyzing feedback for $name in current conversation...'),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: double.infinity, left: 16, right: 16, top: 16),
+      ),
     );
   }
 
@@ -818,7 +819,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Analyzing app for refinements in current conversation...')),
+      SnackBar(
+        content: Text('Analyzing app for refinements in current conversation...'),
+        behavior: SnackBarBehavior.floating,
+        margin: const EdgeInsets.only(bottom: double.infinity, left: 16, right: 16, top: 16),
+      ),
     );
   }
 
