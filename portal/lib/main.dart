@@ -1,8 +1,11 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'firebase_options.dart';
+import 'auth_screen.dart';
+import 'dashboard_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,9 +48,22 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Roboto',
       ),
       themeMode: ThemeMode.system,
-      home: const LandingPage(),
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, snap) {
+          if (snap.connectionState == ConnectionState.waiting) {
+            return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          }
+          if (snap.hasData) return const DashboardScreen();
+          return const LandingPage();
+        },
+      ),
     );
   }
+}
+
+void _goToAuth(BuildContext context) {
+  Navigator.push(context, MaterialPageRoute(builder: (_) => const AuthScreen()));
 }
 
 class LandingPage extends StatefulWidget {
@@ -81,10 +97,11 @@ class _LandingPageState extends State<LandingPage> {
             LandingHeader(
               onFeaturesTap: () => _scrollTo(_featuresKey),
               onPricingTap: () => _scrollTo(_pricingKey),
+              onGetStarted: () => _goToAuth(context),
             ),
-            const HeroSection(),
+            HeroSection(onGetStarted: () => _goToAuth(context)),
             FeaturesSection(key: _featuresKey),
-            PricingSection(key: _pricingKey),
+            PricingSection(key: _pricingKey, onSelectPlan: () => _goToAuth(context)),
             const HowItWorksSection(),
             const Footer(),
           ],
@@ -97,11 +114,13 @@ class _LandingPageState extends State<LandingPage> {
 class LandingHeader extends StatelessWidget {
   final VoidCallback onFeaturesTap;
   final VoidCallback onPricingTap;
+  final VoidCallback onGetStarted;
 
   const LandingHeader({
     super.key,
     required this.onFeaturesTap,
     required this.onPricingTap,
+    required this.onGetStarted,
   });
 
   @override
@@ -127,7 +146,7 @@ class LandingHeader extends StatelessWidget {
                 _HeaderLink(label: 'Pricing', onTap: onPricingTap),
                 const SizedBox(width: 16),
                 ElevatedButton(
-                  onPressed: () {},
+                  onPressed: onGetStarted,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Theme.of(context).colorScheme.primary,
                     foregroundColor: Theme.of(context).colorScheme.onPrimary,
@@ -167,7 +186,8 @@ class _HeaderLink extends StatelessWidget {
 }
 
 class HeroSection extends StatelessWidget {
-  const HeroSection({super.key});
+  final VoidCallback onGetStarted;
+  const HeroSection({super.key, required this.onGetStarted});
 
   @override
   Widget build(BuildContext context) {
@@ -250,7 +270,7 @@ class HeroSection extends StatelessWidget {
                       : WrapAlignment.start,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () {},
+                      onPressed: onGetStarted,
                       icon: const Icon(Icons.rocket_launch),
                       label: const Text('Start Forging Now'),
                       style: ElevatedButton.styleFrom(
@@ -554,7 +574,8 @@ class FeaturesSection extends StatelessWidget {
 }
 
 class PricingSection extends StatelessWidget {
-  const PricingSection({super.key});
+  final VoidCallback onSelectPlan;
+  const PricingSection({super.key, required this.onSelectPlan});
 
   @override
   Widget build(BuildContext context) {
@@ -585,7 +606,7 @@ class PricingSection extends StatelessWidget {
             spacing: 24,
             runSpacing: 24,
             alignment: WrapAlignment.center,
-            children: const [
+            children: [
               _PricingCard(
                 title: 'Free',
                 price: '\$0',
@@ -595,6 +616,7 @@ class PricingSection extends StatelessWidget {
                   'Community templates',
                   'Local previews',
                 ],
+                onSelect: onSelectPlan,
               ),
               _PricingCard(
                 title: 'Pro',
@@ -607,6 +629,7 @@ class PricingSection extends StatelessWidget {
                   'Priority generation',
                   'Saved projects and history',
                 ],
+                onSelect: onSelectPlan,
               ),
               _PricingCard(
                 title: 'Ultra',
@@ -617,6 +640,7 @@ class PricingSection extends StatelessWidget {
                   'Advanced model access',
                   'Team collaboration controls',
                 ],
+                onSelect: onSelectPlan,
               ),
             ],
           ),
@@ -846,12 +870,14 @@ class _PricingCard extends StatelessWidget {
   final List<String> features;
   final String? badge;
   final bool highlighted;
+  final VoidCallback onSelect;
 
   const _PricingCard({
     required this.title,
     required this.price,
     required this.subtitle,
     required this.features,
+    required this.onSelect,
     this.badge,
     this.highlighted = false,
   });
@@ -958,7 +984,7 @@ class _PricingCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: onSelect,
               style: ElevatedButton.styleFrom(
                 backgroundColor: highlighted
                     ? colorScheme.primary
