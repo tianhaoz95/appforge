@@ -1188,8 +1188,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     textStyle: TextStyle(color: colorScheme.onPrimary),
                                   ),
                                   llmMessageStyle: LlmMessageStyle(
-                                    icon: null,
-                                    iconDecoration: null,
+                                    icon: Icons.circle,
+                                    iconColor: Colors.transparent,
+                                    iconDecoration: const BoxDecoration(color: Colors.transparent),
                                     decoration: null,
                                     padding: EdgeInsets.zero,
                                     margin: const EdgeInsets.only(left: -28, top: 4, bottom: 4),
