@@ -19,6 +19,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
+  bool _minimized = false;
 
   @override
   Widget build(BuildContext context) {
@@ -45,11 +46,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               app.setThemeMode(isDark ? ThemeMode.light : ThemeMode.dark);
             },
           ),
-          IconButton(
-            tooltip: 'Sign Out',
-            icon: const Icon(Icons.logout),
-            onPressed: () => FirebaseAuth.instance.signOut(),
-          ),
         ],
       ),
       body: Theme(
@@ -70,13 +66,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: NavigationRail(
               selectedIndex: _tab,
               onDestinationSelected: (i) => setState(() => _tab = i),
-              labelType: NavigationRailLabelType.all,
+              labelType: _minimized ? NavigationRailLabelType.none : NavigationRailLabelType.all,
               useIndicator: true,
               destinations: const [
                 NavigationRailDestination(icon: Icon(Icons.credit_card_outlined), label: Text('Plan')),
+                NavigationRailDestination(icon: Icon(Icons.receipt_long_outlined), label: Text('Billing')),
                 NavigationRailDestination(icon: Icon(Icons.smart_toy_outlined), label: Text('Model')),
                 NavigationRailDestination(icon: Icon(Icons.person_outline), label: Text('Profile')),
               ],
+              trailing: Expanded(
+                child: Align(
+                  alignment: Alignment.bottomCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(bottom: 20),
+                    child: IconButton(
+                      icon: Icon(_minimized ? Icons.chevron_right : Icons.chevron_left),
+                      onPressed: () => setState(() => _minimized = !_minimized),
+                      tooltip: _minimized ? 'Expand' : 'Minimize',
+                    ),
+                  ),
+                ),
+              ),
             ),
           ),
           Expanded(
@@ -87,7 +97,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 return IndexedStack(
                   index: _tab,
                   children: [
-                    _PlanTab(data: data, uid: user.uid),
+                    _PlanTab(data: data, uid: user.uid, onTabChange: (i) => setState(() => _tab = i)),
+                    _BillingTab(data: data, uid: user.uid),
                     _ModelTab(data: data, uid: user.uid),
                     _ProfileTab(user: user, data: data),
                   ],
@@ -105,7 +116,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
 class _PlanTab extends StatelessWidget {
   final Map<String, dynamic> data;
   final String uid;
-  const _PlanTab({required this.data, required this.uid});
+  final ValueChanged<int> onTabChange;
+  const _PlanTab({required this.data, required this.uid, required this.onTabChange});
 
   @override
   Widget build(BuildContext context) {
@@ -135,14 +147,33 @@ class _PlanTab extends StatelessWidget {
                     ScaffoldMessenger.of(context).showSnackBar(
                       SnackBar(content: Text('Switched to $plan plan')));
                   }
+                  
+                  // Navigate to billing information if selecting a paid plan but info is missing
+                  final hasBilling = (data['billing_name'] as String? ?? '').isNotEmpty && 
+                                   (data['billing_email'] as String? ?? '').isNotEmpty;
+                  if (plan != 'Free' && !hasBilling) {
+                    onTabChange(1); // Billing tab index
+                  }
                 },
               );
             }).toList(),
           ),
-          const SizedBox(height: 48),
-          _BillingSection(uid: uid, data: data),
         ],
       ),
+    );
+  }
+}
+
+class _BillingTab extends StatelessWidget {
+  final Map<String, dynamic> data;
+  final String uid;
+  const _BillingTab({required this.data, required this.uid});
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(32),
+      child: _BillingSection(uid: uid, data: data),
     );
   }
 }
