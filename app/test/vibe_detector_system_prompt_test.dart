@@ -29,9 +29,9 @@ Hope you like it!
       ),
     ));
 
-    expect(find.text('Deploy App'), findsOneWidget);
+    expect(find.text('Deploy'), findsOneWidget);
     
-    await tester.tap(find.text('Deploy App'));
+    await tester.tap(find.text('Deploy'));
     
     expect(capturedCode, contains('<div class="bg-blue-500 p-4">'));
     expect(capturedCode, contains('<h1 x-text="title"></h1>'));

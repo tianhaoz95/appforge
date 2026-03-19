@@ -17,7 +17,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('Deploy My App'), findsOneWidget);
+    expect(find.text('Deploy'), findsOneWidget);
     expect(find.text('Preview: My App'), findsOneWidget);
     
     // Original message is collapsed by default
@@ -40,8 +40,7 @@ void main() {
       ),
     ));
 
-    expect(find.text('Deploy App'), findsNothing);
-    expect(find.text('Deploy My App'), findsNothing);
+    expect(find.text('Deploy'), findsNothing);
     expect(find.textContaining('Just a regular message.'), findsOneWidget);
   });
 
@@ -76,7 +75,7 @@ void main() {
 
     expect(find.text('🚀'), findsOneWidget);
     expect(find.text('Preview: Rocket App'), findsOneWidget);
-    expect(find.text('Deploy Rocket App'), findsOneWidget);
+    expect(find.text('Deploy'), findsOneWidget);
   });
 
   testWidgets('MiniAppPreview has a full screen button that triggers onDeploy with isTemporary: true', (WidgetTester tester) async {

@@ -178,32 +178,36 @@ class VibeDetector extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              if (onAutoRefine != null) ...[
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton.icon(
-                    onPressed: () => onAutoRefine?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
-                    icon: const Icon(Icons.auto_fix_high),
-                    label: const Text('Auto Refine'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+              Row(
+                children: [
+                  if (onAutoRefine != null) ...[
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () => onAutoRefine?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
+                        icon: const Icon(Icons.auto_fix_high, size: 18),
+                        label: const Text('Refine'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
+                      icon: const Icon(Icons.rocket_launch, size: 18),
+                      label: const Text('Deploy'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orangeAccent,
+                        foregroundColor: Colors.black,
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(height: 8),
-              ],
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
-                  icon: const Icon(Icons.rocket_launch),
-                  label: Text(name != null ? 'Deploy $name' : 'Deploy App'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orangeAccent,
-                    foregroundColor: Colors.black,
-                  ),
-                ),
+                ],
               ),
             ] else if (cleanMessage.isNotEmpty) ...[
               MarkdownBody(data: cleanMessage),

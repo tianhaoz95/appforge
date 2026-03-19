@@ -498,8 +498,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
 
     systemPrompt += '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
-        '\n\nAUTO REFINE CAPABILITY: '
-        'When you receive a message starting with "AUTO REFINE:", it means the user wants you to analyze the current app for flaws and potential improvements based on logs and a screenshot. '
+        '\n\nREFINE CAPABILITY: '
+        'When you receive a message starting with "REFINE:", it means the user wants you to analyze the current app for flaws and potential improvements based on logs and a screenshot. '
         'You MUST analyze the console logs for errors or warnings, and the screenshot for layout/styling issues. '
         'Then, provide the improved code (and design document) following the same <forge>, <backend>, <name>, <design>, <version>, and <release_notes> tagging rules. '
         '\nExample of Alpine.js AI integration: '
@@ -854,7 +854,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       if (_provider != null) {
         final autoRefineMessage = ChatMessage(
           origin: MessageOrigin.user,
-          text: "AUTO REFINE: Please analyze this app for flaws and potential improvements based on the following context:\n\n"
+          text: "REFINE: Please analyze this app for flaws and potential improvements based on the following context:\n\n"
               "1. App Console Logs:\n$logsText\n\n"
               "2. App Screenshot (attached below).\n\n"
               "Please look for visual inconsistencies, bugs indicated by logs, or UX improvements and implement the necessary changes in the code and design doc.",

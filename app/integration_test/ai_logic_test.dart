@@ -186,7 +186,7 @@ document.addEventListener('alpine:init', () => {
     await tester.pumpAndSettle(const Duration(seconds: 2));
 
     // Tap deploy button
-    final deployButton = find.textContaining('Deploy Todo App', skipOffstage: false);
+    final deployButton = find.text('Deploy', skipOffstage: false);
     expect(deployButton, findsOneWidget, reason: 'Deploy button not found');
     await tester.ensureVisible(deployButton);
     await tester.pumpAndSettle();

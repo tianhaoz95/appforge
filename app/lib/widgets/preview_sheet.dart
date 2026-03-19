@@ -334,7 +334,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       
       widget.onAutoRefine?.call(List.from(_logs), screenshot);
     } catch (e) {
-      debugPrint('Error capturing screenshot for Auto Refine: $e');
+      debugPrint('Error capturing screenshot for Refine: $e');
     }
   }
 

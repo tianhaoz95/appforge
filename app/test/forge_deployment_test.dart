@@ -71,10 +71,10 @@ void main() {
     );
 
     // 1. Verify VibeDetector found the tag and showed the button
-    expect(find.text('Deploy App'), findsOneWidget);
+    expect(find.text('Deploy'), findsOneWidget);
 
     // 2. Tap Deploy
-    await tester.tap(find.text('Deploy App'));
+    await tester.tap(find.text('Deploy'));
     await tester.pumpAndSettle();
 
     // 3. Verify PreviewSheet is shown
