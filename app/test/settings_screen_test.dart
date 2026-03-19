@@ -87,4 +87,56 @@ void main() {
     expect(find.text('5,678'), findsOneWidget);
     expect(find.text('6,912'), findsOneWidget);
   });
+
+  testWidgets('SettingsScreen shows Change Password button and expands fields', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await tester.pumpWidget(createSettingsScreen());
+
+    // Find Change Password button (it should be visible without edit mode)
+    expect(find.text('Change Password'), findsOneWidget);
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+
+    // Verify password fields appear
+    expect(find.widgetWithText(TextField, 'Old Password'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'New Password'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Confirm New Password'), findsOneWidget);
+    expect(find.text('Update Password'), findsOneWidget);
+
+    // Test cancelling password change
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Update Password'), findsNothing);
+  });
+
+  testWidgets('SettingsScreen calls AuthProvider.changePassword with correct values', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    when(() => mockAuthProvider.changePassword(any(), any())).thenAnswer((_) async {});
+
+    await tester.pumpWidget(createSettingsScreen());
+
+    // Tap Change Password
+    await tester.tap(find.text('Change Password'));
+    await tester.pumpAndSettle();
+
+    // Enter passwords
+    await tester.enterText(find.widgetWithText(TextField, 'Old Password'), 'old123');
+    await tester.enterText(find.widgetWithText(TextField, 'New Password'), 'new123456');
+    await tester.enterText(find.widgetWithText(TextField, 'Confirm New Password'), 'new123456');
+
+    // Tap Update Password
+    await tester.tap(find.text('Update Password'));
+    await tester.pumpAndSettle();
+
+    // Verify AuthProvider called
+    verify(() => mockAuthProvider.changePassword('old123', 'new123456')).called(1);
+    expect(find.text('Password updated successfully'), findsOneWidget);
+  });
 }

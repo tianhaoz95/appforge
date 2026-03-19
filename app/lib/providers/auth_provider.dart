@@ -63,4 +63,20 @@ class AuthProvider extends ChangeNotifier {
       rethrow;
     }
   }
+
+  Future<void> changePassword(String oldPassword, String newPassword) async {
+    try {
+      final email = _user?.email;
+      if (email == null) throw Exception('User email not found');
+      
+      // Re-authenticate user
+      AuthCredential credential = EmailAuthProvider.credential(email: email, password: oldPassword);
+      await _user?.reauthenticateWithCredential(credential);
+      
+      // Update password
+      await _user?.updatePassword(newPassword);
+    } catch (e) {
+      rethrow;
+    }
+  }
 }

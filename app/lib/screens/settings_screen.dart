@@ -19,8 +19,12 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   final _nameController = TextEditingController();
+  final _oldPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   bool _isEditingProfile = false;
+  bool _isChangingPassword = false;
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
@@ -69,6 +73,58 @@ class _SettingsScreenState extends State<SettingsScreen> {
             content: Text('Error updating profile: ${e.toString()}'),
             backgroundColor: Colors.redAccent,
             behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _changePassword() async {
+    final oldPass = _oldPasswordController.text.trim();
+    final newPass = _newPasswordController.text.trim();
+    final confirmPass = _confirmPasswordController.text.trim();
+
+    if (oldPass.isEmpty || newPass.isEmpty || confirmPass.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please fill in all password fields')),
+      );
+      return;
+    }
+
+    if (newPass != confirmPass) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New passwords do not match')),
+      );
+      return;
+    }
+
+    if (newPass.length < 6) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('New password must be at least 6 characters')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await context.read<AuthProvider>().changePassword(oldPass, newPass);
+      if (mounted) {
+        _oldPasswordController.clear();
+        _newPasswordController.clear();
+        _confirmPasswordController.clear();
+        setState(() => _isChangingPassword = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Password updated successfully')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error updating password: ${e.toString()}'),
+            backgroundColor: Colors.redAccent,
           ),
         );
       }
@@ -203,6 +259,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
               children: [
                 _buildProfileHeader(user, theme, settingsProvider),
+                if (user?.email != null) ...[
+                  const SizedBox(height: 24),
+                  _buildPasswordSection(theme),
+                ],
                 const SizedBox(height: 32),
                 _buildSectionHeader('App preferences'),
                 const SizedBox(height: 12),
@@ -519,6 +579,107 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
+  Widget _buildPasswordSection(ThemeData theme) {
+    if (!_isChangingPassword) {
+      return Row(
+        children: [
+          const Icon(Icons.lock_outline, size: 20, color: Colors.blueGrey),
+          const SizedBox(width: 12),
+          TextButton.icon(
+            onPressed: () => setState(() => _isChangingPassword = true),
+            icon: const Icon(Icons.lock_reset, size: 18),
+            label: const Text('Change Password'),
+            style: TextButton.styleFrom(
+              padding: EdgeInsets.zero,
+              visualDensity: VisualDensity.compact,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.lock_reset, size: 20, color: theme.colorScheme.primary),
+              const SizedBox(width: 8),
+              Text(
+                'Change Password',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            controller: _oldPasswordController,
+            decoration: const InputDecoration(
+              labelText: 'Old Password',
+              isDense: true,
+              prefixIcon: Icon(Icons.password, size: 18),
+            ),
+            obscureText: true,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _newPasswordController,
+            decoration: const InputDecoration(
+              labelText: 'New Password',
+              isDense: true,
+              prefixIcon: Icon(Icons.lock_outline, size: 18),
+            ),
+            obscureText: true,
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _confirmPasswordController,
+            decoration: const InputDecoration(
+              labelText: 'Confirm New Password',
+              isDense: true,
+              prefixIcon: Icon(Icons.lock_outline, size: 18),
+            ),
+            obscureText: true,
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              TextButton(
+                onPressed: () {
+                  setState(() {
+                    _isChangingPassword = false;
+                    _oldPasswordController.clear();
+                    _newPasswordController.clear();
+                    _confirmPasswordController.clear();
+                  });
+                },
+                child: const Text('Cancel'),
+              ),
+              const Spacer(),
+              FilledButton.tonal(
+                onPressed: _changePassword,
+                style: FilledButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                ),
+                child: const Text('Update Password'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildProfileHeader(dynamic user, ThemeData theme, SettingsProvider settingsProvider) {
     final initials = (user?.displayName ?? user?.email ?? 'U')
         .toString()
@@ -585,7 +746,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ),
                       autofocus: true,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 16),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
@@ -729,6 +890,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _nameController.dispose();
+    _oldPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
     super.dispose();
   }
 }
