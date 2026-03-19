@@ -17,6 +17,12 @@ class SettingsProvider with ChangeNotifier {
   String _systemPrompt = '';
   ThemeMode _themeMode = ThemeMode.system;
   ForgeMode _defaultForgeMode = ForgeMode.build;
+  int _totalPromptTokens = 0;
+  int _totalCandidateTokens = 0;
+  int _totalTotalTokens = 0;
+  int _totalThoughtsTokens = 0;
+  int _totalCachedTokens = 0;
+  int _totalToolUseTokens = 0;
 
   static const String _keySuggestExistingApps = 'suggest_existing_apps';
   static const String _keyAllowGeolocation = 'allow_geolocation';
@@ -31,6 +37,12 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyLocalAvatarPath = 'local_avatar_path';
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyDefaultForgeMode = 'default_forge_mode';
+  static const String _keyTotalPromptTokens = 'total_prompt_tokens';
+  static const String _keyTotalCandidateTokens = 'total_candidate_tokens';
+  static const String _keyTotalTotalTokens = 'total_total_tokens';
+  static const String _keyTotalThoughtsTokens = 'total_thoughts_tokens';
+  static const String _keyTotalCachedTokens = 'total_cached_tokens';
+  static const String _keyTotalToolUseTokens = 'total_tool_use_tokens';
 
   bool get suggestExistingApps => _suggestExistingApps;
   bool get allowGeolocation => _allowGeolocation;
@@ -46,6 +58,12 @@ class SettingsProvider with ChangeNotifier {
   String get systemPrompt => _systemPrompt;
   ThemeMode get themeMode => _themeMode;
   ForgeMode get defaultForgeMode => _defaultForgeMode;
+  int get totalPromptTokens => _totalPromptTokens;
+  int get totalCandidateTokens => _totalCandidateTokens;
+  int get totalTotalTokens => _totalTotalTokens;
+  int get totalThoughtsTokens => _totalThoughtsTokens;
+  int get totalCachedTokens => _totalCachedTokens;
+  int get totalToolUseTokens => _totalToolUseTokens;
 
   Future<void> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -60,6 +78,12 @@ class SettingsProvider with ChangeNotifier {
     _rememberMe = prefs.getBool(_keyRememberMe) ?? false;
     _rememberedEmail = prefs.getString(_keyRememberedEmail) ?? '';
     _localAvatarPath = prefs.getString(_keyLocalAvatarPath) ?? '';
+    _totalPromptTokens = prefs.getInt(_keyTotalPromptTokens) ?? 0;
+    _totalCandidateTokens = prefs.getInt(_keyTotalCandidateTokens) ?? 0;
+    _totalTotalTokens = prefs.getInt(_keyTotalTotalTokens) ?? 0;
+    _totalThoughtsTokens = prefs.getInt(_keyTotalThoughtsTokens) ?? 0;
+    _totalCachedTokens = prefs.getInt(_keyTotalCachedTokens) ?? 0;
+    _totalToolUseTokens = prefs.getInt(_keyTotalToolUseTokens) ?? 0;
     
     final themeIndex = prefs.getInt(_keyThemeMode) ?? ThemeMode.system.index;
     _themeMode = ThemeMode.values[themeIndex];
@@ -68,6 +92,24 @@ class SettingsProvider with ChangeNotifier {
     _defaultForgeMode = ForgeMode.values[modeIndex];
     
     notifyListeners();
+  }
+
+  Future<void> addTokenUsage(int prompt, int candidate, int total, {int thoughts = 0, int cached = 0, int toolUse = 0}) async {
+    _totalPromptTokens += prompt;
+    _totalCandidateTokens += candidate;
+    _totalTotalTokens += total;
+    _totalThoughtsTokens += thoughts;
+    _totalCachedTokens += cached;
+    _totalToolUseTokens += toolUse;
+    notifyListeners();
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_keyTotalPromptTokens, _totalPromptTokens);
+    await prefs.setInt(_keyTotalCandidateTokens, _totalCandidateTokens);
+    await prefs.setInt(_keyTotalTotalTokens, _totalTotalTokens);
+    await prefs.setInt(_keyTotalThoughtsTokens, _totalThoughtsTokens);
+    await prefs.setInt(_keyTotalCachedTokens, _totalCachedTokens);
+    await prefs.setInt(_keyTotalToolUseTokens, _totalToolUseTokens);
   }
 
   void setSystemPrompt(String value) {

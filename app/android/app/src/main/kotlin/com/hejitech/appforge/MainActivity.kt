@@ -79,9 +79,15 @@ class MainActivity : FlutterActivity() {
                 val response = model.generateContent(prompt)
                 val source = response.inferenceSource.toString()
                 val responseText = response.text ?: ""
+                val usage = response.usageMetadata
                 result.success(mapOf(
                     "text" to responseText,
-                    "source" to source
+                    "source" to source,
+                    "usage" to mapOf(
+                        "promptTokenCount" to usage?.promptTokenCount,
+                        "candidatesTokenCount" to usage?.candidatesTokenCount,
+                        "totalTokenCount" to usage?.totalTokenCount
+                    )
                 ))
             } catch (e: Exception) {
                 result.error("GENERATION_FAILED", e.message, null)

@@ -27,6 +27,7 @@ import 'repositories/micro_app_data_repository.dart';
 import 'repositories/local_database.dart';
 import 'providers/fallback_llm_provider.dart';
 import 'providers/hybrid_inference_manager.dart';
+import 'providers/token_tracking_firebase_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/forge_mode.dart';
@@ -586,8 +587,32 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     );
 
     final provider = FallbackLlmProvider(
-      primary: FirebaseProvider(model: primaryModel),
-      secondary: FirebaseProvider(model: secondaryModel),
+      primary: TokenTrackingFirebaseProvider(
+        model: primaryModel,
+        onUsageMetadata: (meta) {
+          settings.addTokenUsage(
+            meta.promptTokenCount ?? 0,
+            meta.candidatesTokenCount ?? 0,
+            meta.totalTokenCount ?? 0,
+            thoughts: meta.thoughtsTokenCount ?? 0,
+            cached: meta.cachedContentTokenCount ?? 0,
+            toolUse: meta.toolUsePromptTokenCount ?? 0,
+          );
+        },
+      ),
+      secondary: TokenTrackingFirebaseProvider(
+        model: secondaryModel,
+        onUsageMetadata: (meta) {
+          settings.addTokenUsage(
+            meta.promptTokenCount ?? 0,
+            meta.candidatesTokenCount ?? 0,
+            meta.totalTokenCount ?? 0,
+            thoughts: meta.thoughtsTokenCount ?? 0,
+            cached: meta.cachedContentTokenCount ?? 0,
+            toolUse: meta.toolUsePromptTokenCount ?? 0,
+          );
+        },
+      ),
     );
 
     provider.addListener(_onHistoryChanged);

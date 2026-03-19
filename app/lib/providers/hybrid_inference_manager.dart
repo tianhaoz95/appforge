@@ -8,8 +8,17 @@ class HybridInferenceSource {
 class HybridInferenceResult {
   final String text;
   final String source;
+  final int promptTokenCount;
+  final int candidateTokenCount;
+  final int totalTokenCount;
 
-  HybridInferenceResult({required this.text, required this.source});
+  HybridInferenceResult({
+    required this.text, 
+    required this.source,
+    this.promptTokenCount = 0,
+    this.candidateTokenCount = 0,
+    this.totalTokenCount = 0,
+  });
 
   bool get isOnDevice => source == HybridInferenceSource.onDevice;
 }
@@ -34,9 +43,14 @@ class HybridInferenceManager {
       'modelName': modelName,
     });
     
+    final usage = result['usage'] as Map?;
+    
     return HybridInferenceResult(
       text: result['text'] as String,
       source: result['source'] as String,
+      promptTokenCount: usage?['promptTokenCount'] as int? ?? 0,
+      candidateTokenCount: usage?['candidatesTokenCount'] as int? ?? 0,
+      totalTokenCount: usage?['totalTokenCount'] as int? ?? 0,
     );
   }
 }

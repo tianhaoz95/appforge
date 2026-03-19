@@ -63,5 +63,28 @@ void main() {
       await newProvider.loadSettings();
       expect(newProvider.localAvatarPath, path);
     });
+
+    test('token usage persists across loadSettings', () async {
+      await settingsProvider.addTokenUsage(100, 200, 300, thoughts: 10, cached: 20, toolUse: 30);
+      expect(settingsProvider.totalPromptTokens, 100);
+      expect(settingsProvider.totalCandidateTokens, 200);
+      expect(settingsProvider.totalTotalTokens, 300);
+      expect(settingsProvider.totalThoughtsTokens, 10);
+      expect(settingsProvider.totalCachedTokens, 20);
+      expect(settingsProvider.totalToolUseTokens, 30);
+
+      final newProvider = SettingsProvider();
+      await newProvider.loadSettings();
+      expect(newProvider.totalPromptTokens, 100);
+      expect(newProvider.totalCandidateTokens, 200);
+      expect(newProvider.totalTotalTokens, 300);
+      expect(newProvider.totalThoughtsTokens, 10);
+      expect(newProvider.totalCachedTokens, 20);
+      expect(newProvider.totalToolUseTokens, 30);
+
+      await newProvider.addTokenUsage(50, 50, 100, thoughts: 5);
+      expect(newProvider.totalTotalTokens, 400);
+      expect(newProvider.totalThoughtsTokens, 15);
+    });
   });
 }

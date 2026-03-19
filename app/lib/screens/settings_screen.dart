@@ -227,6 +227,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+                _buildSectionHeader('Token Usage'),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
+                  ),
+                  child: Column(
+                    children: [
+                      _buildTokenRow('Prompt Tokens', settingsProvider.totalPromptTokens, theme),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Divider(height: 1),
+                      ),
+                      _buildTokenRow('Candidate Tokens', settingsProvider.totalCandidateTokens, theme),
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 8.0),
+                        child: Divider(height: 1),
+                      ),
+                      if (settingsProvider.totalThoughtsTokens > 0) ...[
+                        _buildTokenRow('Thoughts Tokens', settingsProvider.totalThoughtsTokens, theme),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Divider(height: 1),
+                        ),
+                      ],
+                      if (settingsProvider.totalCachedTokens > 0) ...[
+                        _buildTokenRow('Cached Tokens', settingsProvider.totalCachedTokens, theme),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Divider(height: 1),
+                        ),
+                      ],
+                      if (settingsProvider.totalToolUseTokens > 0) ...[
+                        _buildTokenRow('Tool Use Tokens', settingsProvider.totalToolUseTokens, theme),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8.0),
+                          child: Divider(height: 1),
+                        ),
+                      ],
+                      _buildTokenRow('Total Tokens', settingsProvider.totalTotalTokens, theme, isBold: true),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 32),
                 _buildSectionHeader('AI agent preferences'),
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
@@ -573,6 +620,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
       subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
       trailing: trailing,
+    );
+  }
+
+  Widget _buildTokenRow(String label, int value, ThemeData theme, {bool isBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        Text(
+          value.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},'),
+          style: theme.textTheme.bodyLarge?.copyWith(
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            fontFamily: 'monospace',
+            color: isBold ? theme.colorScheme.primary : theme.colorScheme.onSurface,
+          ),
+        ),
+      ],
     );
   }
 

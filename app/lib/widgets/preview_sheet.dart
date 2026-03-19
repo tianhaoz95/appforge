@@ -564,6 +564,17 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
 
     try {
       final response = await primaryModel.generateContent([Content.text(prompt)]);
+      if (response.usageMetadata != null && mounted) {
+        final meta = response.usageMetadata!;
+        context.read<SettingsProvider>().addTokenUsage(
+          meta.promptTokenCount ?? 0,
+          meta.candidatesTokenCount ?? 0,
+          meta.totalTokenCount ?? 0,
+          thoughts: meta.thoughtsTokenCount ?? 0,
+          cached: meta.cachedContentTokenCount ?? 0,
+          toolUse: meta.toolUsePromptTokenCount ?? 0,
+        );
+      }
       return response.text ?? 'No response';
     } catch (e) {
       final errorStr = e.toString().toLowerCase();
@@ -577,6 +588,17 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           ],
         );
         final response = await secondaryModel.generateContent([Content.text(prompt)]);
+        if (response.usageMetadata != null && mounted) {
+          final meta = response.usageMetadata!;
+          context.read<SettingsProvider>().addTokenUsage(
+            meta.promptTokenCount ?? 0,
+            meta.candidatesTokenCount ?? 0,
+            meta.totalTokenCount ?? 0,
+            thoughts: meta.thoughtsTokenCount ?? 0,
+            cached: meta.cachedContentTokenCount ?? 0,
+            toolUse: meta.toolUsePromptTokenCount ?? 0,
+          );
+        }
         return response.text ?? 'No response';
       }
       rethrow;
