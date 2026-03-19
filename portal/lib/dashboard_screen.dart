@@ -64,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               child: NavigationRail(
                 extended: !_minimized,
+                minExtendedWidth: 160,
                 selectedIndex: _tab,
                 onDestinationSelected: (i) => setState(() => _tab = i),
                 useIndicator: true,
