@@ -19,11 +19,17 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _tab = 0;
-  bool _minimized = false;
+  bool? _isMinimized;
 
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser!;
+    final size = MediaQuery.of(context).size;
+    final isMobile = size.width < 900;
+
+    _isMinimized ??= isMobile;
+
+    final minimized = _isMinimized!;
 
     return Scaffold(
       appBar: AppBar(
@@ -55,70 +61,102 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           dividerTheme: const DividerThemeData(color: Colors.transparent),
         ),
-        child: Row(
+        child: Stack(
           children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.only(
-                topRight: Radius.circular(24),
-                bottomRight: Radius.circular(24),
-              ),
-              child: NavigationRail(
-                extended: !_minimized,
-                minExtendedWidth: 160,
-                selectedIndex: _tab,
-                onDestinationSelected: (i) => setState(() => _tab = i),
-                useIndicator: true,
-                destinations: const [
-                  NavigationRailDestination(
-                    icon: Icon(Icons.credit_card_outlined),
-                    label: Text('Plan'),
+            Row(
+              children: [
+                ClipRRect(
+                  borderRadius: const BorderRadius.only(
+                    topRight: Radius.circular(24),
+                    bottomRight: Radius.circular(24),
                   ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.receipt_long_outlined),
-                    label: Text('Billing'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.smart_toy_outlined),
-                    label: Text('Model'),
-                  ),
-                  NavigationRailDestination(
-                    icon: Icon(Icons.person_outline),
-                    label: Text('Profile'),
-                  ),
-                ],
-                trailing: Expanded(
-                  child: Align(
-                    alignment: _minimized ? Alignment.bottomCenter : Alignment.bottomLeft,
-                    child: Padding(
-                      padding: EdgeInsets.only(bottom: 20, left: _minimized ? 0 : 16),
-                      child: IconButton(
-                        icon: Icon(_minimized ? Icons.chevron_right : Icons.chevron_left),
-                        onPressed: () => setState(() => _minimized = !_minimized),
-                        tooltip: _minimized ? 'Expand' : 'Minimize',
+                  child: NavigationRail(
+                    extended: !minimized,
+                    minExtendedWidth: 160,
+                    selectedIndex: _tab,
+                    onDestinationSelected: (i) => setState(() => _tab = i),
+                    useIndicator: true,
+                    destinations: const [
+                      NavigationRailDestination(
+                        icon: Icon(Icons.credit_card_outlined),
+                        label: Text('Plan'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.receipt_long_outlined),
+                        label: Text('Billing'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.smart_toy_outlined),
+                        label: Text('Model'),
+                      ),
+                      NavigationRailDestination(
+                        icon: Icon(Icons.person_outline),
+                        label: Text('Profile'),
+                      ),
+                    ],
+                    trailing: Expanded(
+                      child: Align(
+                        alignment: minimized ? Alignment.bottomCenter : Alignment.bottomLeft,
+                        child: Padding(
+                          padding: EdgeInsets.only(bottom: 20, left: minimized ? 0 : 16),
+                          child: IconButton(
+                            icon: Icon(minimized ? Icons.chevron_right : Icons.chevron_left),
+                            onPressed: () => setState(() => _isMinimized = !minimized),
+                            tooltip: minimized ? 'Expand' : 'Minimize',
+                          ),
+                        ),
                       ),
                     ),
                   ),
                 ),
-              ),
+                if (!isMobile)
+                  Expanded(
+                    child: _buildMainContent(user),
+                  ),
+              ],
             ),
-              Expanded(
-              child: StreamBuilder<DocumentSnapshot>(
-                stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
-                builder: (context, snap) {
-                  final data = snap.data?.data() as Map<String, dynamic>? ?? {};
-                  return AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: KeyedSubtree(
-                      key: ValueKey(_tab),
-                      child: _buildTab(context, _tab, data, user),
-                    ),
-                  );
-                },
+            if (isMobile)
+              AnimatedPositioned(
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+                left: minimized ? 72 : 160,
+                top: 0,
+                bottom: 0,
+                width: size.width - 72,
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    boxShadow: [
+                      if (!minimized)
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.1),
+                          blurRadius: 10,
+                          offset: const Offset(-5, 0),
+                        ),
+                    ],
+                  ),
+                  child: _buildMainContent(user),
+                ),
               ),
-            ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildMainContent(User user) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+      builder: (context, snap) {
+        final data = snap.data?.data() as Map<String, dynamic>? ?? {};
+        return AnimatedSwitcher(
+          duration: const Duration(milliseconds: 300),
+          child: KeyedSubtree(
+            key: ValueKey(_tab),
+            child: _buildTab(context, _tab, data, user),
+          ),
+        );
+      },
     );
   }
 
