@@ -24,7 +24,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser!;
-    final cs = Theme.of(context).colorScheme;
 
     return Scaffold(
       appBar: AppBar(
@@ -57,73 +56,84 @@ class _DashboardScreenState extends State<DashboardScreen> {
           dividerTheme: const DividerThemeData(color: Colors.transparent),
         ),
         child: Row(
-        children: [
-          ClipRRect(
-            borderRadius: const BorderRadius.only(
-              topRight: Radius.circular(24),
-              bottomRight: Radius.circular(24),
-            ),
-            child: NavigationRail(
-              selectedIndex: _tab,
-              onDestinationSelected: (i) => setState(() => _tab = i),
-              labelType: _minimized ? NavigationRailLabelType.none : NavigationRailLabelType.all,
-              useIndicator: true,
-              minWidth: _minimized ? 56 : 80,
-              destinations: [
-                NavigationRailDestination(
-                  icon: Icon(Icons.credit_card_outlined, size: _minimized ? 20 : 24),
-                  label: const Text('Plan'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.receipt_long_outlined, size: _minimized ? 20 : 24),
-                  label: const Text('Billing'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.smart_toy_outlined, size: _minimized ? 20 : 24),
-                  label: const Text('Model'),
-                ),
-                NavigationRailDestination(
-                  icon: Icon(Icons.person_outline, size: _minimized ? 20 : 24),
-                  label: const Text('Profile'),
-                ),
-              ],
-              trailing: Expanded(
-                child: Align(
-                  alignment: Alignment.bottomCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(bottom: 20),
-                    child: IconButton(
-                      iconSize: _minimized ? 20 : 24,
-                      icon: Icon(_minimized ? Icons.chevron_right : Icons.chevron_left),
-                      onPressed: () => setState(() => _minimized = !_minimized),
-                      tooltip: _minimized ? 'Expand' : 'Minimize',
+          children: [
+            ClipRRect(
+              borderRadius: const BorderRadius.only(
+                topRight: Radius.circular(24),
+                bottomRight: Radius.circular(24),
+              ),
+              child: NavigationRail(
+                extended: !_minimized,
+                selectedIndex: _tab,
+                onDestinationSelected: (i) => setState(() => _tab = i),
+                useIndicator: true,
+                destinations: const [
+                  NavigationRailDestination(
+                    icon: Icon(Icons.credit_card_outlined),
+                    label: Text('Plan'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.receipt_long_outlined),
+                    label: Text('Billing'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.smart_toy_outlined),
+                    label: Text('Model'),
+                  ),
+                  NavigationRailDestination(
+                    icon: Icon(Icons.person_outline),
+                    label: Text('Profile'),
+                  ),
+                ],
+                trailing: Expanded(
+                  child: Align(
+                    alignment: _minimized ? Alignment.bottomCenter : Alignment.bottomLeft,
+                    child: Padding(
+                      padding: EdgeInsets.only(bottom: 20, left: _minimized ? 0 : 16),
+                      child: IconButton(
+                        icon: Icon(_minimized ? Icons.chevron_right : Icons.chevron_left),
+                        onPressed: () => setState(() => _minimized = !_minimized),
+                        tooltip: _minimized ? 'Expand' : 'Minimize',
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
-          ),
-          Expanded(
-            child: StreamBuilder<DocumentSnapshot>(
-              stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
-              builder: (context, snap) {
-                final data = snap.data?.data() as Map<String, dynamic>? ?? {};
-                return IndexedStack(
-                  index: _tab,
-                  children: [
-                    _PlanTab(data: data, uid: user.uid, onTabChange: (i) => setState(() => _tab = i)),
-                    _BillingTab(data: data, uid: user.uid),
-                    _ModelTab(data: data, uid: user.uid),
-                    _ProfileTab(user: user, data: data),
-                  ],
-                );
-              },
+              Expanded(
+              child: StreamBuilder<DocumentSnapshot>(
+                stream: FirebaseFirestore.instance.collection('users').doc(user.uid).snapshots(),
+                builder: (context, snap) {
+                  final data = snap.data?.data() as Map<String, dynamic>? ?? {};
+                  return AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: KeyedSubtree(
+                      key: ValueKey(_tab),
+                      child: _buildTab(context, _tab, data, user),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
-        ],
+          ],
         ),
       ),
     );
+  }
+
+  Widget _buildTab(BuildContext context, int index, Map<String, dynamic> data, User user) {
+    switch (index) {
+      case 0:
+        return _PlanTab(data: data, uid: user.uid, onTabChange: (i) => setState(() => _tab = i));
+      case 1:
+        return _BillingTab(data: data, uid: user.uid);
+      case 2:
+        return _ModelTab(data: data, uid: user.uid);
+      case 3:
+        return _ProfileTab(user: user, data: data);
+      default:
+        return const SizedBox.shrink();
+    }
   }
 }
 
@@ -277,11 +287,11 @@ class _BillingSectionState extends State<_BillingSection> {
             ),
             child: Column(
               children: [
-                Icon(Icons.receipt_long_outlined, size: 40, color: cs.onSurface.withOpacity(0.3)),
+                Icon(Icons.receipt_long_outlined, size: 40, color: cs.onSurface.withValues(alpha: 0.3)),
                 const SizedBox(height: 12),
-                Text('No billing information yet', style: TextStyle(color: cs.onSurface.withOpacity(0.5), fontWeight: FontWeight.w500)),
+                Text('No billing information yet', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.w500)),
                 const SizedBox(height: 4),
-                Text('Add your details for invoicing and receipts.', style: TextStyle(fontSize: 12, color: cs.onSurface.withOpacity(0.35))),
+                Text('Add your details for invoicing and receipts.', style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.35))),
                 const SizedBox(height: 16),
                 FilledButton.tonal(
                   onPressed: () => setState(() => _editing = true),
@@ -317,7 +327,7 @@ class _BillingSectionState extends State<_BillingSection> {
   Widget _infoRow(String label, String value, ColorScheme cs) => Padding(
     padding: const EdgeInsets.only(bottom: 8),
     child: Row(children: [
-      SizedBox(width: 80, child: Text(label, style: TextStyle(color: cs.onSurface.withOpacity(0.6), fontSize: 13))),
+      SizedBox(width: 80, child: Text(label, style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6), fontSize: 13))),
       const SizedBox(width: 12),
       Text(value, style: const TextStyle(fontSize: 13)),
     ]),
@@ -344,7 +354,7 @@ class _PlanCard extends StatelessWidget {
       width: 260,
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: selected ? cs.primaryContainer.withOpacity(0.4) : cs.surface,
+        color: selected ? cs.primaryContainer.withValues(alpha: 0.4) : cs.surface,
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
       ),
@@ -355,7 +365,7 @@ class _PlanCard extends StatelessWidget {
           const SizedBox(height: 4),
           Text(_prices[plan]!, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900)),
           const SizedBox(height: 8),
-          Text(_descs[plan]!, style: TextStyle(color: cs.onSurface.withOpacity(0.7), height: 1.5)),
+          Text(_descs[plan]!, style: TextStyle(color: cs.onSurface.withValues(alpha: 0.7), height: 1.5)),
           const SizedBox(height: 20),
           SizedBox(
             width: double.infinity,
@@ -386,7 +396,7 @@ class _ModelTab extends StatelessWidget {
         children: [
           Text('AI Model', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
-          Text('Choose the model used for app generation.', style: TextStyle(color: cs.onSurface.withOpacity(0.6))),
+          Text('Choose the model used for app generation.', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6))),
           const SizedBox(height: 32),
           ..._models.map((model) {
             final selected = model == current;
@@ -397,7 +407,7 @@ class _ModelTab extends StatelessWidget {
                   borderRadius: BorderRadius.circular(14),
                   side: BorderSide(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
                 ),
-                tileColor: selected ? cs.primaryContainer.withOpacity(0.3) : null,
+                tileColor: selected ? cs.primaryContainer.withValues(alpha: 0.3) : null,
                 leading: Icon(Icons.smart_toy_outlined, color: selected ? cs.primary : null),
                 title: Text(model, style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
                 trailing: selected ? Icon(Icons.check_circle, color: cs.primary) : null,
