@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
+import '../legal_notice_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -164,6 +165,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     autofillHints: const [AutofillHints.password],
                     textInputAction: TextInputAction.done,
                     onSubmitted: (_) => _register(),
+                  ),
+
+                  const SizedBox(height: 16),
+                  
+                  // Privacy and User Agreement links
+                  Center(
+                    child: Wrap(
+                      alignment: WrapAlignment.center,
+                      children: [
+                        const Text(
+                          'By registering, you agree to our ',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LegalNoticeScreen(
+                                type: LegalNoticeType.userAgreement,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'User Agreement',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                        const Text(
+                          ' and ',
+                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                        ),
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const LegalNoticeScreen(
+                                type: LegalNoticeType.privacyNotice,
+                              ),
+                            ),
+                          ),
+                          child: Text(
+                            'Privacy Notice',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Theme.of(context).colorScheme.primary,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
 
                   if (_errorMessage != null) ...[

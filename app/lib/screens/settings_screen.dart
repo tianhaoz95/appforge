@@ -8,6 +8,7 @@ import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/forge_mode.dart';
+import 'legal_notice_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -471,8 +472,50 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 const SizedBox(height: 48),
                 _buildAppInfo(theme),
+                const SizedBox(height: 24),
+                _buildLegalLinks(context, theme),
               ],
             ),
+    );
+  }
+
+  Widget _buildLegalLinks(BuildContext context, ThemeData theme) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        TextButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LegalNoticeScreen(
+                type: LegalNoticeType.privacyNotice,
+              ),
+            ),
+          ),
+          child: Text(
+            'Privacy Notice',
+            style: TextStyle(fontSize: 12, color: theme.colorScheme.primary),
+          ),
+        ),
+        Text(
+          '•',
+          style: TextStyle(fontSize: 12, color: theme.hintColor),
+        ),
+        TextButton(
+          onPressed: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const LegalNoticeScreen(
+                type: LegalNoticeType.userAgreement,
+              ),
+            ),
+          ),
+          child: Text(
+            'User Agreement',
+            style: TextStyle(fontSize: 12, color: theme.colorScheme.primary),
+          ),
+        ),
+      ],
     );
   }
 
