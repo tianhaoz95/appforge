@@ -289,6 +289,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   String? _enhancementPeriodicBackend;
   String? _enhancementDesign;
   String? _enhancementAppId;
+  String? _enhancementVersion;
   bool _enhancementContextInPrompt = false;
   ForgeMode _currentMode = ForgeMode.build;
   final GlobalKey<PreviewSheetState> _previewSheetKey = GlobalKey();
@@ -334,10 +335,23 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         enhancementPeriodicBackend: _enhancementContextInPrompt ? _enhancementPeriodicBackend : null,
         enhancementDesign: _enhancementContextInPrompt ? _enhancementDesign : null,
         enhancementAppId: _enhancementContextInPrompt ? _enhancementAppId : null,
+        enhancementVersion: _enhancementContextInPrompt ? _enhancementVersion : null,
         history: _provider?.history.toList(),
         mode: _currentMode,
       );
     }
+  }
+
+  int _compareVersions(String v1, String v2) {
+    final p1 = v1.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    final p2 = v2.split('.').map((e) => int.tryParse(e) ?? 0).toList();
+    for (var i = 0; i < 3; i++) {
+      final v1Part = i < p1.length ? p1[i] : 0;
+      final v2Part = i < p2.length ? p2[i] : 0;
+      if (v1Part > v2Part) return 1;
+      if (v1Part < v2Part) return -1;
+    }
+    return 0;
   }
 
   void _initializeAI({
@@ -346,6 +360,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     String? enhancementPeriodicBackend,
     String? enhancementDesign,
     String? enhancementAppId,
+    String? enhancementVersion,
     List<ChatMessage>? history,
     ForgeMode? mode,
   }) async {
@@ -520,6 +535,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           'Current Implementation:\n<forge>$enhancementCode</forge>\n'
           'Current Backend:\n<backend>${enhancementBackend ?? 'No backend provided.'}</backend>\n'
           'Current Background Periodic:\n<periodic_backend>${enhancementPeriodicBackend ?? 'No background periodic code provided.'}</periodic_backend>\n'
+          'Current Version:\n<version>${enhancementVersion ?? '1.0.0'}</version>\n'
           'Design Document:\n<design>${enhancementDesign ?? 'No design document provided.'}</design>';
     }
 
@@ -630,6 +646,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementBackend = enhancementBackend;
       _enhancementDesign = enhancementDesign;
       _enhancementAppId = enhancementAppId;
+      _enhancementVersion = enhancementVersion;
       _enhancementContextInPrompt = includesEnhancementContext;
     });
   }
@@ -678,6 +695,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementPeriodicBackend = null;
       _enhancementDesign = null;
       _enhancementAppId = null;
+      _enhancementVersion = null;
       _enhancementContextInPrompt = false;
       _currentMode = context.read<SettingsProvider>().defaultForgeMode;
       if (_provider != null) {
@@ -687,7 +705,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     _initializeAI(mode: _currentMode);
   }
 
-  void onEnhance() {
+  void onEnhance() async {
     if (_activeForgeCode == null) return;
 
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
@@ -696,6 +714,13 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final periodicBackendToEnhance = _activePeriodicBackendCode;
     final designToEnhance = _activeDesignDoc;
     final appIdToEnhance = _activeAppId;
+
+    String? versionToEnhance;
+    if (appIdToEnhance != null) {
+      final app = await _repository.getApp(appIdToEnhance);
+      versionToEnhance = app?['version'];
+    }
+
     final newConversationId = const Uuid().v4();
 
     setState(() {
@@ -707,6 +732,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementPeriodicBackend = periodicBackendToEnhance;
       _enhancementDesign = designToEnhance;
       _enhancementAppId = appIdToEnhance;
+      _enhancementVersion = versionToEnhance;
       if (_provider != null) {
         _provider!.history = [];
       }
@@ -718,6 +744,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
       enhancementAppId: appIdToEnhance,
+      enhancementVersion: versionToEnhance,
     );
 
     // Give it a moment for AI to be ready with new provider
@@ -767,6 +794,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementBackend: backendToEnhance,
       enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
+      enhancementAppId: _activeAppId,
+      enhancementVersion: _enhancementVersion,
       history: existingHistory,
     );
 
@@ -914,8 +943,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           finalAppId = _enhancementAppId!;
           resolvedName = name ?? existingApp['name'] ?? resolvedName;
           finalIcon = icon ?? existingApp['icon'] ?? finalIcon;
-          if (version == null) {
-            finalVersion = _bumpVersion(existingApp['version']);
+          
+          final currentVersion = existingApp['version'] ?? '1.0.0';
+          if (version == null || _compareVersions(version, currentVersion) <= 0) {
+            finalVersion = _bumpVersion(currentVersion);
+          } else {
+            finalVersion = version;
           }
         }
       }
@@ -936,6 +969,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
       setState(() {
         _activeAppId = appId;
+        _enhancementVersion = finalVersion;
       });
 
     } catch (e) {
@@ -979,6 +1013,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _enhancementPeriodicBackend = data.enhancementPeriodicBackend;
         _enhancementDesign = data.enhancementDesign;
         _enhancementAppId = data.enhancementAppId;
+        _enhancementVersion = app['version'];
       });
 
       _initializeAI(
@@ -987,6 +1022,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         enhancementPeriodicBackend: data.enhancementPeriodicBackend,
         enhancementDesign: data.enhancementDesign,
         enhancementAppId: data.enhancementAppId,
+        enhancementVersion: app['version'],
         history: data.history.toList(),
       );
     } else {
@@ -1004,7 +1040,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
   void _onConversationSelected(String conversationId, String title) async {
     final repository = context.read<ConversationRepository>();
+    final appRepository = context.read<MicroAppRepository>();
     final data = await repository.getConversation(conversationId);
+
+    String? enhancementVersion;
+    if (data.enhancementAppId != null) {
+      final app = await appRepository.getApp(data.enhancementAppId!);
+      enhancementVersion = app?['version'];
+    }
 
     setState(() {
       _currentConversationId = conversationId;
@@ -1018,6 +1061,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementPeriodicBackend = data.enhancementPeriodicBackend;
       _enhancementDesign = data.enhancementDesign;
       _enhancementAppId = data.enhancementAppId;
+      _enhancementVersion = enhancementVersion;
       _currentMode = data.forgeMode;
     });
 
@@ -1027,6 +1071,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       enhancementPeriodicBackend: data.enhancementPeriodicBackend,
       enhancementDesign: data.enhancementDesign,
       enhancementAppId: data.enhancementAppId,
+      enhancementVersion: enhancementVersion,
       history: data.history.toList(),
       mode: data.forgeMode,
     );
@@ -1184,6 +1229,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                     enhancementCode: _enhancementCode,
                     enhancementBackend: _enhancementBackend,
                     enhancementDesign: _enhancementDesign,
+                    enhancementAppId: _enhancementAppId,
+                    enhancementVersion: _enhancementVersion,
                     history: currentHistory,
                   );
                 },
