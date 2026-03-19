@@ -21,6 +21,7 @@ import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
 import 'widgets/preview_sheet.dart';
 import 'widgets/rolling_greeting.dart';
+import 'widgets/markdown_utils.dart';
 import 'repositories/micro_app_repository.dart';
 import 'repositories/conversation_repository.dart';
 import 'repositories/micro_app_data_repository.dart';
@@ -1079,6 +1080,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               MarkdownBody(
                 data: '```html\n${_enhancementCode ?? ''}\n```',
                 selectable: true,
+                builders: {
+                  'code': CodeElementBuilder(context),
+                },
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                  code: const TextStyle(backgroundColor: Colors.transparent),
+                ),
               ),
               const SizedBox(height: 16),
               Row(
@@ -1096,6 +1103,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               MarkdownBody(
                 data: '```javascript\n${_enhancementBackend ?? ''}\n```',
                 selectable: true,
+                builders: {
+                  'code': CodeElementBuilder(context),
+                },
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                  code: const TextStyle(backgroundColor: Colors.transparent),
+                ),
               ),
               const SizedBox(height: 16),
               Row(
@@ -1113,6 +1126,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               MarkdownBody(
                 data: '```javascript\n${_enhancementPeriodicBackend ?? ''}\n```',
                 selectable: true,
+                builders: {
+                  'code': CodeElementBuilder(context),
+                },
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                  code: const TextStyle(backgroundColor: Colors.transparent),
+                ),
               ),
               const SizedBox(height: 24),
               Row(
@@ -1130,6 +1149,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               MarkdownBody(
                 data: _enhancementDesign ?? 'No design document provided.',
                 selectable: true,
+                builders: {
+                  'code': CodeElementBuilder(context),
+                },
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                  code: const TextStyle(backgroundColor: Colors.transparent),
+                ),
               ),
             ],
           ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'mini_app_preview.dart';
+import 'markdown_utils.dart';
 
 class VibeDetector extends StatelessWidget {
   final String message;
@@ -135,16 +136,43 @@ class VibeDetector extends StatelessWidget {
                     ],
                     const SizedBox(height: 12),
                     const Text('Source Code:', style: TextStyle(fontWeight: FontWeight.bold)),
-                    MarkdownBody(data: '```html\n${forgeCode ?? ''}\n```'),
+                    MarkdownBody(
+                      data: '```html\n${forgeCode ?? ''}\n```',
+                      selectable: true,
+                      builders: {
+                        'code': CodeElementBuilder(context),
+                      },
+                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                        code: const TextStyle(backgroundColor: Colors.transparent),
+                      ),
+                    ),
                     if (backendCode != null && backendCode.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       const Text('Backend Code:', style: TextStyle(fontWeight: FontWeight.bold)),
-                      MarkdownBody(data: '```javascript\n$backendCode\n```'),
+                      MarkdownBody(
+                        data: '```javascript\n$backendCode\n```',
+                        selectable: true,
+                        builders: {
+                          'code': CodeElementBuilder(context),
+                        },
+                        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                          code: const TextStyle(backgroundColor: Colors.transparent),
+                        ),
+                      ),
                     ],
                     if (periodicBackendCode != null && periodicBackendCode.isNotEmpty) ...[
                       const SizedBox(height: 8),
                       const Text('Background Periodic Code:', style: TextStyle(fontWeight: FontWeight.bold)),
-                      MarkdownBody(data: '```javascript\n$periodicBackendCode\n```'),
+                      MarkdownBody(
+                        data: '```javascript\n$periodicBackendCode\n```',
+                        selectable: true,
+                        builders: {
+                          'code': CodeElementBuilder(context),
+                        },
+                        styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                          code: const TextStyle(backgroundColor: Colors.transparent),
+                        ),
+                      ),
                     ],
                   ],
                 ),

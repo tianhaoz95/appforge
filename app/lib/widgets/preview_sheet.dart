@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:feedback/feedback.dart';
@@ -17,6 +18,7 @@ import 'dart:async';
 import '../repositories/micro_app_data_repository.dart';
 import '../repositories/micro_app_repository.dart';
 import '../providers/settings_provider.dart';
+import 'markdown_utils.dart';
 
 class PreviewSheet extends StatefulWidget {
   final String code;
@@ -371,12 +373,17 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           ],
           MarkdownBody(
             data: _activeDesignDoc ?? 'No design documentation provided.',
+            selectable: true,
+            builders: {
+              'code': CodeElementBuilder(context),
+            },
             styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
               p: Theme.of(context).textTheme.bodyMedium,
               h1: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
               h2: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
               h3: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
               listBullet: Theme.of(context).textTheme.bodyMedium,
+              code: const TextStyle(backgroundColor: Colors.transparent),
             ),
           ),
         ],
@@ -497,6 +504,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           MarkdownBody(
             data: '```html\n$_activeCode\n```',
             selectable: true,
+            builders: {
+              'code': CodeElementBuilder(context),
+            },
+            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+              code: const TextStyle(backgroundColor: Colors.transparent),
+            ),
           ),
           const SizedBox(height: 24),
           const Divider(),
@@ -522,6 +535,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           MarkdownBody(
             data: '```javascript\n${_activeBackendCode ?? '// No backend code provided.'}\n```',
             selectable: true,
+            builders: {
+              'code': CodeElementBuilder(context),
+            },
+            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+              code: const TextStyle(backgroundColor: Colors.transparent),
+            ),
           ),
           const SizedBox(height: 24),
           const Divider(),
@@ -547,6 +566,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
           MarkdownBody(
             data: '```javascript\n${_activePeriodicBackendCode ?? '// No background periodic code provided.'}\n```',
             selectable: true,
+            builders: {
+              'code': CodeElementBuilder(context),
+            },
+            styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+              code: const TextStyle(backgroundColor: Colors.transparent),
+            ),
           ),
         ],
       ),
