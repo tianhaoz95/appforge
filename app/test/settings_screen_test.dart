@@ -96,8 +96,8 @@ void main() {
     await tester.pumpWidget(createSettingsScreen());
 
     // Find Change Password button (it should be visible without edit mode)
-    expect(find.text('Change Password'), findsOneWidget);
-    await tester.tap(find.text('Change Password'));
+    expect(find.widgetWithText(TextButton, 'Change Password'), findsOneWidget);
+    await tester.tap(find.widgetWithText(TextButton, 'Change Password'));
     await tester.pumpAndSettle();
 
     // Verify password fields appear
@@ -123,7 +123,7 @@ void main() {
     await tester.pumpWidget(createSettingsScreen());
 
     // Tap Change Password
-    await tester.tap(find.text('Change Password'));
+    await tester.tap(find.widgetWithText(TextButton, 'Change Password'));
     await tester.pumpAndSettle();
 
     // Enter passwords

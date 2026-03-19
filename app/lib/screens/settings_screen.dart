@@ -25,6 +25,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = false;
   bool _isEditingProfile = false;
   bool _isChangingPassword = false;
+  bool _showOldPassword = false;
+  bool _showNewPassword = false;
+  bool _showConfirmPassword = false;
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
@@ -580,103 +583,164 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildPasswordSection(ThemeData theme) {
-    if (!_isChangingPassword) {
-      return Row(
-        children: [
-          const Icon(Icons.lock_outline, size: 20, color: Colors.blueGrey),
-          const SizedBox(width: 12),
-          TextButton.icon(
-            onPressed: () => setState(() => _isChangingPassword = true),
-            icon: const Icon(Icons.lock_reset, size: 18),
-            label: const Text('Change Password'),
-            style: TextButton.styleFrom(
-              padding: EdgeInsets.zero,
-              visualDensity: VisualDensity.compact,
-            ),
+    return AnimatedSwitcher(
+      duration: const Duration(milliseconds: 300),
+      transitionBuilder: (Widget child, Animation<double> animation) {
+        return FadeTransition(
+          opacity: animation,
+          child: SizeTransition(
+            sizeFactor: animation,
+            axisAlignment: -1.0,
+            child: child,
           ),
-        ],
-      );
-    }
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerHighest.withOpacity(0.3),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.lock_reset, size: 20, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                'Change Password',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: theme.colorScheme.primary,
-                  fontWeight: FontWeight.bold,
+        );
+      },
+      child: !_isChangingPassword
+          ? Row(
+              key: const ValueKey('password_button'),
+              children: [
+                const Icon(Icons.lock_outline, size: 20, color: Colors.blueGrey),
+                const SizedBox(width: 12),
+                TextButton.icon(
+                  onPressed: () => setState(() => _isChangingPassword = true),
+                  icon: const Icon(Icons.lock_reset, size: 18),
+                  label: const Text('Change Password'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    visualDensity: VisualDensity.compact,
+                  ),
                 ),
+              ],
+            )
+          : Container(
+              key: const ValueKey('password_form'),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: theme.scaffoldBackgroundColor,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _oldPasswordController,
-            decoration: const InputDecoration(
-              labelText: 'Old Password',
-              isDense: true,
-              prefixIcon: Icon(Icons.password, size: 18),
-            ),
-            obscureText: true,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _newPasswordController,
-            decoration: const InputDecoration(
-              labelText: 'New Password',
-              isDense: true,
-              prefixIcon: Icon(Icons.lock_outline, size: 18),
-            ),
-            obscureText: true,
-          ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _confirmPasswordController,
-            decoration: const InputDecoration(
-              labelText: 'Confirm New Password',
-              isDense: true,
-              prefixIcon: Icon(Icons.lock_outline, size: 18),
-            ),
-            obscureText: true,
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              TextButton(
-                onPressed: () {
-                  setState(() {
-                    _isChangingPassword = false;
-                    _oldPasswordController.clear();
-                    _newPasswordController.clear();
-                    _confirmPasswordController.clear();
-                  });
-                },
-                child: const Text('Cancel'),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.lock_reset, size: 20, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Change Password',
+                        style: theme.textTheme.titleSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _oldPasswordController,
+                    decoration: InputDecoration(
+                      labelText: 'Old Password',
+                      isDense: true,
+                      prefixIcon: const Icon(Icons.password, size: 18),
+                      filled: true,
+                      fillColor: theme.brightness == Brightness.light
+                          ? Colors.grey[200]
+                          : Colors.grey[800],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showOldPassword ? Icons.visibility : Icons.visibility_off,
+                          size: 18,
+                        ),
+                        onPressed: () => setState(() => _showOldPassword = !_showOldPassword),
+                      ),
+                    ),
+                    obscureText: !_showOldPassword,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _newPasswordController,
+                    decoration: InputDecoration(
+                      labelText: 'New Password',
+                      isDense: true,
+                      prefixIcon: const Icon(Icons.lock_outline, size: 18),
+                      filled: true,
+                      fillColor: theme.brightness == Brightness.light
+                          ? Colors.grey[200]
+                          : Colors.grey[800],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showNewPassword ? Icons.visibility : Icons.visibility_off,
+                          size: 18,
+                        ),
+                        onPressed: () => setState(() => _showNewPassword = !_showNewPassword),
+                      ),
+                    ),
+                    obscureText: !_showNewPassword,
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _confirmPasswordController,
+                    decoration: InputDecoration(
+                      labelText: 'Confirm New Password',
+                      isDense: true,
+                      prefixIcon: const Icon(Icons.lock_outline, size: 18),
+                      filled: true,
+                      fillColor: theme.brightness == Brightness.light
+                          ? Colors.grey[200]
+                          : Colors.grey[800],
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _showConfirmPassword ? Icons.visibility : Icons.visibility_off,
+                          size: 18,
+                        ),
+                        onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                      ),
+                    ),
+                    obscureText: !_showConfirmPassword,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      TextButton(
+                        onPressed: () {
+                          setState(() {
+                            _isChangingPassword = false;
+                            _oldPasswordController.clear();
+                            _newPasswordController.clear();
+                            _confirmPasswordController.clear();
+                            _showOldPassword = false;
+                            _showNewPassword = false;
+                            _showConfirmPassword = false;
+                          });
+                        },
+                        child: const Text('Cancel'),
+                      ),
+                      const Spacer(),
+                      FilledButton.tonal(
+                        onPressed: _changePassword,
+                        style: FilledButton.styleFrom(
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        child: const Text('Update Password'),
+                      ),
+                    ],
+                  ),
+                ],
               ),
-              const Spacer(),
-              FilledButton.tonal(
-                onPressed: _changePassword,
-                style: FilledButton.styleFrom(
-                  visualDensity: VisualDensity.compact,
-                ),
-                child: const Text('Update Password'),
-              ),
-            ],
-          ),
-        ],
-      ),
+            ),
     );
   }
 
