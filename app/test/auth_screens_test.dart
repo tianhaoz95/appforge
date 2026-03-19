@@ -93,6 +93,7 @@ void main() {
 
     await tester.enterText(find.byType(TextField).first, 'test@example.com');
     await tester.enterText(find.byType(TextField).last, 'password123');
+    await tester.ensureVisible(find.text('Sign In'));
     await tester.tap(find.text('Sign In'));
     await tester.pump();
 
@@ -110,9 +111,60 @@ void main() {
     await tester.enterText(find.widgetWithText(TextField, 'Password'), 'password123');
     await tester.enterText(find.widgetWithText(TextField, 'Confirm Password'), 'password123');
     
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Register'));
     await tester.tap(find.widgetWithText(ElevatedButton, 'Register'));
     await tester.pump();
 
     verify(() => mockAuthProvider.signUp('test@example.com', 'password123', 'Test User')).called(1);
+  });
+
+  testWidgets('LoginScreen password visibility toggle works', (WidgetTester tester) async {
+    await tester.pumpWidget(createAuthScreen(const LoginScreen()));
+
+    final passwordFieldFinder = find.widgetWithText(TextField, 'Password');
+    TextField passwordField = tester.widget<TextField>(passwordFieldFinder);
+    expect(passwordField.obscureText, isTrue);
+
+    await tester.tap(find.byIcon(Icons.visibility));
+    await tester.pump();
+
+    passwordField = tester.widget<TextField>(passwordFieldFinder);
+    expect(passwordField.obscureText, isFalse);
+
+    await tester.tap(find.byIcon(Icons.visibility_off));
+    await tester.pump();
+
+    passwordField = tester.widget<TextField>(passwordFieldFinder);
+    expect(passwordField.obscureText, isTrue);
+  });
+
+  testWidgets('RegisterScreen password visibility toggles work', (WidgetTester tester) async {
+    await tester.pumpWidget(createAuthScreen(const RegisterScreen()));
+
+    final passwordFieldFinder = find.widgetWithText(TextField, 'Password');
+    final confirmPasswordFieldFinder = find.widgetWithText(TextField, 'Confirm Password');
+
+    expect(tester.widget<TextField>(passwordFieldFinder).obscureText, isTrue);
+    expect(tester.widget<TextField>(confirmPasswordFieldFinder).obscureText, isTrue);
+
+    // Toggle password visibility
+    await tester.tap(find.descendant(
+      of: passwordFieldFinder,
+      matching: find.byType(IconButton),
+    ));
+    await tester.pump();
+
+    expect(tester.widget<TextField>(passwordFieldFinder).obscureText, isFalse);
+    expect(tester.widget<TextField>(confirmPasswordFieldFinder).obscureText, isTrue);
+
+    // Toggle confirm password visibility
+    await tester.tap(find.descendant(
+      of: confirmPasswordFieldFinder,
+      matching: find.byType(IconButton),
+    ));
+    await tester.pump();
+
+    expect(tester.widget<TextField>(passwordFieldFinder).obscureText, isFalse);
+    expect(tester.widget<TextField>(confirmPasswordFieldFinder).obscureText, isFalse);
   });
 }
