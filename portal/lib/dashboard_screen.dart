@@ -180,40 +180,46 @@ class _PlanTab extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Subscription Plan', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('Current plan: $current', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 32),
-          Wrap(
-            spacing: 20,
-            runSpacing: 20,
-            children: _plans.map((plan) {
-              final selected = plan == current;
-              return _PlanCard(
-                plan: plan,
-                selected: selected,
-                onSelect: () async {
-                  await FirebaseFirestore.instance.collection('users').doc(uid).set(
-                    {'plan': plan}, SetOptions(merge: true));
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Switched to $plan plan')));
-                  }
-                  
-                  // Navigate to billing information if selecting a paid plan but info is missing
-                  final hasBilling = (data['billing_name'] as String? ?? '').isNotEmpty && 
-                                   (data['billing_email'] as String? ?? '').isNotEmpty;
-                  if (plan != 'Free' && !hasBilling) {
-                    onTabChange(1); // Billing tab index
-                  }
-                },
-              );
-            }).toList(),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 900),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Subscription Plan', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Current plan: $current', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600)),
+              const SizedBox(height: 32),
+              Wrap(
+                spacing: 20,
+                runSpacing: 20,
+                children: _plans.map((plan) {
+                  final selected = plan == current;
+                  return _PlanCard(
+                    plan: plan,
+                    selected: selected,
+                    onSelect: () async {
+                      await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                        {'plan': plan}, SetOptions(merge: true));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Switched to $plan plan')));
+                      }
+                      
+                      // Navigate to billing information if selecting a paid plan but info is missing
+                      final hasBilling = (data['billing_name'] as String? ?? '').isNotEmpty && 
+                                       (data['billing_email'] as String? ?? '').isNotEmpty;
+                      if (plan != 'Free' && !hasBilling) {
+                        onTabChange(1); // Billing tab index
+                      }
+                    },
+                  );
+                }).toList(),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -228,7 +234,13 @@ class _BillingTab extends StatelessWidget {
   Widget build(BuildContext context) {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
-      child: _BillingSection(uid: uid, data: data),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: _BillingSection(uid: uid, data: data),
+        ),
+      ),
     );
   }
 }
@@ -422,34 +434,40 @@ class _ModelTab extends StatelessWidget {
     final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('AI Model', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text('Choose the model used for app generation.', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6))),
-          const SizedBox(height: 32),
-          ..._models.map((model) {
-            final selected = model == current;
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(14),
-                  side: BorderSide(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
-                ),
-                tileColor: selected ? cs.primaryContainer.withValues(alpha: 0.3) : null,
-                leading: Icon(Icons.smart_toy_outlined, color: selected ? cs.primary : null),
-                title: Text(model, style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
-                trailing: selected ? Icon(Icons.check_circle, color: cs.primary) : null,
-                onTap: () async {
-                  await FirebaseFirestore.instance.collection('users').doc(uid).set(
-                    {'model': model}, SetOptions(merge: true));
-                },
-              ),
-            );
-          }),
-        ],
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 600),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('AI Model', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text('Choose the model used for app generation.', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6))),
+              const SizedBox(height: 32),
+              ..._models.map((model) {
+                final selected = model == current;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: ListTile(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                      side: BorderSide(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
+                    ),
+                    tileColor: selected ? cs.primaryContainer.withValues(alpha: 0.3) : null,
+                    leading: Icon(Icons.smart_toy_outlined, color: selected ? cs.primary : null),
+                    title: Text(model, style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+                    trailing: selected ? Icon(Icons.check_circle, color: cs.primary) : null,
+                    onTap: () async {
+                      await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                        {'model': model}, SetOptions(merge: true));
+                    },
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -510,70 +528,73 @@ class _ProfileTabState extends State<_ProfileTab> {
     final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
       padding: const EdgeInsets.all(32),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 480),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Profile', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 32),
-            CircleAvatar(
-              radius: 36,
-              backgroundColor: cs.primaryContainer,
-              child: Text(
-                (widget.user.displayName?.isNotEmpty == true ? widget.user.displayName![0] : widget.user.email![0]).toUpperCase(),
-                style: TextStyle(fontSize: 28, color: cs.onPrimaryContainer, fontWeight: FontWeight.bold),
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 480),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Profile', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 32),
+              CircleAvatar(
+                radius: 36,
+                backgroundColor: cs.primaryContainer,
+                child: Text(
+                  (widget.user.displayName?.isNotEmpty == true ? widget.user.displayName![0] : widget.user.email![0]).toUpperCase(),
+                  style: TextStyle(fontSize: 28, color: cs.onPrimaryContainer, fontWeight: FontWeight.bold),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            TextFormField(
-              controller: _nameCtrl,
-              decoration: InputDecoration(
-                labelText: 'Display Name',
-                prefixIcon: const Icon(Icons.person_outline),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 24),
+              TextFormField(
+                controller: _nameCtrl,
+                decoration: InputDecoration(
+                  labelText: 'Display Name',
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextFormField(
-              initialValue: widget.user.email,
-              readOnly: true,
-              decoration: InputDecoration(
-                labelText: 'Email',
-                prefixIcon: const Icon(Icons.email_outlined),
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+              const SizedBox(height: 12),
+              TextFormField(
+                initialValue: widget.user.email,
+                readOnly: true,
+                decoration: InputDecoration(
+                  labelText: 'Email',
+                  prefixIcon: const Icon(Icons.email_outlined),
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton(
-                onPressed: _saving ? null : _save,
-                child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save Changes'),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: _saving ? null : _save,
+                  child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save Changes'),
+                ),
               ),
-            ),
-            const SizedBox(height: 48),
-            const Divider(),
-            const SizedBox(height: 16),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: const Icon(Icons.logout),
-                label: const Text('Sign Out'),
-                onPressed: () => FirebaseAuth.instance.signOut(),
+              const SizedBox(height: 48),
+              const Divider(),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: const Icon(Icons.logout),
+                  label: const Text('Sign Out'),
+                  onPressed: () => FirebaseAuth.instance.signOut(),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                icon: Icon(Icons.delete_forever, color: cs.error),
-                label: Text('Delete Account', style: TextStyle(color: cs.error)),
-                style: OutlinedButton.styleFrom(side: BorderSide(color: cs.error)),
-                onPressed: _deleteAccount,
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  icon: Icon(Icons.delete_forever, color: cs.error),
+                  label: Text('Delete Account', style: TextStyle(color: cs.error)),
+                  style: OutlinedButton.styleFrom(side: BorderSide(color: cs.error)),
+                  onPressed: _deleteAccount,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
