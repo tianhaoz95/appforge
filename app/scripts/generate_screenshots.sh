@@ -17,12 +17,14 @@ mkdir -p screenshots
 
 echo "🚀 Starting screenshot generation..."
 
+# Set a default screenshots directory if not provided
+export SCREENSHOTS_DIR=${SCREENSHOTS_DIR:-"screenshots/general"}
+mkdir -p "$SCREENSHOTS_DIR"
+
 # Run the integration test with the screenshot driver
-# We use --driver and --target to specify the driver and the test
-# Note: Ensure the app/test_driver/screenshot_driver.dart exists
-flutter drive 
-  --driver=test_driver/screenshot_driver.dart 
+flutter drive \
+  --driver=test_driver/screenshot_driver.dart \
   --target=integration_test/screenshot_test.dart
 
-echo "✅ Screenshots generated in app/screenshots/"
-ls -lh screenshots/
+echo "✅ Screenshots generated in app/$SCREENSHOTS_DIR/"
+ls -lh "$SCREENSHOTS_DIR"

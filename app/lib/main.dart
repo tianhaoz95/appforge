@@ -217,6 +217,7 @@ class MyApp extends StatelessWidget {
       child: Consumer<SettingsProvider>(
         builder: (context, settings, _) => MaterialApp(
           title: 'MicroForge',
+          debugShowCheckedModeBanner: false,
           theme: ThemeData(
             colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.light),
             scaffoldBackgroundColor: Colors.white,

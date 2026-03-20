@@ -57,7 +57,7 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('Capture Play Store Screenshots', (WidgetTester tester) async {
+  testWidgets('Capture Store Screenshots', (WidgetTester tester) async {
     final mockLlm = MockLlmProvider();
     MicroForgeHomePage.mockProvider = mockLlm;
 
