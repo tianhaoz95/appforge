@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
-import 'package:markdown/markdown.dart' as md;
 import 'package:provider/provider.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 import 'package:feedback/feedback.dart';
@@ -847,7 +846,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       'mode': mode,
       'source': source,
       'colors': {
-        'background': _colorToHex(scheme.background),
+        'background': _colorToHex(scheme.surface),
         'surface': _colorToHex(scheme.surface),
         'text': _colorToHex(scheme.onSurface),
         'muted': _colorToHex(scheme.onSurfaceVariant),
@@ -861,7 +860,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   }
 
   String _colorToHex(Color color) {
-    final value = color.value & 0xFFFFFF;
+    final value = color.toARGB32() & 0xFFFFFF;
     return '#${value.toRadixString(16).padLeft(6, '0')}';
   }
 
@@ -1082,6 +1081,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                         child: DropdownButtonHideUnderline(
                                           child: DropdownButton<String>(
                                             value: _currentVersion,
+                                            isExpanded: true,
                                             icon: const Icon(Icons.history, size: 14),
                                             style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface, fontWeight: FontWeight.bold),
                                             onChanged: (String? newValue) {
@@ -1117,11 +1117,12 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                           ),
                                         ),
                                       ),
-                                    Flexible(
+                                    Expanded(
                                       child: DropdownButtonHideUnderline(
                                         child: DropdownButton<int>(
                                           value: _tabController.index,
                                           isDense: true,
+                                          isExpanded: true,
                                           style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.primary, fontWeight: FontWeight.bold),
                                           onChanged: (int? newValue) {
                                             if (newValue != null) {
