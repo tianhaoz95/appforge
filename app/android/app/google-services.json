@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "146390824855",
+    "project_id": "appforge-app",
+    "storage_bucket": "appforge-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:146390824855:android:34ecddc19ce2738da436d2",
+        "android_client_info": {
+          "package_name": "com.hejitech.appforge"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCoWgkc8PMh76gNglrs2fsvPZHty_o4La0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

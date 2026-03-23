@@ -1,0 +1,153 @@
+00:00 +0: loading /var/tmp/vibe-kanban/worktrees/cf87-enhance-integrat/appforge/integration_test/ai_logic_test.dart
+Running Gradle task 'assembleDebug'...                             29.1s
+✓ Built build/app/outputs/flutter-apk/app-debug.apk
+Installing build/app/outputs/flutter-apk/app-debug.apk...           3.0s
+00:00 +0: (setUpAll)
+00:00 +0: Todo App Generation and Database Operations Test
+IntegrationTestWidgetsFlutterBinding - DEBUG MODE
+[root]
+└View(state: _ViewState#8dc30)
+ └RawView
+  └_RawViewInternal-[_DeprecatedRawViewKey TestFlutterView#ba358](renderObject: _ReusableRenderView#5c825)
+   └_ViewScope
+    └_PipelineOwnerScope
+     └_MediaQueryFromView(state: _MediaQueryFromViewState#ba1d4)
+      └MediaQuery(MediaQueryData(size: Size(411.4, 914.3), devicePixelRatio: 2.6, textScaler: SystemTextScaler (no scaling), platformBrightness: Brightness.light, padding: EdgeInsets(0.0, 24.0, 0.0, 24.0), viewPadding: EdgeInsets(0.0, 24.0, 0.0, 24.0), viewInsets: EdgeInsets.zero, systemGestureInsets: EdgeInsets(29.7, 24.0, 29.7, 32.0), alwaysUse24HourFormat: false, accessibleNavigation: false, highContrast: false, onOffSwitchLabels: false, disableAnimations: false, invertColors: false, boldText: false, navigationMode: traditional, gestureSettings: DeviceGestureSettings(touchSlop: 8.0), displayFeatures: [], supportsShowingSystemContextMenu: false, lineHeightScaleFactorOverride: null, letterSpacingOverride: null, wordSpacingOverride: null, paragraphSpacingOverride: null))
+       └FocusTraversalGroup(policy: ReadingOrderTraversalPolicy#ba725, state: _FocusTraversalGroupState#65e9e)
+        └Focus(debugLabel: "FocusTraversalGroup", focusNode: _FocusTraversalGroupNode#3c8a5(FocusTraversalGroup [IN FOCUS PATH]), state: _FocusState#9f43c)
+         └_FocusInheritedScope
+          └_FocusScopeWithExternalFocusNode(debugLabel: "View Scope", focusNode: FocusScopeNode#7922a(View Scope [IN FOCUS PATH]), dependencies: [_FocusInheritedScope], state: _FocusScopeState#aef54)
+           └_FocusInheritedScope
+            └MultiProvider
+             └_NestedHook
+              └SingleChildBuilder
+               └_InheritedProviderScope<SettingsProvider?>(listening to value)
+                └_InheritedProviderScope<MicroAppRepository?>(value: <not yet loaded>)
+                 └_InheritedProviderScope<MicroAppDataRepository?>(value: <not yet loaded>)
+                  └_InheritedProviderScope<ConversationRepository?>(value: <not yet loaded>)
+                   └_InheritedProviderScope<AuthProvider?>(value: Instance of 'AuthProvider', listening to value)
+                    └MyApp
+                     └BetterFeedback(state: _BetterFeedbackState#81aa9)
+                      └FeedbackApp(dependencies: [MediaQuery])
+                       └FeedbackLocalization(dependencies: [_ViewScope])
+                        └Localizations(locale: en_US, delegates: [GlobalCupertinoLocalizations.delegate(81 locales), GlobalMaterialLocalizations.delegate(82 locales), GlobalWidgetsLocalizations.delegate(79 locales), DefaultFeedbackLocalizations.delegate(en_EN)], state: _LocalizationsState#7d104)
+                         └Semantics(container: true, properties: SemanticsProperties, textDirection: ltr, renderObject: RenderSemanticsAnnotations#b7fab)
+                          └_LocalizationsScope-[GlobalKey#d00e0]
+                           └Directionality(textDirection: ltr)
+                            └FeedbackTheme
+                             └Builder
+                              └FeedbackData
+                               └Builder(dependencies: [FeedbackTheme, _LocalizationsScope-[GlobalKey#d00e0]])
+                                └FeedbackWidget(dependencies: [FeedbackTheme], state: FeedbackWidgetState#f4f78(ticker inactive))
+                                 └Overlay(state: OverlayState#7abc9(entries: [OverlayEntry#ff8cb(opaque: false; maintainState: false)]))
+                                  └_Theater(skipCount: 0, dependencies: [Directionality], renderObject: _RenderTheater#6bf58)
+                                   └_OverlayEntryWidget-[LabeledGlobalKey<_OverlayEntryWidgetState>#e26d1](state: _OverlayEntryWidgetState#763c1)
+                                    └TickerMode(state: _TickerModeState#4d129(requested mode: enabled))
+                                     └_EffectiveTickerMode(effective mode: enabled)
+                                      └_RenderTheaterMarker
+                                       └Builder(dependencies: [FeedbackTheme])
+                                        └Theme(ThemeData#05a5b, dependencies: [MediaQuery])
+                                         └_InheritedTheme
+                                          └CupertinoTheme(brightness: light, primaryColor: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB), scaffoldBackgroundColor: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), actionTextStyle: TextStyle(inherit: false, color: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB), family: CupertinoSystemText, size: 17.0, letterSpacing: -0.4, decoration: TextDecoration.none), actionSmallTextStyle: TextStyle(inherit: false, color: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB), family: CupertinoSystemText, size: 15.0, letterSpacing: -0.2, decoration: TextDecoration.none), navActionTextStyle: TextStyle(inherit: false, color: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB), family: CupertinoSystemText, size: 17.0, letterSpacing: -0.4, decoration: TextDecoration.none))
+                                           └InheritedCupertinoTheme
+                                            └IconTheme(color: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB))
+                                             └IconTheme(color: Color(alpha: 0.8667, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB))
+                                              └DefaultSelectionStyle
+                                               └Material(type: canvas, color: MaterialColor(primary value: Color(alpha: 1.0000, red: 0.6196, green: 0.6196, blue: 0.6196, colorSpace: ColorSpace.sRGB)), dependencies: [InheritedCupertinoTheme, _InheritedTheme, _LocalizationsScope-[GlobalKey#d00e0]], state: _MaterialState#32847)
+                                                └AnimatedPhysicalModel(duration: 200ms, shape: rectangle, borderRadius: null, elevation: 0.0, color: MaterialColor(primary value: Color(alpha: 1.0000, red: 0.6196, green: 0.6196, blue: 0.6196, colorSpace: ColorSpace.sRGB)), animateColor: false, shadowColor: Color(alpha: 1.0000, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB), animateShadowColor: true, state: _AnimatedPhysicalModelState#51ad4(ticker inactive))
+                                                 └PhysicalModel(shape: rectangle, borderRadius: BorderRadius.zero, elevation: 0.0, color: MaterialColor(primary value: Color(alpha: 1.0000, red: 0.6196, green: 0.6196, blue: 0.6196, colorSpace: ColorSpace.sRGB)), shadowColor: Color(alpha: 1.0000, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB), renderObject: RenderPhysicalModel#1ed86)
+                                                  └NotificationListener<LayoutChangedNotification>
+                                                   └_InkFeatures-[GlobalKey#ac9a9 ink renderer](renderObject: _RenderInkFeatures#c3709)
+                                                    └AnimatedDefaultTextStyle(duration: 200ms, debugLabel: (englishLike bodyMedium 2021).merge((blackMountainView bodyMedium).apply), inherit: false, color: Color(alpha: 1.0000, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB), family: Roboto, size: 14.0, weight: 400, letterSpacing: 0.3, baseline: alphabetic, height: 1.4x, leadingDistribution: even, decoration: Color(alpha: 1.0000, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB) TextDecoration.none, softWrap: wrapping at box width, overflow: clip, state: _AnimatedDefaultTextStyleState#c5577(ticker inactive))
+                                                     └DefaultTextStyle(debugLabel: (englishLike bodyMedium 2021).merge((blackMountainView bodyMedium).apply), inherit: false, color: Color(alpha: 1.0000, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB), family: Roboto, size: 14.0, weight: 400, letterSpacing: 0.3, baseline: alphabetic, height: 1.4x, leadingDistribution: even, decoration: Color(alpha: 1.0000, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB) TextDecoration.none, softWrap: wrapping at box width, overflow: clip)
+                                                      └AnimatedBuilder(listenable: AnimationController#76f7f(⏮ 0.000; paused), dependencies: [MediaQuery], state: _AnimatedState#775e3)
+                                                       └CustomMultiChildLayout(renderObject: RenderCustomMultiChildLayoutBox#077ea)
+                                                        └LayoutId-[<screenshot_id>](id: screenshot_id)
+                                                         └Padding(padding: EdgeInsets(8.0, 0.0, 8.0, 0.0), dependencies: [Directionality], renderObject: RenderPadding#10208)
+                                                          └ScaleAndFade
+                                                           └ValueListenableBuilder<double>(state: _ValueListenableBuilderState<double>#8172c)
+                                                            └Opacity(opacity: 1.0, renderObject: RenderOpacity#0a888)
+                                                             └Transform(dependencies: [Directionality], renderObject: RenderTransform#3b22f)
+                                                              └LayoutBuilder(dependencies: [MediaQuery], renderObject: _RenderLayoutBuilder#41dff)
+                                                               └OverflowBox(alignment: Alignment.center, maxWidth: 411.4, maxHeight: 914.3, fit: max, dependencies: [Directionality], renderObject: RenderConstrainedOverflowBox#f2f54)
+                                                                └ScaleAndClip
+                                                                 └Transform(dependencies: [Directionality], renderObject: RenderTransform#e88da relayoutBoundary=up1)
+                                                                  └ClipRRect(BorderRadius.zero, dependencies: [Directionality], renderObject: RenderClipRRect#08fdc relayoutBoundary=up2)
+                                                                   └LayoutBuilder(renderObject: _RenderLayoutBuilder#a5ae0 relayoutBoundary=up3)
+                                                                    └Screenshot
+                                                                     └RepaintBoundary-[GlobalKey#02867](renderObject: RenderRepaintBoundary#fbe12 relayoutBoundary=up4)
+                                                                      └PaintOnChild
+                                                                       └Stack(alignment: AlignmentDirectional.topStart, fit: loose, dependencies: [Directionality], renderObject: RenderStack#a93ef relayoutBoundary=up5)
+                                                                        └Consumer<SettingsProvider>(dependencies: [_InheritedProviderScope<SettingsProvider?>])
+                                                                         └MaterialApp(state: _MaterialAppState#e5c57)
+                                                                          └ScrollConfiguration(behavior: MaterialScrollBehavior)
+                                                                           └HeroControllerScope
+                                                                            └WidgetsApp-[GlobalObjectKey _MaterialAppState#e5c57](state: _WidgetsAppState#576fd)
+                                                                             └RootRestorationScope(state: _RootRestorationScopeState#c2c73)
+                                                                              └UnmanagedRestorationScope
+                                                                               └RestorationScope(dependencies: [UnmanagedRestorationScope], state: _RestorationScopeState#e3d79)
+                                                                                └UnmanagedRestorationScope
+                                                                                 └SharedAppData(state: _SharedAppDataState#17964)
+                                                                                  └_SharedAppModel
+00:14 +0 -1: Todo App Generation and Database Operations Test [E]
+  Test failed. See exception logs above.
+  The test description was: Todo App Generation and Database Operations Test
+  
+00:14 +0 -1: (tearDownAll)
+00:15 +0 -1: Todo App Generation and Database Operations Test
+                                                                                   └NotificationListener<NavigationNotification>
+                                                                                    └Shortcuts(shortcuts: <Default WidgetsApp Shortcuts>, state: _ShortcutsState#8456b)
+                                                                                     └Focus(debugLabel: "Shortcuts", dependencies: [_FocusInheritedScope], state: _FocusState#5c3ef)
+                                                                                      └_FocusInheritedScope
+                                                                                       └Semantics(container: false, properties: SemanticsProperties, renderObject: RenderSemanticsAnnotations#1fcfa relayoutBoundary=up6)
+                                                                                        └DefaultTextEditingShortcuts
+                                                                                         └Shortcuts(shortcuts: <Default Text Editing Shortcuts>, state: _ShortcutsState#9630f)
+                                                                                          └Focus(debugLabel: "Shortcuts", dependencies: [_FocusInheritedScope], state: _FocusState#c286d)
+                                                                                           └_FocusInheritedScope
+                                                                                            └Semantics(container: false, properties: SemanticsProperties, renderObject: RenderSemanticsAnnotations#464dc relayoutBoundary=up7)
+                                                                                             └Actions(dispatcher: null, actions: {DoNothingIntent: DoNothingAction#de107, DoNothingAndStopPropagationIntent: DoNothingAction#07df6, RequestFocusIntent: RequestFocusAction#b1331, NextFocusIntent: NextFocusAction#975bf, PreviousFocusIntent: PreviousFocusAction#644ee, DirectionalFocusIntent: DirectionalFocusAction#e30e7, ScrollIntent: _OverridableContextAction<ScrollIntent>#46924(defaultAction: ScrollAction#dac8a), PrioritizedIntents: PrioritizedAction#ea657, VoidCallbackIntent: VoidCallbackAction#06393}, state: _ActionsState#645c2)
+                                                                                              └_ActionsScope
+                                                                                               └FocusTraversalGroup(policy: ReadingOrderTraversalPolicy#34e6a, state: _FocusTraversalGroupState#338bc)
+                                                                                                └Focus(debugLabel: "FocusTraversalGroup", focusNode: _FocusTraversalGroupNode#4c299(FocusTraversalGroup [IN FOCUS PATH]), dependencies: [_FocusInheritedScope], state: _FocusState#fd7f3)
+                                                                                                 └_FocusInheritedScope
+                                                                                                  └TapRegionSurface(renderObject: RenderTapRegionSurface#5d859 relayoutBoundary=up8)
+                                                                                                   └ShortcutRegistrar(state: _ShortcutRegistrarState#99a40)
+                                                                                                    └_ShortcutRegistrarScope
+                                                                                                     └Shortcuts(manager: ShortcutManager#3b95d(shortcuts: {}), shortcuts: {}, state: _ShortcutsState#f0484)
+                                                                                                      └Focus(debugLabel: "Shortcuts", dependencies: [_FocusInheritedScope], state: _FocusState#8ccf1)
+                                                                                                       └_FocusInheritedScope
+                                                                                                        └Semantics(container: false, properties: SemanticsProperties, renderObject: RenderSemanticsAnnotations#8d480 relayoutBoundary=up9)
+                                                                                                         └ListenableBuilder(listenable: LocalizationsResolver, state: _AnimatedState#63f3b)
+                                                                                                          └Localizations(locale: en_US, delegates: [DefaultMaterialLocalizations.delegate(en_US), DefaultCupertinoLocalizations.delegate(en_US), DefaultWidgetsLocalizations.delegate(en_US)], state: _LocalizationsState#3e7b6)
+                                                                                                           └Semantics(container: false, properties: SemanticsProperties, textDirection: ltr, renderObject: RenderSemanticsAnnotations#be474 relayoutBoundary=up10)
+                                                                                                            └_LocalizationsScope-[GlobalKey#d1497]
+                                                                                                             └Directionality(textDirection: ltr)
+                                                                                                              └Title(state: _TitleState#c3640(title: "MicroForge", color: Color(alpha: 1.0000, red: 0.0667, green: 0.4000, blue: 0.5098, colorSpace: ColorSpace.sRGB)))
+                                                                                                               └Focus(dependencies: [_FocusInheritedScope], state: _FocusState#ee95d)
+                                                                                                                └_FocusInheritedScope
+                                                                                                                 └Semantics(container: false, properties: SemanticsProperties, renderObject: RenderSemanticsAnnotations#ebf4d relayoutBoundary=up11)
+                                                                                                                  └CheckedModeBanner("DEBUG")
+                                                                                                                   └Banner(dependencies: [Directionality], state: _BannerState#febbf("DEBUG", textDirection: ltr, location: topEnd, Color(alpha: 0.6275, red: 0.7176, green: 0.1098, blue: 0.1098, colorSpace: ColorSpace.sRGB), text inherit: true, text color: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), text size: 10.2, text weight: 900, text height: 1.0x))
+                                                                                                                    └CustomPaint(renderObject: RenderCustomPaint#8b6ed relayoutBoundary=up12)
+                                                                                                                     └ValueListenableBuilder<bool>(state: _ValueListenableBuilderState<bool>#8a0f5)
+                                                                                                                      └DefaultTextStyle(debugLabel: fallback style; consider putting your text in a Material, inherit: true, color: Color(alpha: 0.8157, red: 1.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB), family: monospace, size: 48.0, weight: 900, decoration: double Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB) TextDecoration.underline, softWrap: wrapping at box width, overflow: clip)
+                                                                                                                       └Builder(dependencies: [MediaQuery])
+                                                                                                                        └AnimatedTheme(duration: 200ms, state: _AnimatedThemeState#741fa(ticker inactive, ThemeDataTween(ThemeData#4603d → ThemeData#4603d)))
+                                                                                                                         └Theme(ThemeData#4603d, dependencies: [DefaultSelectionStyle, InheritedCupertinoTheme])
+                                                                                                                          └_InheritedTheme
+                                                                                                                           └CupertinoTheme(brightness: light, primaryColor: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB), scaffoldBackgroundColor: Color(alpha: 1.0000, red: 1.0000, green: 1.0000, blue: 1.0000, colorSpace: ColorSpace.sRGB), actionTextStyle: TextStyle(inherit: false, color: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB), family: CupertinoSystemText, size: 17.0, letterSpacing: -0.4, decoration: TextDecoration.none), actionSmallTextStyle: TextStyle(inherit: false, color: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB), family: CupertinoSystemText, size: 15.0, letterSpacing: -0.2, decoration: TextDecoration.none), navActionTextStyle: TextStyle(inherit: false, color: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB), family: CupertinoSystemText, size: 17.0, letterSpacing: -0.4, decoration: TextDecoration.none))
+                                                                                                                            └InheritedCupertinoTheme
+                                                                                                                             └IconTheme(color: Color(alpha: 1.0000, red: 0.3843, green: 0.0000, blue: 0.9333, colorSpace: ColorSpace.sRGB))
+                                                                                                                              └IconTheme(color: Color(alpha: 0.8667, red: 0.0000, green: 0.0000, blue: 0.0000, colorSpace: ColorSpace.sRGB))
+                                                                                                                               └DefaultSelectionStyle
+                                                                                                                                └ScaffoldMessenger(dependencies: [MediaQuery], state: ScaffoldMessengerState#07bc6)
+                                                                                                                                 └_ScaffoldMessengerScope
+                                                                                                                                  └DefaultSelectionStyle
+                                                                                                                                   └FocusScope(debugLabel: "Navigator Scope", AUTOFOCUS, dependencies: [_FocusInheritedScope], state: _FocusScopeState#81710)
+                                                                                                                                    └Semantics(container: false, properties: SemanticsProperties, renderObject: RenderSemanticsAnnotations#4c752 relayoutBoundary=up13)
+                                                                                                                                     └_FocusInheritedScope
+                                                                                                                                      └Navigator-[GlobalObjectKey<NavigatorState> _WidgetsAppState#576fd](dependencies: [HeroControllerScope, InheritedCupertinoTheme, UnmanagedRestorationScope, _InheritedTheme, _LocalizationsScope-[GlobalKey#d1497]], state: NavigatorState#4eca3(tickers: tracking 1 ticker))
+                                                                                                                                       └HeroControllerScope
+                                                                                                                                        └NotificationListener<NavigationNotification>
+                                                                                                                                         └Listener(listeners: [down, up, cancel], behavior: deferToChild, renderObject: RenderPointerListener#1668a relayoutBoundary=up14)
+00:18 +0 -1: Some tests failed.
