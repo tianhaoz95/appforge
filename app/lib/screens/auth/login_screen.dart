@@ -53,6 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     try {
       final settings = context.read<SettingsProvider>();
+      final auth = context.read<AuthProvider>();
       await settings.setRememberMe(_rememberMe);
       if (_rememberMe) {
         await settings.setRememberedEmail(email);
@@ -60,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
         await settings.setRememberedEmail('');
       }
 
-      await context.read<AuthProvider>().signIn(email, password);
+      await auth.signIn(email, password);
       // Trigger autofill save
       TextInput.finishAutofillContext();
     } catch (e) {

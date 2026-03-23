@@ -16,7 +16,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # https://apple.co/3X25VwX
 # In Windows, build-name is used as the major, minor, and patch parts
 # of the product and file versions while build-number is used as the build suffix.
-version: 1.3.40+162
+version: 1.3.44+166
 
 environment:
   sdk: ^3.11.1
@@ -62,12 +62,13 @@ dependencies:
   workmanager: ^0.9.0+3
   image_picker: ^1.2.1
 
+  markdown: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
   integration_test:
     sdk: flutter
-  flutter_launcher_icons: ^0.13.1
+  flutter_launcher_icons: ^0.14.4
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -82,8 +83,9 @@ dev_dependencies:
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: "brand/logo_padded.png"
+  image_path: "brand/logo.png"
   remove_alpha_ios: true
+  background_color_ios: "#ffffff"
   adaptive_icon_background: "#ffffff"
   adaptive_icon_foreground: "brand/logo_padded.png"
 

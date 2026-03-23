@@ -540,9 +540,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           'Design Document:\n<design>${enhancementDesign ?? 'No design document provided.'}</design>';
     }
 
+    final auth = context.read<AuthProvider>();
+
     // Check on-device model status
     try {
       final status = await HybridInferenceManager.checkModelStatus();
+      if (!mounted) return;
       final statusString = status.toString();
       debugPrint('On-device AI status: $statusString');
       // If downloadable, we start it, but in a real app, you might want to show a progress bar
@@ -555,8 +558,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
 
     if (settings.suggestExistingApps) {
-      final auth = context.read<AuthProvider>();
-      final apps = await repository.getAppsForOwner(auth.user?.uid ?? 'local-user');
+      final ownerId = auth.user?.uid ?? 'local-user';
+      final apps = await repository.getAppsForOwner(ownerId);
+      if (!mounted) return;
       if (apps.isNotEmpty) {
         systemPrompt += '\n\nPREVIOUSLY DEPLOYED MICRO-APPS:\n';
         for (final app in apps) {
@@ -835,10 +839,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     if (_activeForgeCode == null) return;
 
     final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
-    final codeToEnhance = _activeForgeCode!;
-    final backendToEnhance = _activeBackendCode;
-    final periodicBackendToEnhance = _activePeriodicBackendCode;
-    final designToEnhance = _activeDesignDoc;
     final existingHistory = _provider?.history.toList() ?? [];
 
     setState(() {
@@ -1291,7 +1291,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     iconDecoration: const BoxDecoration(color: Colors.transparent),
                                     decoration: null,
                                     padding: EdgeInsets.zero,
-                                    margin: const EdgeInsets.only(left: -28, top: 4, bottom: 4),
+                                    margin: const EdgeInsets.only(left: 0, top: 4, bottom: 4),
                                     maxWidth: double.infinity,
                                     minWidth: 0,
                                     flex: 100,
