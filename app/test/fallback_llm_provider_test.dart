@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:appforge/providers/fallback_llm_provider.dart';
+import 'package:appforge/providers/settings_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockBaseLlmProvider extends LlmProvider with ChangeNotifier {
   String? lastPrompt;
@@ -34,14 +36,19 @@ class MockBaseLlmProvider extends LlmProvider with ChangeNotifier {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  
   late MockBaseLlmProvider primary;
   late MockBaseLlmProvider secondary;
   late FallbackLlmProvider fallback;
+  late SettingsProvider settings;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     primary = MockBaseLlmProvider();
     secondary = MockBaseLlmProvider();
-    fallback = FallbackLlmProvider(primary: primary, secondary: secondary);
+    settings = SettingsProvider();
+    fallback = FallbackLlmProvider(primary: primary, secondary: secondary, settings: settings);
   });
 
   test('FallbackLlmProvider uses primary provider by default', () async {
@@ -62,5 +69,32 @@ void main() {
     expect(results.first, contains('Response to: Failover Test'));
     expect(primary.lastPrompt, equals('Failover Test'));
     expect(secondary.lastPrompt, equals('Failover Test'));
+  });
+
+  test('FallbackLlmProvider toggles halMode on trigger strings and returns fixed response and updates history', () async {
+    expect(settings.halMode, isFalse);
+    expect(fallback.history, isEmpty);
+
+    // Trigger ON
+    final onStream = fallback.sendMessageStream("I’m sorry, Dave.");
+    final resultsOn = await onStream.toList();
+    expect(settings.halMode, isTrue);
+    expect(resultsOn.first, equals("🤖 Hi 🤖"));
+    expect(primary.lastPrompt, isNull); // Verify AI was NOT called
+    
+    expect(fallback.history.length, 2);
+    expect(fallback.history[0].text, equals("I’m sorry, Dave."));
+    expect(fallback.history[1].text, equals("🤖 Hi 🤖"));
+
+    // Trigger OFF
+    final offStream = fallback.sendMessageStream("This mission is too important for me to allow you to jeopardize it.");
+    final resultsOff = await offStream.toList();
+    expect(settings.halMode, isFalse);
+    expect(resultsOff.first, equals("🤖 Hi 🤖"));
+    expect(primary.lastPrompt, isNull); // Verify AI was NOT called
+    
+    expect(fallback.history.length, 4);
+    expect(fallback.history[2].text, equals("This mission is too important for me to allow you to jeopardize it."));
+    expect(fallback.history[3].text, equals("🤖 Hi 🤖"));
   });
 }

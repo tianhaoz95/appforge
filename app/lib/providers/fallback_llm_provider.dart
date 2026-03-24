@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
+import 'settings_provider.dart';
 
 class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
   LlmProvider _currentProvider;
   final LlmProvider _primaryProvider;
   final LlmProvider _secondaryProvider;
+  final SettingsProvider _settingsProvider;
   bool _isUsingFallback = false;
   bool _isBusy = false;
 
   FallbackLlmProvider({
     required LlmProvider primary,
     required LlmProvider secondary,
+    required SettingsProvider settings,
   })  : _primaryProvider = primary,
         _secondaryProvider = secondary,
+        _settingsProvider = settings,
         _currentProvider = primary;
 
   bool get isBusy => _isBusy;
@@ -31,6 +35,46 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
   Stream<String> sendMessageStream(String prompt, {Iterable<Attachment> attachments = const []}) async* {
     _isBusy = true;
     notifyListeners(); // Notify when starting to capture user's message
+
+    // Intercept HAL_MODE triggers
+    final normalizedPrompt = prompt.trim()
+        .replaceAll('’', "'")
+        .replaceAll('‘', "'")
+        .replaceAll('“', '"')
+        .replaceAll('”', '"');
+    final checkPrompt = normalizedPrompt.replaceAll('"', '');
+    
+    bool isTrigger = false;
+    if (checkPrompt == "I'm sorry, Dave.") {
+      _settingsProvider.setHalMode(true);
+      isTrigger = true;
+    } else if (checkPrompt == "This mission is too important for me to allow you to jeopardize it.") {
+      _settingsProvider.setHalMode(false);
+      isTrigger = true;
+    }
+
+    if (isTrigger) {
+      final responseText = "🤖 Hi 🤖";
+      // Manually add the messages to history since we are bypassing the underlying providers
+      final userMessage = ChatMessage(
+        origin: MessageOrigin.user,
+        text: prompt,
+        attachments: attachments.toList(),
+      );
+      final llmMessage = ChatMessage(
+        origin: MessageOrigin.llm,
+        text: responseText,
+        attachments: const [],
+      );
+      
+      final currentHistory = history;
+      history = [...currentHistory, userMessage, llmMessage];
+
+      yield responseText;
+      _isBusy = false;
+      notifyListeners();
+      return;
+    }
 
     try {
       final stream = _primaryProvider.sendMessageStream(prompt, attachments: attachments);
