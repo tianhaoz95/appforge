@@ -44,10 +44,20 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
         .replaceAll('”', '"');
     final checkPrompt = normalizedPrompt.replaceAll('"', '');
     
+    bool isTrigger = false;
     if (checkPrompt == "I'm sorry, Dave.") {
       _settingsProvider.setHalMode(true);
+      isTrigger = true;
     } else if (checkPrompt == "This mission is too important for me to allow you to jeopardize it.") {
       _settingsProvider.setHalMode(false);
+      isTrigger = true;
+    }
+
+    if (isTrigger) {
+      yield "🤖 Hi 🤖";
+      _isBusy = false;
+      notifyListeners();
+      return;
     }
 
     try {
