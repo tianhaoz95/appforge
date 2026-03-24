@@ -4,7 +4,6 @@ import 'package:flutter/services.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_ai/firebase_ai.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'package:provider/provider.dart';
@@ -28,7 +27,7 @@ import 'repositories/micro_app_data_repository.dart';
 import 'repositories/local_database.dart';
 import 'providers/fallback_llm_provider.dart';
 import 'providers/hybrid_inference_manager.dart';
-import 'providers/token_tracking_firebase_provider.dart';
+import 'providers/llm_abstraction/firebase_llm_service.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/forge_mode.dart';
@@ -592,48 +591,42 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       return;
     }
 
-    final primaryModel = FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-3.1-flash-lite-preview',
-      systemInstruction: Content.system(systemPrompt),
-      tools: [
-        Tool.urlContext(),
-      ],
+    final primaryService = FirebaseLlmService(
+      modelName: 'gemini-3.1-flash-lite-preview',
+      onUsageMetadata: (meta) {
+        settings.addTokenUsage(
+          meta.promptTokenCount ?? 0,
+          meta.candidatesTokenCount ?? 0,
+          meta.totalTokenCount ?? 0,
+          thoughts: meta.thoughtsTokenCount ?? 0,
+          cached: meta.cachedContentTokenCount ?? 0,
+          toolUse: meta.toolUsePromptTokenCount ?? 0,
+        );
+      },
     );
 
-    final secondaryModel = FirebaseAI.googleAI().generativeModel(
-      model: 'gemini-2.0-flash',
-      systemInstruction: Content.system(systemPrompt),
-      tools: [
-        Tool.urlContext(),
-      ],
+    final secondaryService = FirebaseLlmService(
+      modelName: 'gemini-2.0-flash',
+      onUsageMetadata: (meta) {
+        settings.addTokenUsage(
+          meta.promptTokenCount ?? 0,
+          meta.candidatesTokenCount ?? 0,
+          meta.totalTokenCount ?? 0,
+          thoughts: meta.thoughtsTokenCount ?? 0,
+          cached: meta.cachedContentTokenCount ?? 0,
+          toolUse: meta.toolUsePromptTokenCount ?? 0,
+        );
+      },
     );
 
     final provider = FallbackLlmProvider(
-      primary: TokenTrackingFirebaseProvider(
-        model: primaryModel,
-        onUsageMetadata: (meta) {
-          settings.addTokenUsage(
-            meta.promptTokenCount ?? 0,
-            meta.candidatesTokenCount ?? 0,
-            meta.totalTokenCount ?? 0,
-            thoughts: meta.thoughtsTokenCount ?? 0,
-            cached: meta.cachedContentTokenCount ?? 0,
-            toolUse: meta.toolUsePromptTokenCount ?? 0,
-          );
-        },
+      primary: primaryService.createProvider(
+        systemInstruction: systemPrompt,
+        history: history,
       ),
-      secondary: TokenTrackingFirebaseProvider(
-        model: secondaryModel,
-        onUsageMetadata: (meta) {
-          settings.addTokenUsage(
-            meta.promptTokenCount ?? 0,
-            meta.candidatesTokenCount ?? 0,
-            meta.totalTokenCount ?? 0,
-            thoughts: meta.thoughtsTokenCount ?? 0,
-            cached: meta.cachedContentTokenCount ?? 0,
-            toolUse: meta.toolUsePromptTokenCount ?? 0,
-          );
-        },
+      secondary: secondaryService.createProvider(
+        systemInstruction: systemPrompt,
+        history: history,
       ),
       settings: settings,
     );
