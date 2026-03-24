@@ -12,6 +12,7 @@ class SettingsProvider with ChangeNotifier {
   bool _allowBackgroundNotifications = false;
   bool _allowBackgroundDatabase = false;
   bool _rememberMe = false;
+  bool _halMode = false;
   String _rememberedEmail = '';
   String _localAvatarPath = '';
   String _systemPrompt = '';
@@ -33,6 +34,7 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyAllowBackgroundNotifications = 'allow_background_notifications';
   static const String _keyAllowBackgroundDatabase = 'allow_background_database';
   static const String _keyRememberMe = 'remember_me';
+  static const String _keyHalMode = 'hal_mode';
   static const String _keyRememberedEmail = 'remembered_email';
   static const String _keyLocalAvatarPath = 'local_avatar_path';
   static const String _keyThemeMode = 'theme_mode';
@@ -53,6 +55,7 @@ class SettingsProvider with ChangeNotifier {
   bool get allowBackgroundNotifications => _allowBackgroundNotifications;
   bool get allowBackgroundDatabase => _allowBackgroundDatabase;
   bool get rememberMe => _rememberMe;
+  bool get halMode => _halMode;
   String get rememberedEmail => _rememberedEmail;
   String get localAvatarPath => _localAvatarPath;
   String get systemPrompt => _systemPrompt;
@@ -76,6 +79,7 @@ class SettingsProvider with ChangeNotifier {
     _allowBackgroundNotifications = prefs.getBool(_keyAllowBackgroundNotifications) ?? false;
     _allowBackgroundDatabase = prefs.getBool(_keyAllowBackgroundDatabase) ?? false;
     _rememberMe = prefs.getBool(_keyRememberMe) ?? false;
+    _halMode = prefs.getBool(_keyHalMode) ?? false;
     _rememberedEmail = prefs.getString(_keyRememberedEmail) ?? '';
     _localAvatarPath = prefs.getString(_keyLocalAvatarPath) ?? '';
     _totalPromptTokens = prefs.getInt(_keyTotalPromptTokens) ?? 0;
@@ -152,6 +156,15 @@ class SettingsProvider with ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyRememberMe, value);
+    }
+  }
+
+  Future<void> setHalMode(bool value) async {
+    if (_halMode != value) {
+      _halMode = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyHalMode, value);
     }
   }
 

@@ -635,6 +635,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           );
         },
       ),
+      settings: settings,
     );
 
     provider.addListener(_onHistoryChanged);

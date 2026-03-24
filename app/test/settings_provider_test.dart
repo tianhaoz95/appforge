@@ -64,6 +64,19 @@ void main() {
       expect(newProvider.localAvatarPath, path);
     });
 
+    test('halMode persists across loadSettings', () async {
+      await settingsProvider.setHalMode(true);
+
+      final newProvider = SettingsProvider();
+      await newProvider.loadSettings();
+      expect(newProvider.halMode, isTrue);
+
+      await newProvider.setHalMode(false);
+      final thirdProvider = SettingsProvider();
+      await thirdProvider.loadSettings();
+      expect(thirdProvider.halMode, isFalse);
+    });
+
     test('token usage persists across loadSettings', () async {
       await settingsProvider.addTokenUsage(100, 200, 300, thoughts: 10, cached: 20, toolUse: 30);
       expect(settingsProvider.totalPromptTokens, 100);

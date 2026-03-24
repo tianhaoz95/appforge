@@ -1,7 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:appforge/providers/fallback_llm_provider.dart';
+import 'package:appforge/providers/settings_provider.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MockBaseLlmProvider extends LlmProvider with ChangeNotifier {
   String? lastPrompt;
@@ -34,14 +36,19 @@ class MockBaseLlmProvider extends LlmProvider with ChangeNotifier {
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  
   late MockBaseLlmProvider primary;
   late MockBaseLlmProvider secondary;
   late FallbackLlmProvider fallback;
+  late SettingsProvider settings;
 
   setUp(() {
+    SharedPreferences.setMockInitialValues({});
     primary = MockBaseLlmProvider();
     secondary = MockBaseLlmProvider();
-    fallback = FallbackLlmProvider(primary: primary, secondary: secondary);
+    settings = SettingsProvider();
+    fallback = FallbackLlmProvider(primary: primary, secondary: secondary, settings: settings);
   });
 
   test('FallbackLlmProvider uses primary provider by default', () async {
@@ -62,5 +69,19 @@ void main() {
     expect(results.first, contains('Response to: Failover Test'));
     expect(primary.lastPrompt, equals('Failover Test'));
     expect(secondary.lastPrompt, equals('Failover Test'));
+  });
+
+  test('FallbackLlmProvider toggles halMode on trigger strings', () async {
+    expect(settings.halMode, isFalse);
+
+    // Trigger ON
+    final onStream = fallback.sendMessageStream("I’m sorry, Dave.");
+    await onStream.drain();
+    expect(settings.halMode, isTrue);
+
+    // Trigger OFF
+    final offStream = fallback.sendMessageStream("This mission is too important for me to allow you to jeopardize it.");
+    await offStream.drain();
+    expect(settings.halMode, isFalse);
   });
 }
