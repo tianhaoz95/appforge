@@ -37,9 +37,16 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
     notifyListeners(); // Notify when starting to capture user's message
 
     // Intercept HAL_MODE triggers
-    if (prompt == "I’m sorry, Dave.") {
+    final normalizedPrompt = prompt.trim()
+        .replaceAll('’', "'")
+        .replaceAll('‘', "'")
+        .replaceAll('“', '"')
+        .replaceAll('”', '"');
+    final checkPrompt = normalizedPrompt.replaceAll('"', '');
+    
+    if (checkPrompt == "I'm sorry, Dave.") {
       _settingsProvider.setHalMode(true);
-    } else if (prompt == "This mission is too important for me to allow you to jeopardize it.") {
+    } else if (checkPrompt == "This mission is too important for me to allow you to jeopardize it.") {
       _settingsProvider.setHalMode(false);
     }
 
