@@ -54,7 +54,23 @@ class FallbackLlmProvider extends LlmProvider with ChangeNotifier {
     }
 
     if (isTrigger) {
-      yield "🤖 Hi 🤖";
+      final responseText = "🤖 Hi 🤖";
+      // Manually add the messages to history since we are bypassing the underlying providers
+      final userMessage = ChatMessage(
+        origin: MessageOrigin.user,
+        text: prompt,
+        attachments: attachments.toList(),
+      );
+      final llmMessage = ChatMessage(
+        origin: MessageOrigin.llm,
+        text: responseText,
+        attachments: const [],
+      );
+      
+      final currentHistory = history;
+      history = [...currentHistory, userMessage, llmMessage];
+
+      yield responseText;
       _isBusy = false;
       notifyListeners();
       return;

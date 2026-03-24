@@ -71,8 +71,9 @@ void main() {
     expect(secondary.lastPrompt, equals('Failover Test'));
   });
 
-  test('FallbackLlmProvider toggles halMode on trigger strings and returns fixed response', () async {
+  test('FallbackLlmProvider toggles halMode on trigger strings and returns fixed response and updates history', () async {
     expect(settings.halMode, isFalse);
+    expect(fallback.history, isEmpty);
 
     // Trigger ON
     final onStream = fallback.sendMessageStream("I’m sorry, Dave.");
@@ -80,6 +81,10 @@ void main() {
     expect(settings.halMode, isTrue);
     expect(resultsOn.first, equals("🤖 Hi 🤖"));
     expect(primary.lastPrompt, isNull); // Verify AI was NOT called
+    
+    expect(fallback.history.length, 2);
+    expect(fallback.history[0].text, equals("I’m sorry, Dave."));
+    expect(fallback.history[1].text, equals("🤖 Hi 🤖"));
 
     // Trigger OFF
     final offStream = fallback.sendMessageStream("This mission is too important for me to allow you to jeopardize it.");
@@ -87,5 +92,9 @@ void main() {
     expect(settings.halMode, isFalse);
     expect(resultsOff.first, equals("🤖 Hi 🤖"));
     expect(primary.lastPrompt, isNull); // Verify AI was NOT called
+    
+    expect(fallback.history.length, 4);
+    expect(fallback.history[2].text, equals("This mission is too important for me to allow you to jeopardize it."));
+    expect(fallback.history[3].text, equals("🤖 Hi 🤖"));
   });
 }
