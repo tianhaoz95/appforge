@@ -5,6 +5,7 @@ import '../repositories/conversation_repository.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import 'dart:io';
+import 'app_vault_title.dart';
 
 class AppVaultDrawer extends StatefulWidget {
   final Function(Map<String, dynamic> app)? onAppSelected;
@@ -155,7 +156,10 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
             ),
           ),
           _buildSectionHeader(
-            title: 'Recent Chats',
+            title: const Text(
+              'Recent Chats',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             isSelectionMode: _isChatSelectionMode,
             selectedCount: _selectedConversationIds.length,
             onCancel: () => setState(() {
@@ -221,7 +225,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
           ),
           const Divider(),
           _buildSectionHeader(
-            title: 'Forged Apps',
+            title: const AppVaultTitle(),
             isSelectionMode: _isAppSelectionMode,
             selectedCount: _selectedAppIds.length,
             onCancel: () => setState(() {
@@ -263,7 +267,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
   }
 
   Widget _buildSectionHeader({
-    required String title,
+    required Widget title,
     required bool isSelectionMode,
     required int selectedCount,
     required VoidCallback onCancel,
@@ -274,10 +278,7 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
   }) {
     if (!isSelectionMode) {
       return ListTile(
-        title: Text(
-          title,
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
+        title: title,
       );
     }
 
