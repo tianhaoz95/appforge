@@ -270,15 +270,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 32),
                 _buildSectionHeader('App preferences'),
                 const SizedBox(height: 12),
-                _buildPreferenceItem(
-                  icon: Icons.memory,
-                  title: 'HAL Mode',
-                  subtitle: 'Enable experimental AI features',
-                  trailing: Switch(
-                    value: settingsProvider.halMode,
-                    onChanged: (v) => settingsProvider.setHalMode(v),
+                if (settingsProvider.halMode)
+                  _buildPreferenceItem(
+                    icon: Icons.memory,
+                    title: 'HAL Mode',
+                    subtitle: 'Enable experimental AI features',
+                    trailing: Switch(
+                      value: settingsProvider.halMode,
+                      onChanged: (v) {
+                        if (!v) {
+                          settingsProvider.setHalMode(false);
+                        }
+                      },
+                    ),
                   ),
-                ),
                 _buildPreferenceItem(
                   icon: Icons.palette_outlined,
                   title: 'App Theme',

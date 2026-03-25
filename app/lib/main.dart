@@ -1247,39 +1247,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 const Text('MicroForge'),
-                if (context.watch<SettingsProvider>().halMode) ...[
-                  const SizedBox(width: 12),
-                  GestureDetector(
-                    onLongPress: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('Turn Off HAL Mode?'),
-                          content: const Text('Are you sure you want to turn off HAL mode?'),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Cancel'),
-                            ),
-                            TextButton(
-                              onPressed: () {
-                                context.read<SettingsProvider>().setHalMode(false);
-                                Navigator.pop(context);
-                              },
-                              child: const Text('Turn Off', style: TextStyle(color: Colors.red)),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
-                    child: Badge(
-                      label: const Text('HAL 9000'),
-                      backgroundColor: Colors.redAccent,
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                      child: Icon(Icons.lens, size: 14, color: Colors.redAccent.shade700),
-                    ),
-                  ),
-                ],
               ],
             ),
             actions: [
