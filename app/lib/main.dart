@@ -28,6 +28,8 @@ import 'repositories/local_database.dart';
 import 'providers/fallback_llm_provider.dart';
 import 'providers/hybrid_inference_manager.dart';
 import 'providers/llm_abstraction/firebase_llm_service.dart';
+import 'providers/llm_abstraction/openai_llm_service.dart';
+import 'providers/llm_abstraction/openai_handler.dart';
 import 'providers/auth_provider.dart';
 import 'providers/settings_provider.dart';
 import 'providers/forge_mode.dart';
@@ -591,45 +593,58 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       return;
     }
 
-    final primaryService = FirebaseLlmService(
-      modelName: 'gemini-3.1-flash-lite-preview',
-      onUsageMetadata: (meta) {
-        settings.addTokenUsage(
-          meta.promptTokenCount ?? 0,
-          meta.candidatesTokenCount ?? 0,
-          meta.totalTokenCount ?? 0,
-          thoughts: meta.thoughtsTokenCount ?? 0,
-          cached: meta.cachedContentTokenCount ?? 0,
-          toolUse: meta.toolUsePromptTokenCount ?? 0,
-        );
-      },
-    );
+    LlmProvider provider;
 
-    final secondaryService = FirebaseLlmService(
-      modelName: 'gemini-2.0-flash',
-      onUsageMetadata: (meta) {
-        settings.addTokenUsage(
-          meta.promptTokenCount ?? 0,
-          meta.candidatesTokenCount ?? 0,
-          meta.totalTokenCount ?? 0,
-          thoughts: meta.thoughtsTokenCount ?? 0,
-          cached: meta.cachedContentTokenCount ?? 0,
-          toolUse: meta.toolUsePromptTokenCount ?? 0,
-        );
-      },
-    );
-
-    final provider = FallbackLlmProvider(
-      primary: primaryService.createProvider(
+    if (settings.useLocalOpenAi && settings.localOpenAiUrl.isNotEmpty) {
+      final localService = OpenAiLlmService(
+        handler: NetworkOpenAiHandler(endpoint: settings.localOpenAiUrl),
+        modelName: 'local-model',
+      );
+      provider = localService.createProvider(
         systemInstruction: systemPrompt,
         history: history,
-      ),
-      secondary: secondaryService.createProvider(
-        systemInstruction: systemPrompt,
-        history: history,
-      ),
-      settings: settings,
-    );
+      );
+    } else {
+      final primaryService = FirebaseLlmService(
+        modelName: 'gemini-3.1-flash-lite-preview',
+        onUsageMetadata: (meta) {
+          settings.addTokenUsage(
+            meta.promptTokenCount ?? 0,
+            meta.candidatesTokenCount ?? 0,
+            meta.totalTokenCount ?? 0,
+            thoughts: meta.thoughtsTokenCount ?? 0,
+            cached: meta.cachedContentTokenCount ?? 0,
+            toolUse: meta.toolUsePromptTokenCount ?? 0,
+          );
+        },
+      );
+
+      final secondaryService = FirebaseLlmService(
+        modelName: 'gemini-2.0-flash',
+        onUsageMetadata: (meta) {
+          settings.addTokenUsage(
+            meta.promptTokenCount ?? 0,
+            meta.candidatesTokenCount ?? 0,
+            meta.totalTokenCount ?? 0,
+            thoughts: meta.thoughtsTokenCount ?? 0,
+            cached: meta.cachedContentTokenCount ?? 0,
+            toolUse: meta.toolUsePromptTokenCount ?? 0,
+          );
+        },
+      );
+
+      provider = FallbackLlmProvider(
+        primary: primaryService.createProvider(
+          systemInstruction: systemPrompt,
+          history: history,
+        ),
+        secondary: secondaryService.createProvider(
+          systemInstruction: systemPrompt,
+          history: history,
+        ),
+        settings: settings,
+      );
+    }
 
     provider.addListener(_onHistoryChanged);
 

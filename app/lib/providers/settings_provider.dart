@@ -11,6 +11,8 @@ class SettingsProvider with ChangeNotifier {
   bool _allowBackgroundExecution = false;
   bool _allowBackgroundNotifications = false;
   bool _allowBackgroundDatabase = false;
+  bool _useLocalOpenAi = false;
+  String _localOpenAiUrl = '';
   bool _rememberMe = false;
   bool _halMode = false;
   String _rememberedEmail = '';
@@ -33,6 +35,8 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyAllowBackgroundExecution = 'allow_background_execution';
   static const String _keyAllowBackgroundNotifications = 'allow_background_notifications';
   static const String _keyAllowBackgroundDatabase = 'allow_background_database';
+  static const String _keyUseLocalOpenAi = 'use_local_openai';
+  static const String _keyLocalOpenAiUrl = 'local_openai_url';
   static const String _keyRememberMe = 'remember_me';
   static const String _keyHalMode = 'hal_mode';
   static const String _keyRememberedEmail = 'remembered_email';
@@ -54,6 +58,8 @@ class SettingsProvider with ChangeNotifier {
   bool get allowBackgroundExecution => _allowBackgroundExecution;
   bool get allowBackgroundNotifications => _allowBackgroundNotifications;
   bool get allowBackgroundDatabase => _allowBackgroundDatabase;
+  bool get useLocalOpenAi => _useLocalOpenAi;
+  String get localOpenAiUrl => _localOpenAiUrl;
   bool get rememberMe => _rememberMe;
   bool get halMode => _halMode;
   String get rememberedEmail => _rememberedEmail;
@@ -78,6 +84,8 @@ class SettingsProvider with ChangeNotifier {
     _allowBackgroundExecution = prefs.getBool(_keyAllowBackgroundExecution) ?? false;
     _allowBackgroundNotifications = prefs.getBool(_keyAllowBackgroundNotifications) ?? false;
     _allowBackgroundDatabase = prefs.getBool(_keyAllowBackgroundDatabase) ?? false;
+    _useLocalOpenAi = prefs.getBool(_keyUseLocalOpenAi) ?? false;
+    _localOpenAiUrl = prefs.getString(_keyLocalOpenAiUrl) ?? '';
     _rememberMe = prefs.getBool(_keyRememberMe) ?? false;
     _halMode = prefs.getBool(_keyHalMode) ?? false;
     _rememberedEmail = prefs.getString(_keyRememberedEmail) ?? '';
@@ -183,6 +191,24 @@ class SettingsProvider with ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keySuggestExistingApps, value);
+    }
+  }
+
+  Future<void> setUseLocalOpenAi(bool value) async {
+    if (_useLocalOpenAi != value) {
+      _useLocalOpenAi = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyUseLocalOpenAi, value);
+    }
+  }
+
+  Future<void> setLocalOpenAiUrl(String value) async {
+    if (_localOpenAiUrl != value) {
+      _localOpenAiUrl = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyLocalOpenAiUrl, value);
     }
   }
 
