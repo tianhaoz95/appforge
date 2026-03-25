@@ -64,6 +64,7 @@ dependencies:
 
   markdown: any
   http: ^1.6.0
+  openai_dart: ^2.0.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
