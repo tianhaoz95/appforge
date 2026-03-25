@@ -1285,7 +1285,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                               Expanded(child: LlmChatView(
                                   provider: _provider!,
                                   style: LlmChatViewStyle(
-                                    backgroundColor: Colors.transparent,
+                                    backgroundColor: isDark ? Colors.black : Colors.transparent,
                                     progressIndicatorColor: colorScheme.primary,
                                   userMessageStyle: UserMessageStyle(
                                     decoration: BoxDecoration(
@@ -1298,7 +1298,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     icon: Icons.circle,
                                     iconColor: Colors.transparent,
                                     iconDecoration: const BoxDecoration(color: Colors.transparent),
-                                    decoration: null,
+                                    decoration: BoxDecoration(
+                                      color: isDark ? Colors.black : Colors.transparent,
+                                    ),
                                     padding: EdgeInsets.zero,
                                     margin: const EdgeInsets.only(left: 0, top: 4, bottom: 4),
                                     maxWidth: double.infinity,
