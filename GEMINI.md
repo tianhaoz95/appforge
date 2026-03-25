@@ -107,6 +107,7 @@ Follow these steps to deploy a new Android build to Firebase App Distribution:
 ---
 
 ## Development Conventions
+- **Branch Management:** At the start of a task, if the local repository is on the `main` branch, check out to a new branch with a name reflecting the task to be implemented.
 - **App ID / Package Name:** `com.hejitech.appforge`
 - **AI Response Format:** AI is instructed via a system prompt to wrap micro-app code (HTML/Alpine.js/Tailwind) inside `<forge>...</forge>` tags.
 - **Interoperability:** The micro-apps can communicate back to the Flutter layer using a `window.MicroForge` JavaScript bridge (e.g., `saveData`, `closeApp`).
