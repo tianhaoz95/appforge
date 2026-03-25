@@ -414,6 +414,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
+                _buildSectionHeader('Model Provider'),
+                const SizedBox(height: 12),
+                _buildPreferenceItem(
+                  icon: Icons.hub_outlined,
+                  title: 'Use Local OpenAI API',
+                  subtitle: 'Use an OpenAI compatible local backend (e.g. Ollama, LM Studio)',
+                  trailing: Switch(
+                    value: settingsProvider.useLocalOpenAi,
+                    onChanged: (v) => settingsProvider.setUseLocalOpenAi(v),
+                  ),
+                ),
+                if (settingsProvider.useLocalOpenAi) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(left: 48, right: 0, top: 8, bottom: 16),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        labelText: 'OpenAI API URL',
+                        hintText: 'http://localhost:11434/v1/chat/completions',
+                        helperText: 'Full endpoint URL for chat completions',
+                        isDense: true,
+                        filled: true,
+                        fillColor: theme.brightness == Brightness.light
+                            ? Colors.grey[100]
+                            : Colors.grey[900],
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
+                        ),
+                      ),
+                      controller: TextEditingController(text: settingsProvider.localOpenAiUrl)
+                        ..selection = TextSelection.fromPosition(
+                          TextPosition(offset: settingsProvider.localOpenAiUrl.length),
+                        ),
+                      onChanged: (v) => settingsProvider.setLocalOpenAiUrl(v),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 32),
                 _buildSectionHeader('App access control'),
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
