@@ -1301,7 +1301,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     decoration: BoxDecoration(
                                       color: isDark ? Colors.black : Colors.transparent,
                                     ),
-                                    textStyle: TextStyle(color: isDark ? Colors.white : Colors.black),
                                     padding: EdgeInsets.zero,
                                     margin: const EdgeInsets.only(left: 0, top: 4, bottom: 4),
                                     maxWidth: double.infinity,
