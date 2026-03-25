@@ -50,6 +50,9 @@ class NetworkOpenAiHandler implements OpenAiHandler {
 
   @override
   Stream<Map<String, dynamic>> executeChatCompletionStream(OpenAiRequest request) async* {
+    if (endpoint.trim().isEmpty) {
+      throw Exception('OpenAI API URL is empty. Please configure it in Settings.');
+    }
     final uri = Uri.parse(endpoint);
     final headers = {
       'Content-Type': 'application/json',

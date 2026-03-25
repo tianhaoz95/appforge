@@ -595,7 +595,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     LlmProvider provider;
 
-    if (settings.useLocalOpenAi && settings.localOpenAiUrl.isNotEmpty) {
+    if (settings.useLocalOpenAi) {
       final localService = OpenAiLlmService(
         handler: NetworkOpenAiHandler(endpoint: settings.localOpenAiUrl),
         modelName: 'local-model',

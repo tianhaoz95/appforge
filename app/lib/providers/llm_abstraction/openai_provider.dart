@@ -90,22 +90,30 @@ class OpenAiProvider extends LlmProvider with ChangeNotifier {
       stream: true,
     );
 
-    final responseStream = _handler.executeChatCompletionStream(request);
+    try {
+      final responseStream = _handler.executeChatCompletionStream(request);
 
-    await for (final chunk in responseStream) {
-      final choices = chunk['choices'] as List<dynamic>?;
-      if (choices != null && choices.isNotEmpty) {
-        final delta = choices[0]['delta'] as Map<String, dynamic>?;
-        if (delta != null && delta.containsKey('content')) {
-          final content = delta['content'] as String;
-          if (content.isNotEmpty) {
-            if (updateHistory) {
-              llmMessage.append(content);
+      await for (final chunk in responseStream) {
+        final choices = chunk['choices'] as List<dynamic>?;
+        if (choices != null && choices.isNotEmpty) {
+          final delta = choices[0]['delta'] as Map<String, dynamic>?;
+          if (delta != null && delta.containsKey('content')) {
+            final content = delta['content'] as String;
+            if (content.isNotEmpty) {
+              if (updateHistory) {
+                llmMessage.append(content);
+              }
+              yield content;
             }
-            yield content;
           }
         }
       }
+    } catch (e) {
+      final errorMessage = "Error: ${e.toString()}";
+      if (updateHistory) {
+        llmMessage.append(errorMessage);
+      }
+      yield errorMessage;
     }
 
     if (updateHistory) {
