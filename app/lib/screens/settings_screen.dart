@@ -9,6 +9,7 @@ import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import '../providers/forge_mode.dart';
 import 'legal_notice_screen.dart';
+import 'system_prompt_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -270,6 +271,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSectionHeader('App preferences'),
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
+                  icon: Icons.memory,
+                  title: 'HAL Mode',
+                  subtitle: 'Enable experimental AI features',
+                  trailing: Switch(
+                    value: settingsProvider.halMode,
+                    onChanged: (v) => settingsProvider.setHalMode(v),
+                  ),
+                ),
+                _buildPreferenceItem(
                   icon: Icons.palette_outlined,
                   title: 'App Theme',
                   subtitle: 'Choose your preferred look',
@@ -293,15 +303,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 const SizedBox(height: 32),
                 _buildSectionHeader('Token Usage'),
                 const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-                  ),
-                  child: Column(
-                    children: [
+                Theme(
+                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                    ),
+                    child: ExpansionTile(
+                      title: const Text('View Token Usage Details', style: TextStyle(fontSize: 14)),
+                      initiallyExpanded: false,
+                      childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
+                      children: [
                       _buildTokenRow('Prompt Tokens', settingsProvider.totalPromptTokens, theme),
                       const Padding(
                         padding: EdgeInsets.symmetric(vertical: 8.0),
@@ -333,8 +347,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: Divider(height: 1),
                         ),
                       ],
-                      _buildTokenRow('Total Tokens', settingsProvider.totalTotalTokens, theme, isBold: true),
-                    ],
+                        _buildTokenRow('Total Tokens', settingsProvider.totalTotalTokens, theme, isBold: true),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -379,35 +394,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 _buildPreferenceItem(
                   icon: Icons.terminal_outlined,
-                  title: 'View System Prompt',
-                  subtitle: 'Inspect the instructions sent to the AI',
+                  title: 'View and Edit System Instructions',
+                  subtitle: 'Inspect or customize the instructions sent to the AI',
                   trailing: IconButton(
-                    icon: const Icon(Icons.visibility_outlined),
+                    icon: const Icon(Icons.edit_document),
                     onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text('System Prompt'),
-                          content: SizedBox(
-                            width: double.maxFinite,
-                            child: SingleChildScrollView(
-                              child: SelectableText(
-                                settingsProvider.systemPrompt.isEmpty
-                                    ? 'No system prompt available yet. Start a conversation to initialize it.'
-                                    : settingsProvider.systemPrompt,
-                                style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ),
-                          actions: [
-                            TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text('Close'),
-                            ),
-                          ],
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const SystemPromptScreen(),
                         ),
                       );
                     },

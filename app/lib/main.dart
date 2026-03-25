@@ -214,37 +214,53 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BetterFeedback(
-      child: Consumer<SettingsProvider>(
-        builder: (context, settings, _) => MaterialApp(
-          title: 'MicroForge',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.light),
-            scaffoldBackgroundColor: Colors.white,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.white,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              surfaceTintColor: Colors.transparent,
-            ),
-            useMaterial3: true,
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, _) {
+        final platformBrightness = MediaQuery.platformBrightnessOf(context);
+        final isDark = settings.themeMode == ThemeMode.dark ||
+            (settings.themeMode == ThemeMode.system && platformBrightness == Brightness.dark);
+        final colorScheme = ColorScheme.fromSeed(
+          seedColor: Colors.blueGrey, 
+          brightness: isDark ? Brightness.dark : Brightness.light,
+        );
+        
+        return BetterFeedback(
+          theme: FeedbackThemeData(
+            background: isDark ? Colors.grey[900]! : Colors.grey[300]!,
+            feedbackSheetColor: isDark ? Colors.black : Colors.white,
+            activeFeedbackModeColor: colorScheme.primary,
+            bottomSheetDescriptionStyle: TextStyle(color: isDark ? Colors.white : Colors.black),
           ),
-          darkTheme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.dark),
-            scaffoldBackgroundColor: Colors.black,
-            appBarTheme: const AppBarTheme(
-              backgroundColor: Colors.black,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              surfaceTintColor: Colors.transparent,
+          child: MaterialApp(
+            title: 'MicroForge',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.light),
+              scaffoldBackgroundColor: Colors.white,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.white,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                surfaceTintColor: Colors.transparent,
+              ),
+              useMaterial3: true,
             ),
-            useMaterial3: true,
+            darkTheme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.dark),
+              scaffoldBackgroundColor: Colors.black,
+              appBarTheme: const AppBarTheme(
+                backgroundColor: Colors.black,
+                elevation: 0,
+                scrolledUnderElevation: 0,
+                surfaceTintColor: Colors.transparent,
+              ),
+              useMaterial3: true,
+            ),
+            themeMode: settings.themeMode,
+            home: const AuthWrapper(),
           ),
-          themeMode: settings.themeMode,
-          home: const AuthWrapper(),
-        ),
-      ),
+        );
+      },
     );
   }
 }
@@ -593,6 +609,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       return;
     }
 
+    settings.setDefaultSystemPrompt(systemPrompt);
+    final actualPrompt = settings.customSystemPrompt.isNotEmpty ? settings.customSystemPrompt : systemPrompt;
+
     LlmProvider provider;
 
     if (settings.useLocalOpenAi) {
@@ -601,7 +620,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         modelName: 'local-model',
       );
       provider = localService.createProvider(
-        systemInstruction: systemPrompt,
+        systemInstruction: actualPrompt,
         history: history,
       );
     } else {
@@ -635,11 +654,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
       provider = FallbackLlmProvider(
         primary: primaryService.createProvider(
-          systemInstruction: systemPrompt,
+          systemInstruction: actualPrompt,
           history: history,
         ),
         secondary: secondaryService.createProvider(
-          systemInstruction: systemPrompt,
+          systemInstruction: actualPrompt,
           history: history,
         ),
         settings: settings,
@@ -1224,7 +1243,45 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       children: [
         Scaffold(
           appBar: AppBar(
-            title: const Text('MicroForge'),
+            title: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text('MicroForge'),
+                if (context.watch<SettingsProvider>().halMode) ...[
+                  const SizedBox(width: 12),
+                  GestureDetector(
+                    onLongPress: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Turn Off HAL Mode?'),
+                          content: const Text('Are you sure you want to turn off HAL mode?'),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () {
+                                context.read<SettingsProvider>().setHalMode(false);
+                                Navigator.pop(context);
+                              },
+                              child: const Text('Turn Off', style: TextStyle(color: Colors.red)),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                    child: Badge(
+                      label: const Text('HAL 9000'),
+                      backgroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      child: Icon(Icons.lens, size: 14, color: Colors.redAccent.shade700),
+                    ),
+                  ),
+                ],
+              ],
+            ),
             actions: [
               IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
               IconButton(

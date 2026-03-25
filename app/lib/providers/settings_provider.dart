@@ -18,6 +18,8 @@ class SettingsProvider with ChangeNotifier {
   String _rememberedEmail = '';
   String _localAvatarPath = '';
   String _systemPrompt = '';
+  String _customSystemPrompt = '';
+  String _defaultSystemPrompt = '';
   ThemeMode _themeMode = ThemeMode.system;
   ForgeMode _defaultForgeMode = ForgeMode.build;
   int _totalPromptTokens = 0;
@@ -41,6 +43,7 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyHalMode = 'hal_mode';
   static const String _keyRememberedEmail = 'remembered_email';
   static const String _keyLocalAvatarPath = 'local_avatar_path';
+  static const String _keyCustomSystemPrompt = 'custom_system_prompt';
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyDefaultForgeMode = 'default_forge_mode';
   static const String _keyTotalPromptTokens = 'total_prompt_tokens';
@@ -65,6 +68,8 @@ class SettingsProvider with ChangeNotifier {
   String get rememberedEmail => _rememberedEmail;
   String get localAvatarPath => _localAvatarPath;
   String get systemPrompt => _systemPrompt;
+  String get customSystemPrompt => _customSystemPrompt;
+  String get defaultSystemPrompt => _defaultSystemPrompt;
   ThemeMode get themeMode => _themeMode;
   ForgeMode get defaultForgeMode => _defaultForgeMode;
   int get totalPromptTokens => _totalPromptTokens;
@@ -90,6 +95,7 @@ class SettingsProvider with ChangeNotifier {
     _halMode = prefs.getBool(_keyHalMode) ?? false;
     _rememberedEmail = prefs.getString(_keyRememberedEmail) ?? '';
     _localAvatarPath = prefs.getString(_keyLocalAvatarPath) ?? '';
+    _customSystemPrompt = prefs.getString(_keyCustomSystemPrompt) ?? '';
     _totalPromptTokens = prefs.getInt(_keyTotalPromptTokens) ?? 0;
     _totalCandidateTokens = prefs.getInt(_keyTotalCandidateTokens) ?? 0;
     _totalTotalTokens = prefs.getInt(_keyTotalTotalTokens) ?? 0;
@@ -131,6 +137,28 @@ class SettingsProvider with ChangeNotifier {
     }
   }
 
+  void setDefaultSystemPrompt(String value) {
+    _defaultSystemPrompt = value;
+  }
+
+  Future<void> setCustomSystemPrompt(String value) async {
+    if (_customSystemPrompt != value) {
+      _customSystemPrompt = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keyCustomSystemPrompt, value);
+    }
+  }
+
+  Future<void> setHalMode(bool value) async {
+    if (_halMode != value) {
+      _halMode = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyHalMode, value);
+    }
+  }
+
   Future<void> setLocalAvatarPath(String value) async {
     if (_localAvatarPath != value) {
       _localAvatarPath = value;
@@ -164,15 +192,6 @@ class SettingsProvider with ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyRememberMe, value);
-    }
-  }
-
-  Future<void> setHalMode(bool value) async {
-    if (_halMode != value) {
-      _halMode = value;
-      notifyListeners();
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(_keyHalMode, value);
     }
   }
 
