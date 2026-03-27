@@ -392,6 +392,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   ForgeMode _currentMode = ForgeMode.build;
   final GlobalKey<PreviewSheetState> _previewSheetKey = GlobalKey();
   late MicroAppRepository _repository;
+  late SettingsProvider _settings;
 
   // Add getters for testing
   String? get activeBackendCode => _activeBackendCode;
@@ -406,13 +407,40 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     super.initState();
     _repository = context.read<MicroAppRepository>();
     _repository.addListener(_onAppsChanged);
+    _settings = context.read<SettingsProvider>();
+    _settings.addListener(_onSettingsChanged);
     _initializeAI();
   }
 
   @override
   void dispose() {
     _repository.removeListener(_onAppsChanged);
+    _settings.removeListener(_onSettingsChanged);
     super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    if (!mounted) return;
+
+    // Check if we are busy to avoid interrupting a generation
+    if (_provider is FallbackLlmProvider &&
+        (_provider as FallbackLlmProvider).isBusy) {
+      debugPrint('Settings changed but AI is busy. Delaying re-initialization...');
+      return;
+    }
+
+    debugPrint('Settings changed, re-initializing AI to update system prompt...');
+    _initializeAI(
+      enhancementCode: _enhancementContextInPrompt ? _enhancementCode : null,
+      enhancementBackend: _enhancementContextInPrompt ? _enhancementBackend : null,
+      enhancementPeriodicBackend:
+          _enhancementContextInPrompt ? _enhancementPeriodicBackend : null,
+      enhancementDesign: _enhancementContextInPrompt ? _enhancementDesign : null,
+      enhancementAppId: _enhancementContextInPrompt ? _enhancementAppId : null,
+      enhancementVersion: _enhancementContextInPrompt ? _enhancementVersion : null,
+      history: _provider?.history.toList(),
+      mode: _currentMode,
+    );
   }
 
   void _onAppsChanged() {
@@ -714,9 +742,39 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
 
     settings.setDefaultSystemPrompt(systemPrompt);
-    final actualPrompt = settings.customSystemPrompt.isNotEmpty
-        ? settings.customSystemPrompt
-        : systemPrompt;
+
+    String compactSystemPrompt =
+        'You are MicroForge AI. [MODE: ${_currentMode == ForgeMode.plan ? "PLAN" : "BUILD"}] '
+        'Forge micro-apps with HTML/Alpine.js/Tailwind. '
+        'REQUIRED: <forge>, <name>, <icon>, <design>, <version>, <release_notes>. '
+        'OPTIONAL: <backend>, <periodic_backend>. '
+        'UI: Responsive, light/dark themes via CSS vars: --mf-bg, --mf-text, --mf-primary, etc. '
+        'API (window.MicroForge): getTheme, onThemeChange, saveData, getData, listAll, promptAi, pickFiles, callBackend, closeApp';
+
+    if (settings.allowGeolocation) compactSystemPrompt += ', getLocation';
+    if (settings.allowAccelerometer) compactSystemPrompt += ', getAccelerometer, watchAccelerometer';
+    if (settings.allowNotifications) compactSystemPrompt += ', showNotification';
+    
+    compactSystemPrompt += '. REFINE: Use logs/screenshot to fix code.';
+
+    if (includesEnhancementContext) {
+      compactSystemPrompt +=
+          '\n\nCONTEXT FOR ENHANCEMENT:\n'
+          'Enhancing: <forge>$enhancementCode</forge>\n'
+          'Backend: <backend>${enhancementBackend ?? 'None'}</backend>\n'
+          'Version: <version>${enhancementVersion ?? '1.0.0'}</version>';
+    }
+
+    settings.setCompactSystemPrompt(compactSystemPrompt);
+
+    String actualPrompt;
+    if (settings.customSystemPrompt.isNotEmpty) {
+      actualPrompt = settings.customSystemPrompt;
+    } else if (settings.useCompactPrompt) {
+      actualPrompt = compactSystemPrompt;
+    } else {
+      actualPrompt = systemPrompt;
+    }
 
     LlmProvider provider;
 
