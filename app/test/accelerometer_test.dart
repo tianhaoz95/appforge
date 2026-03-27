@@ -1,3 +1,4 @@
+import "package:flutter/services.dart";
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
@@ -13,7 +14,7 @@ class MockMicroAppRepository extends Mock implements MicroAppRepository {}
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    const MethodChannel("plugins.flutter.io/path_provider").setMockMethodCallHandler((MethodCall methodCall) async { if (methodCall.method == "getApplicationDocumentsDirectory") { return "."; } return null; }); SharedPreferences.setMockInitialValues({});
   });
 
   test('SettingsProvider allowAccelerometer defaults to false', () {

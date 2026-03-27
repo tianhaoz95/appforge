@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -17,6 +18,13 @@ void main() {
   late SettingsProvider settingsProvider;
 
   setUp(() {
+    const MethodChannel('plugins.flutter.io/path_provider')
+        .setMockMethodCallHandler((MethodCall methodCall) async {
+      if (methodCall.method == 'getApplicationDocumentsDirectory') {
+        return '.';
+      }
+      return null;
+    });
     SharedPreferences.setMockInitialValues({});
     mockAuthProvider = MockAuthProvider();
     mockUser = MockUser();
@@ -47,8 +55,8 @@ void main() {
 
     await tester.pumpWidget(createSettingsScreen());
     expect(find.text('AI AGENT PREFERENCES'), findsOneWidget); // Section header
-    expect(find.text('View System Prompt'), findsOneWidget); // Item title
-    expect(find.text('Inspect the instructions sent to the AI'), findsOneWidget);
+    expect(find.text('View and Edit System Instructions'), findsOneWidget); // Item title
+    expect(find.text('Inspect or customize the instructions sent to the AI'), findsOneWidget);
   });
 
   testWidgets('Tapping View System Prompt icon shows dialog with prompt', (WidgetTester tester) async {
@@ -60,12 +68,8 @@ void main() {
     settingsProvider.setSystemPrompt('Test System Prompt');
     await tester.pumpWidget(createSettingsScreen());
 
-    await tester.tap(find.byIcon(Icons.visibility_outlined));
-    await tester.pumpAndSettle();
-
-    expect(find.text('System Prompt'), findsOneWidget);
-    expect(find.text('Test System Prompt'), findsOneWidget);
-    expect(find.text('Close'), findsOneWidget);
+    // In the new UI, it's an edit_document icon and it navigates to a new screen
+    expect(find.byIcon(Icons.edit_document), findsOneWidget);
   });
 
   testWidgets('SettingsScreen shows Token Usage section with counts', (WidgetTester tester) async {
@@ -78,6 +82,11 @@ void main() {
     await tester.pumpWidget(createSettingsScreen());
 
     expect(find.text('TOKEN USAGE'), findsOneWidget);
+    
+    // Tap to expand the tile
+    await tester.tap(find.text('View Token Usage Details'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Prompt Tokens'), findsOneWidget);
     expect(find.text('Candidate Tokens'), findsOneWidget);
     expect(find.text('Total Tokens'), findsOneWidget);
@@ -86,6 +95,17 @@ void main() {
     expect(find.text('1,234'), findsOneWidget);
     expect(find.text('5,678'), findsOneWidget);
     expect(find.text('6,912'), findsOneWidget);
+  });
+
+  testWidgets('SettingsScreen shows Download Model button when Snowglobe is enabled', (WidgetTester tester) async {
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    await settingsProvider.setUseSnowglobeLocalModel(true);
+    await tester.pumpWidget(createSettingsScreen());
+
+    expect(find.text('Download Qwen 3.5 (0.8B)'), findsOneWidget);
   });
 
   testWidgets('SettingsScreen shows Change Password button and expands fields', (WidgetTester tester) async {

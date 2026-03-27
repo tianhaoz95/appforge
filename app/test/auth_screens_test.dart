@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:appforge/screens/auth/login_screen.dart';
 import 'package:appforge/screens/auth/register_screen.dart';
@@ -14,10 +15,18 @@ class MockAuthProvider extends Mock implements AuthProvider {}
 class MockUser extends Mock implements User {}
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late MockAuthProvider mockAuthProvider;
   late SettingsProvider settingsProvider;
 
   setUp(() {
+    const MethodChannel('plugins.flutter.io/path_provider')
+        .setMockMethodCallHandler((MethodCall methodCall) async {
+      if (methodCall.method == 'getApplicationDocumentsDirectory') {
+        return '.';
+      }
+      return null;
+    });
     SharedPreferences.setMockInitialValues({});
     mockAuthProvider = MockAuthProvider();
     settingsProvider = SettingsProvider();

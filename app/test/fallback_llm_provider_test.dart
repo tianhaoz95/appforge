@@ -1,3 +1,4 @@
+import "package:flutter/services.dart";
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_ai_toolkit/flutter_ai_toolkit.dart';
 import 'package:appforge/providers/fallback_llm_provider.dart';
@@ -44,7 +45,7 @@ void main() {
   late SettingsProvider settings;
 
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    const MethodChannel("plugins.flutter.io/path_provider").setMockMethodCallHandler((MethodCall methodCall) async { if (methodCall.method == "getApplicationDocumentsDirectory") { return "."; } return null; }); SharedPreferences.setMockInitialValues({});
     primary = MockBaseLlmProvider();
     secondary = MockBaseLlmProvider();
     settings = SettingsProvider();

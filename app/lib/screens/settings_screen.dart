@@ -417,8 +417,62 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 _buildSectionHeader('Model Provider'),
                 const SizedBox(height: 12),
                 _buildPreferenceItem(
+                  icon: Icons.computer_outlined,
+                  title: 'Use Local LLM (On-device)',
+                  subtitle: 'Use a model running directly on this device (Snowglobe)',
+                  trailing: Switch(
+                    value: settingsProvider.useSnowglobeLocalModel,
+                    onChanged: (v) => settingsProvider.setUseSnowglobeLocalModel(v),
+                  ),
+                ),
+                if (settingsProvider.useSnowglobeLocalModel) ...[
+                  Padding(
+                    padding: const EdgeInsets.only(left: 48, right: 16, top: 0, bottom: 16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        if (settingsProvider.isDownloadingModel) ...[
+                          const Text('Downloading model...', style: TextStyle(fontSize: 12)),
+                          const SizedBox(height: 8),
+                          LinearProgressIndicator(
+                            value: settingsProvider.modelDownloadProgress,
+                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '${(settingsProvider.modelDownloadProgress * 100).toStringAsFixed(1)}%',
+                            style: TextStyle(fontSize: 10, color: theme.hintColor),
+                          ),
+                        ] else if (!settingsProvider.isModelDownloaded) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: () => settingsProvider.downloadModel(),
+                              icon: const Icon(Icons.download, size: 18),
+                              label: const Text('Download Qwen 3.5 (0.8B)'),
+                              style: OutlinedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ] else ...[
+                          Row(
+                            children: [
+                              Icon(Icons.check_circle, size: 16, color: Colors.green[600]),
+                              const SizedBox(width: 8),
+                              const Text('Model ready', style: TextStyle(fontSize: 12, color: Colors.green)),
+                            ],
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+                _buildPreferenceItem(
                   icon: Icons.hub_outlined,
-                  title: 'Use Local OpenAI API',
+                  title: 'Use Local OpenAI API (Remote)',
                   subtitle: 'Use an OpenAI compatible local backend (e.g. Ollama, LM Studio)',
                   trailing: Switch(
                     value: settingsProvider.useLocalOpenAi,

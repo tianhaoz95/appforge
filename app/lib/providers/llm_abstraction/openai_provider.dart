@@ -59,22 +59,22 @@ class OpenAiProvider extends toolkit.LlmProvider with ChangeNotifier {
       notifyListeners();
     }
 
-    final messages = <openai.ChatMessage>[];
+    final messages = <openai.ChatCompletionMessage>[];
 
     if (_systemInstruction != null && _systemInstruction.isNotEmpty) {
       messages.add(
-        openai.ChatMessage.system(_systemInstruction),
+        openai.ChatCompletionMessage.system(content: _systemInstruction),
       );
     }
 
     // Convert history
     for (final msg in (updateHistory ? _history.take(_history.length - 1) : _history)) {
       if (msg.origin.isUser) {
-        messages.add(openai.ChatMessage.user(
-          openai.UserMessageContent.text(msg.text ?? ''),
+        messages.add(openai.ChatCompletionMessage.user(
+          content: openai.ChatCompletionUserMessageContent.string(msg.text ?? ''),
         ));
       } else {
-        messages.add(openai.ChatMessage.assistant(
+        messages.add(openai.ChatCompletionMessage.assistant(
           content: msg.text ?? '',
         ));
       }
@@ -82,29 +82,35 @@ class OpenAiProvider extends toolkit.LlmProvider with ChangeNotifier {
 
     // If updateHistory is false, we manually add the current prompt
     if (!updateHistory) {
-      messages.add(openai.ChatMessage.user(
-        openai.UserMessageContent.text(prompt),
+      messages.add(openai.ChatCompletionMessage.user(
+        content: openai.ChatCompletionUserMessageContent.string(prompt),
       ));
     }
 
-    final request = openai.ChatCompletionCreateRequest(
-      model: _modelName,
+    final request = openai.CreateChatCompletionRequest(
+      model: openai.ChatCompletionModel.modelId(_modelName),
       messages: messages,
+      stream: true,
     );
 
     try {
+      debugPrint("OpenAiProvider: Executing chat completion stream...");
       final responseStream = _handler.executeChatCompletionStream(request);
 
       await for (final chunk in responseStream) {
-        final content = chunk.textDelta;
-        if (content != null && content.isNotEmpty) {
-          if (updateHistory) {
-            llmMessage.append(content);
+        if (chunk.choices.isNotEmpty) {
+          final content = chunk.choices.first.delta.content;
+          if (content != null && content.isNotEmpty) {
+            if (updateHistory) {
+              llmMessage.append(content);
+            }
+            yield content;
           }
-          yield content;
         }
       }
+      debugPrint("OpenAiProvider: Stream completed successfully.");
     } catch (e) {
+      debugPrint("OpenAiProvider: Error in stream: $e");
       final errorMessage = "Error: ${e.toString()}";
       if (updateHistory) {
         llmMessage.append(errorMessage);

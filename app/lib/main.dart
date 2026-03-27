@@ -15,6 +15,9 @@ import 'package:flutter_js/flutter_js.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'firebase_options.dart';
 import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
@@ -35,29 +38,33 @@ import 'providers/settings_provider.dart';
 import 'providers/forge_mode.dart';
 import 'screens/settings_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'package:snowglobe_openai/snowglobe_openai.dart';
 
 @pragma('vm:entry-point')
 void callbackDispatcher() {
   Workmanager().executeTask((task, inputData) async {
     debugPrint("Background task starting: $task");
-    
+
     final prefs = await SharedPreferences.getInstance();
-    final allowBackground = prefs.getBool('allow_background_execution') ?? false;
+    final allowBackground =
+        prefs.getBool('allow_background_execution') ?? false;
     if (!allowBackground) {
       debugPrint("Background execution disabled in settings.");
       return Future.value(true);
     }
 
-    final allowNotifications = prefs.getBool('allow_background_notifications') ?? false;
+    final allowNotifications =
+        prefs.getBool('allow_background_notifications') ?? false;
     final allowDatabase = prefs.getBool('allow_background_database') ?? false;
 
     final dbHelper = LocalDatabase();
     final db = await dbHelper.database;
-    
+
     // Get all apps with periodic backend
     final List<Map<String, dynamic>> apps = await db.query(
       'micro_apps',
-      where: 'periodic_backend_blob IS NOT NULL AND periodic_backend_blob != ""',
+      where:
+          'periodic_backend_blob IS NOT NULL AND periodic_backend_blob != ""',
     );
 
     if (apps.isEmpty) {
@@ -76,7 +83,7 @@ void callbackDispatcher() {
       debugPrint("Executing background task for app: $appName ($appId)");
 
       final jsRuntime = getJavascriptRuntime();
-      
+
       jsRuntime.onMessage('MicroForgeBridge', (dynamic args) async {
         final data = jsonDecode(args.toString()) as Map<String, dynamic>;
         final action = data['action'];
@@ -85,32 +92,40 @@ void callbackDispatcher() {
           debugPrint('[Background $appName] ${data['message']}');
           return jsonEncode({'success': true});
         } else if (action == 'saveData') {
-          if (!allowDatabase) return jsonEncode({'error': 'Database access disabled'});
+          if (!allowDatabase)
+            return jsonEncode({'error': 'Database access disabled'});
           await dataRepository.saveData(appId, data['key'], data['value']);
           return jsonEncode({'success': true});
         } else if (action == 'getData') {
-          if (!allowDatabase) return jsonEncode({'error': 'Database access disabled'});
+          if (!allowDatabase)
+            return jsonEncode({'error': 'Database access disabled'});
           final val = await dataRepository.getData(appId, data['key']);
           return jsonEncode({'value': val});
         } else if (action == 'deleteData') {
-          if (!allowDatabase) return jsonEncode({'error': 'Database access disabled'});
+          if (!allowDatabase)
+            return jsonEncode({'error': 'Database access disabled'});
           await dataRepository.deleteData(appId, data['key']);
           return jsonEncode({'success': true});
         } else if (action == 'listAll') {
-          if (!allowDatabase) return jsonEncode({'error': 'Database access disabled'});
+          if (!allowDatabase)
+            return jsonEncode({'error': 'Database access disabled'});
           final allData = await dataRepository.listAll(appId);
           return jsonEncode({'data': allData});
         } else if (action == 'showNotification') {
-          if (!allowNotifications) return jsonEncode({'error': 'Notification access disabled'});
-          
+          if (!allowNotifications)
+            return jsonEncode({'error': 'Notification access disabled'});
+
           const androidDetails = AndroidNotificationDetails(
             'background_channel',
             'Background Tasks',
             importance: Importance.max,
             priority: Priority.high,
           );
-          const notificationDetails = NotificationDetails(android: androidDetails, iOS: DarwinNotificationDetails());
-          
+          const notificationDetails = NotificationDetails(
+            android: androidDetails,
+            iOS: DarwinNotificationDetails(),
+          );
+
           await notificationsPlugin.show(
             id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
             title: data['title'] ?? appName,
@@ -123,7 +138,8 @@ void callbackDispatcher() {
         return jsonEncode({'error': 'Unknown action'});
       });
 
-      final wrapper = '''
+      final wrapper =
+          '''
         var window = this;
         var MicroForge = {
           saveData: (key, value) => sendMessage('MicroForgeBridge', JSON.stringify({action: 'saveData', key, value})).then(r => JSON.parse(r)),
@@ -164,45 +180,99 @@ void callbackDispatcher() {
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
+  // Initialize Snowglobe Rust bridge as early as possible
+  try {
+    await ensureSnowglobeInitialized();
+  } catch (e) {
+    debugPrint("Failed to initialize Snowglobe Rust bridge: $e");
+  }
+
   final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
-  const androidInitializationSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const androidInitializationSettings = AndroidInitializationSettings(
+    '@mipmap/ic_launcher',
+  );
   const iosInitializationSettings = DarwinInitializationSettings();
   const initializationSettings = InitializationSettings(
     android: androidInitializationSettings,
     iOS: iosInitializationSettings,
   );
-  await flutterLocalNotificationsPlugin.initialize(settings: initializationSettings);
-
-  await Workmanager().initialize(
-    callbackDispatcher,
+  await flutterLocalNotificationsPlugin.initialize(
+    settings: initializationSettings,
   );
-  
+
+  await Workmanager().initialize(callbackDispatcher);
+
   // Schedule a periodic task to run every 30 minutes
   await Workmanager().registerPeriodicTask(
     "microforge-periodic-background",
     "periodicTask",
     frequency: const Duration(minutes: 30),
-    constraints: Constraints(
-      networkType: NetworkType.connected,
-    ),
+    constraints: Constraints(networkType: NetworkType.connected),
   );
 
   // Keep Firebase for AI if needed, but we could also move it later
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  
+
+  if (const bool.fromEnvironment('USE_FIREBASE_EMULATOR')) {
+    const String host = String.fromEnvironment('LOCAL_IP', defaultValue: '10.0.2.2');
+    debugPrint('Connecting to Firebase Emulator at $host');
+    await FirebaseAuth.instance.useAuthEmulator(host, 9099);
+    FirebaseFirestore.instance.settings = const Settings(
+      host: '$host:8080',
+      sslEnabled: false,
+      persistenceEnabled: false,
+    );
+    await FirebaseStorage.instance.useStorageEmulator(host, 9199);
+  }
+
   final dbHelper = LocalDatabase();
   final settingsProvider = SettingsProvider();
   await settingsProvider.loadSettings();
-  
+
+  // Initialize Snowglobe Local Model engine if enabled and model exists
+  if (settingsProvider.useSnowglobeLocalModel &&
+      settingsProvider.isModelDownloaded) {
+    try {
+      final appDocDir = await getApplicationDocumentsDirectory();
+      final modelFile = File('${appDocDir.path}/model.gguf');
+      final tokenizerFile = File('${appDocDir.path}/tokenizer.json');
+      if (await modelFile.exists() && await tokenizerFile.exists()) {
+        debugPrint("Initializing Snowglobe Local Model engine...");
+        final result = await SnowglobeOpenAI.initEngine(
+          cacheDir: appDocDir.path,
+          config: const InitConfig(
+            vocabShards: 1,
+            maxGenLen: 2048,
+            useExecutorch: false,
+            backend: BackendType.llamaCpp,
+            speculateTokens: 0,
+          ),
+        );
+        settingsProvider.setEngineInitialized(true);
+        debugPrint("Snowglobe Local Model engine initialization result: $result");
+      } else {
+        debugPrint("Snowglobe model or tokenizer file missing at ${appDocDir.path}");
+      }
+    } catch (e) {
+      debugPrint("Failed to initialize Snowglobe engine: $e");
+    }
+  }
+
   runApp(
     MultiProvider(
       providers: [
         ChangeNotifierProvider.value(value: settingsProvider),
-        ChangeNotifierProvider(create: (_) => MicroAppRepository(dbHelper: dbHelper)),
+        ChangeNotifierProvider(
+          create: (_) => MicroAppRepository(dbHelper: dbHelper),
+        ),
         Provider(create: (_) => MicroAppDataRepository(dbHelper: dbHelper)),
-        ChangeNotifierProvider(create: (_) => ConversationRepository(dbHelper: dbHelper)),
-        ChangeNotifierProvider(create: (_) => AuthProvider()), // Kept for potential UI needs, but not for auth
+        ChangeNotifierProvider(
+          create: (_) => ConversationRepository(dbHelper: dbHelper),
+        ),
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(),
+        ), // Kept for potential UI needs, but not for auth
       ],
       child: const MyApp(),
     ),
@@ -217,25 +287,32 @@ class MyApp extends StatelessWidget {
     return Consumer<SettingsProvider>(
       builder: (context, settings, _) {
         final platformBrightness = MediaQuery.platformBrightnessOf(context);
-        final isDark = settings.themeMode == ThemeMode.dark ||
-            (settings.themeMode == ThemeMode.system && platformBrightness == Brightness.dark);
+        final isDark =
+            settings.themeMode == ThemeMode.dark ||
+            (settings.themeMode == ThemeMode.system &&
+                platformBrightness == Brightness.dark);
         final colorScheme = ColorScheme.fromSeed(
-          seedColor: Colors.blueGrey, 
+          seedColor: Colors.blueGrey,
           brightness: isDark ? Brightness.dark : Brightness.light,
         );
-        
+
         return BetterFeedback(
           theme: FeedbackThemeData(
             background: isDark ? Colors.grey[900]! : Colors.grey[300]!,
             feedbackSheetColor: isDark ? Colors.black : Colors.white,
             activeFeedbackModeColor: colorScheme.primary,
-            bottomSheetDescriptionStyle: TextStyle(color: isDark ? Colors.white : Colors.black),
+            bottomSheetDescriptionStyle: TextStyle(
+              color: isDark ? Colors.white : Colors.black,
+            ),
           ),
           child: MaterialApp(
             title: 'MicroForge',
             debugShowCheckedModeBanner: false,
             theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.light),
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.blueGrey,
+                brightness: Brightness.light,
+              ),
               scaffoldBackgroundColor: Colors.white,
               appBarTheme: const AppBarTheme(
                 backgroundColor: Colors.white,
@@ -246,7 +323,10 @@ class MyApp extends StatelessWidget {
               useMaterial3: true,
             ),
             darkTheme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(seedColor: Colors.blueGrey, brightness: Brightness.dark),
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: Colors.blueGrey,
+                brightness: Brightness.dark,
+              ),
               scaffoldBackgroundColor: Colors.black,
               appBarTheme: const AppBarTheme(
                 backgroundColor: Colors.black,
@@ -284,7 +364,7 @@ class AuthWrapper extends StatelessWidget {
 
 class MicroForgeHomePage extends StatefulWidget {
   static LlmProvider? mockProvider;
-  
+
   const MicroForgeHomePage({super.key});
 
   @override
@@ -337,9 +417,10 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
   void _onAppsChanged() {
     if (!mounted) return;
-    
+
     // Check if we are busy to avoid interrupting a generation
-    if (_provider is FallbackLlmProvider && (_provider as FallbackLlmProvider).isBusy) {
+    if (_provider is FallbackLlmProvider &&
+        (_provider as FallbackLlmProvider).isBusy) {
       debugPrint('Apps changed but AI is busy. Delaying re-initialization...');
       return;
     }
@@ -349,11 +430,21 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       debugPrint('Apps changed, re-initializing AI to update system prompt...');
       _initializeAI(
         enhancementCode: _enhancementContextInPrompt ? _enhancementCode : null,
-        enhancementBackend: _enhancementContextInPrompt ? _enhancementBackend : null,
-        enhancementPeriodicBackend: _enhancementContextInPrompt ? _enhancementPeriodicBackend : null,
-        enhancementDesign: _enhancementContextInPrompt ? _enhancementDesign : null,
-        enhancementAppId: _enhancementContextInPrompt ? _enhancementAppId : null,
-        enhancementVersion: _enhancementContextInPrompt ? _enhancementVersion : null,
+        enhancementBackend: _enhancementContextInPrompt
+            ? _enhancementBackend
+            : null,
+        enhancementPeriodicBackend: _enhancementContextInPrompt
+            ? _enhancementPeriodicBackend
+            : null,
+        enhancementDesign: _enhancementContextInPrompt
+            ? _enhancementDesign
+            : null,
+        enhancementAppId: _enhancementContextInPrompt
+            ? _enhancementAppId
+            : null,
+        enhancementVersion: _enhancementContextInPrompt
+            ? _enhancementVersion
+            : null,
         history: _provider?.history.toList(),
         mode: _currentMode,
       );
@@ -391,22 +482,26 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _currentMode = settings.defaultForgeMode;
     }
 
-    String systemPrompt = 'You are MicroForge AI. You help users "forge" micro-apps. ';
+    String systemPrompt =
+        'You are MicroForge AI. You help users "forge" micro-apps. ';
 
     if (_currentMode == ForgeMode.plan) {
-      systemPrompt += '\n\n[MODE: PLAN] Iteratively work with the user to refine the design. '
+      systemPrompt +=
+          '\n\n[MODE: PLAN] Iteratively work with the user to refine the design. '
           'Ask for permission to build when the design is mature enough. '
           'Do NOT provide any micro-app code or <forge> tags yet in this mode unless explicitly asked to build. '
           'Focus on discussing requirements, architecture, and user experience first. '
           'In this mode, you should help the user think through their app before implementation.';
     } else {
-      systemPrompt += '\n\n[MODE: BUILD] Immediately start building the micro-app with <forge> tags. '
+      systemPrompt +=
+          '\n\n[MODE: BUILD] Immediately start building the micro-app with <forge> tags. '
           'Whenever you provide code for a micro-app (HTML/Alpine.js/Tailwind), '
           'you MUST wrap it inside <forge>...</forge> tags. '
           'Example: <forge><div class="p-4">Hello</div></forge>. ';
     }
 
-    systemPrompt += '\n\nAdditionally, for every micro-app you forge, you MUST also provide: '
+    systemPrompt +=
+        '\n\nAdditionally, for every micro-app you forge, you MUST also provide: '
         '1. A concise name wrapped in <name>...</name> tags. '
         '2. A suitable emoji to represent the app wrapped in <icon>...</icon> tags. '
         '3. A brief design document in Markdown wrapped in <design>...</design> tags. '
@@ -500,22 +595,26 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         '</periodic_backend>';
 
     if (settings.allowGeolocation) {
-      systemPrompt += '- `window.MicroForge.getLocation()`: Returns a Promise that resolves to a location object. '
+      systemPrompt +=
+          '- `window.MicroForge.getLocation()`: Returns a Promise that resolves to a location object. '
           'Location object: `{ latitude, longitude, altitude, accuracy, speed, heading, timestamp }`. ';
     }
 
     if (settings.allowAccelerometer) {
-      systemPrompt += '- `window.MicroForge.getAccelerometer()`: Returns a Promise that resolves to an object `{ x, y, z }`. '
+      systemPrompt +=
+          '- `window.MicroForge.getAccelerometer()`: Returns a Promise that resolves to an object `{ x, y, z }`. '
           '- `window.MicroForge.watchAccelerometer(callback)`: Subscribes to accelerometer updates. The callback receives `{ x, y, z }`. '
           '- `window.MicroForge.stopAccelerometer()`: Stops the accelerometer subscription. ';
     }
 
     if (settings.allowNotifications) {
-      systemPrompt += '- `window.MicroForge.showNotification(title, body, payload)`: Shows a local notification. Returns a Promise. '
+      systemPrompt +=
+          '- `window.MicroForge.showNotification(title, body, payload)`: Shows a local notification. Returns a Promise. '
           'Payload is an optional string. ';
     }
 
-    systemPrompt += '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
+    systemPrompt +=
+        '- `window.MicroForge.closeApp()`: Closes the micro-app preview. '
         '\n\nREFINE CAPABILITY: '
         'When you receive a message starting with "REFINE:", it means the user wants you to analyze the current app for flaws and potential improvements based on logs and a screenshot. '
         'You MUST analyze the console logs for errors or warnings, and the screenshot for layout/styling issues. '
@@ -528,19 +627,22 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         '@click="files = await window.MicroForge.pickFiles({ multiple: true, type: \'image\' })"';
 
     if (settings.allowGeolocation) {
-      systemPrompt += '\nExample of Alpine.js Geolocation: '
+      systemPrompt +=
+          '\nExample of Alpine.js Geolocation: '
           'x-data="{ loc: null, loading: false }" '
           '@click="loading = true; loc = await window.MicroForge.getLocation(); loading = false"';
     }
 
     if (settings.allowAccelerometer) {
-      systemPrompt += '\nExample of Alpine.js Accelerometer: '
+      systemPrompt +=
+          '\nExample of Alpine.js Accelerometer: '
           'x-data="{ x: 0, y: 0, z: 0 }" '
           'x-init="window.MicroForge.watchAccelerometer(data => { x = data.x; y = data.y; z = data.z })"';
     }
 
     if (settings.allowNotifications) {
-      systemPrompt += '\nExample of Alpine.js Notifications: '
+      systemPrompt +=
+          '\nExample of Alpine.js Notifications: '
           'x-data="{ title: \'\', body: \'\' }" '
           '@submit.prevent="await window.MicroForge.showNotification(title, body, \'my-payload\')"';
     }
@@ -548,7 +650,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     final includesEnhancementContext = enhancementCode != null;
 
     if (includesEnhancementContext) {
-      systemPrompt += '\n\nCONTEXT FOR ENHANCEMENT:\n'
+      systemPrompt +=
+          '\n\nCONTEXT FOR ENHANCEMENT:\n'
           'You are currently enhancing an existing micro-app.\n'
           'Current Implementation:\n<forge>$enhancementCode</forge>\n'
           'Current Backend:\n<backend>${enhancementBackend ?? 'No backend provided.'}</backend>\n'
@@ -586,7 +689,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           final design = app['design_doc'] ?? 'No description available.';
           systemPrompt += '- **$name** (ID: $id): $design\n';
         }
-        systemPrompt += '\nWhen the user asks to build something, you SHOULD FIRST check if any of the existing apps above can fulfill their request. '
+        systemPrompt +=
+            '\nWhen the user asks to build something, you SHOULD FIRST check if any of the existing apps above can fulfill their request. '
             'If so, suggest the existing app(s) and explain how they might help. '
             'When suggesting an existing app, you MUST wrap its ID and name in <suggest_app id="APP_ID">APP_NAME</suggest_app> tags. '
             'Example: "You already have a Task Master app that might work for this: <suggest_app id="123">Task Master</suggest_app>" '
@@ -610,11 +714,22 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
 
     settings.setDefaultSystemPrompt(systemPrompt);
-    final actualPrompt = settings.customSystemPrompt.isNotEmpty ? settings.customSystemPrompt : systemPrompt;
+    final actualPrompt = settings.customSystemPrompt.isNotEmpty
+        ? settings.customSystemPrompt
+        : systemPrompt;
 
     LlmProvider provider;
 
-    if (settings.useLocalOpenAi) {
+    if (settings.useSnowglobeLocalModel) {
+      final localService = OpenAiLlmService(
+        handler: SnowglobeOpenAiHandler(settingsProvider: settings),
+        modelName: 'snowglobe',
+      );
+      provider = localService.createProvider(
+        systemInstruction: actualPrompt,
+        history: history,
+      );
+    } else if (settings.useLocalOpenAi) {
       final localService = OpenAiLlmService(
         handler: NetworkOpenAiHandler(endpoint: settings.localOpenAiUrl),
         modelName: 'local-model',
@@ -741,7 +856,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   void onEnhance() async {
     if (_activeForgeCode == null) return;
 
-    final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
+    final name = _conversationTitle != 'New Conversation'
+        ? _conversationTitle
+        : 'Forged App';
     final codeToEnhance = _activeForgeCode!;
     final backendToEnhance = _activeBackendCode;
     final periodicBackendToEnhance = _activePeriodicBackendCode;
@@ -772,7 +889,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     });
 
     _initializeAI(
-      enhancementCode: codeToEnhance, 
+      enhancementCode: codeToEnhance,
       enhancementBackend: backendToEnhance,
       enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
@@ -787,7 +904,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           _provider!.history = [
             ChatMessage(
               origin: MessageOrigin.llm,
-              text: "I've loaded your app '$name'. How would you like to enhance it?",
+              text:
+                  "I've loaded your app '$name'. How would you like to enhance it?",
               attachments: const [],
             ),
             ChatMessage(
@@ -799,13 +917,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         });
       }
     });
-
   }
 
   void _onFeedback(String text, Uint8List screenshot) {
     if (_activeForgeCode == null) return;
 
-    final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
+    final name = _conversationTitle != 'New Conversation'
+        ? _conversationTitle
+        : 'Forged App';
     final codeToEnhance = _activeForgeCode!;
     final backendToEnhance = _activeBackendCode;
     final periodicBackendToEnhance = _activePeriodicBackendCode;
@@ -823,7 +942,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     });
 
     _initializeAI(
-      enhancementCode: codeToEnhance, 
+      enhancementCode: codeToEnhance,
       enhancementBackend: backendToEnhance,
       enhancementPeriodicBackend: periodicBackendToEnhance,
       enhancementDesign: designToEnhance,
@@ -856,9 +975,16 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Analyzing feedback for $name in current conversation...'),
+        content: Text(
+          'Analyzing feedback for $name in current conversation...',
+        ),
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: double.infinity, left: 16, right: 16, top: 16),
+        margin: const EdgeInsets.only(
+          bottom: double.infinity,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
       ),
     );
   }
@@ -866,7 +992,9 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
   void _onAutoRefine(List<String> logs, Uint8List screenshot) {
     if (_activeForgeCode == null) return;
 
-    final name = _conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App';
+    final name = _conversationTitle != 'New Conversation'
+        ? _conversationTitle
+        : 'Forged App';
     final existingHistory = _provider?.history.toList() ?? [];
 
     setState(() {
@@ -883,7 +1011,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       if (_provider != null) {
         final autoRefineMessage = ChatMessage(
           origin: MessageOrigin.user,
-          text: "REFINE: Please analyze this app for flaws and potential improvements based on the following context:\n\n"
+          text:
+              "REFINE: Please analyze this app for flaws and potential improvements based on the following context:\n\n"
               "1. App Console Logs:\n$logsText\n\n"
               "2. App Screenshot (attached below).\n\n"
               "Please look for visual inconsistencies, bugs indicated by logs, or UX improvements and implement the necessary changes in the code and design doc.",
@@ -904,9 +1033,16 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Analyzing app for refinements in current conversation...'),
+        content: Text(
+          'Analyzing app for refinements in current conversation...',
+        ),
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(bottom: double.infinity, left: 16, right: 16, top: 16),
+        margin: const EdgeInsets.only(
+          bottom: double.infinity,
+          left: 16,
+          right: 16,
+          top: 16,
+        ),
       ),
     );
   }
@@ -925,12 +1061,27 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     }
   }
 
-  void onDeploy(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon, {bool isTemporary = false}) async {
+  void onDeploy(
+    String code,
+    String? backendCode,
+    String? periodicBackendCode,
+    String? name,
+    String? designDoc,
+    String? version,
+    String? releaseNotes,
+    String? icon, {
+    bool isTemporary = false,
+  }) async {
     // Fallback to enhancement values if current ones are null
     final finalBackend = backendCode ?? _enhancementBackend;
-    final finalPeriodicBackend = periodicBackendCode ?? _enhancementPeriodicBackend;
+    final finalPeriodicBackend =
+        periodicBackendCode ?? _enhancementPeriodicBackend;
     final finalDesign = designDoc ?? _enhancementDesign;
-    final finalName = name ?? (_conversationTitle != 'New Conversation' ? _conversationTitle : 'Forged App');
+    final finalName =
+        name ??
+        (_conversationTitle != 'New Conversation'
+            ? _conversationTitle
+            : 'Forged App');
 
     setState(() {
       _activeForgeCode = code;
@@ -939,8 +1090,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _activeDesignDoc = finalDesign;
       _activeReleaseNotes = releaseNotes;
       _showPreview = true;
-      
-      // Update enhancement context so subsequent deploys in the same conversation 
+
+      // Update enhancement context so subsequent deploys in the same conversation
       // can also benefit from these fallbacks
       _enhancementCode = code;
       _enhancementBackend = finalBackend;
@@ -972,9 +1123,10 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           finalAppId = _enhancementAppId!;
           resolvedName = name ?? existingApp['name'] ?? resolvedName;
           finalIcon = icon ?? existingApp['icon'] ?? finalIcon;
-          
+
           final currentVersion = existingApp['version'] ?? '1.0.0';
-          if (version == null || _compareVersions(version, currentVersion) <= 0) {
+          if (version == null ||
+              _compareVersions(version, currentVersion) <= 0) {
             finalVersion = _bumpVersion(currentVersion);
           } else {
             finalVersion = version;
@@ -1000,7 +1152,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
         _activeAppId = appId;
         _enhancementVersion = finalVersion;
       });
-
     } catch (e) {
       debugPrint('Failed to save app: $e');
     }
@@ -1013,14 +1164,17 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       loadApp(app);
     } else {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('App not found!')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('App not found!')));
       }
     }
   }
 
-  void loadApp(Map<String, dynamic> app, {bool switchConversation = false}) async {
+  void loadApp(
+    Map<String, dynamic> app, {
+    bool switchConversation = false,
+  }) async {
     final conversationId = app['conversationId'];
     final appId = app['appId'];
     if (conversationId != null && switchConversation) {
@@ -1081,7 +1235,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     setState(() {
       _currentConversationId = conversationId;
       _conversationTitle = title;
-      _activeForgeCode = null; 
+      _activeForgeCode = null;
       _activeBackendCode = null;
       _activePeriodicBackendCode = null;
       _showPreview = false;
@@ -1108,15 +1262,15 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
   void _copyToClipboard(String text, String label) {
     if (text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No $label to copy.')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No $label to copy.')));
       return;
     }
     Clipboard.setData(ClipboardData(text: text));
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('$label copied to clipboard.')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('$label copied to clipboard.')));
   }
 
   void _showContextDialog() {
@@ -1142,10 +1296,16 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Original Code', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Original Code',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 18),
-                    onPressed: () => _copyToClipboard(_enhancementCode ?? '', 'Original code'),
+                    onPressed: () => _copyToClipboard(
+                      _enhancementCode ?? '',
+                      'Original code',
+                    ),
                     tooltip: 'Copy Original Code',
                   ),
                 ],
@@ -1154,21 +1314,28 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               MarkdownBody(
                 data: '```html\n${_enhancementCode ?? ''}\n```',
                 selectable: true,
-                builders: {
-                  'code': CodeElementBuilder(context),
-                },
-                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                  code: const TextStyle(backgroundColor: Colors.transparent),
-                ),
+                builders: {'code': CodeElementBuilder(context)},
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                    .copyWith(
+                      code: const TextStyle(
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
               ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Original Backend', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Original Backend',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 18),
-                    onPressed: () => _copyToClipboard(_enhancementBackend ?? '', 'Original backend'),
+                    onPressed: () => _copyToClipboard(
+                      _enhancementBackend ?? '',
+                      'Original backend',
+                    ),
                     tooltip: 'Copy Original Backend',
                   ),
                 ],
@@ -1177,44 +1344,59 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               MarkdownBody(
                 data: '```javascript\n${_enhancementBackend ?? ''}\n```',
                 selectable: true,
-                builders: {
-                  'code': CodeElementBuilder(context),
-                },
-                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                  code: const TextStyle(backgroundColor: Colors.transparent),
-                ),
+                builders: {'code': CodeElementBuilder(context)},
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                    .copyWith(
+                      code: const TextStyle(
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
               ),
               const SizedBox(height: 16),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Background Periodic', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Background Periodic',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 18),
-                    onPressed: () => _copyToClipboard(_enhancementPeriodicBackend ?? '', 'Background periodic code'),
+                    onPressed: () => _copyToClipboard(
+                      _enhancementPeriodicBackend ?? '',
+                      'Background periodic code',
+                    ),
                     tooltip: 'Copy Background Periodic Code',
                   ),
                 ],
               ),
               const SizedBox(height: 8),
               MarkdownBody(
-                data: '```javascript\n${_enhancementPeriodicBackend ?? ''}\n```',
+                data:
+                    '```javascript\n${_enhancementPeriodicBackend ?? ''}\n```',
                 selectable: true,
-                builders: {
-                  'code': CodeElementBuilder(context),
-                },
-                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                  code: const TextStyle(backgroundColor: Colors.transparent),
-                ),
+                builders: {'code': CodeElementBuilder(context)},
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                    .copyWith(
+                      code: const TextStyle(
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
               ),
               const SizedBox(height: 24),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('Design Document', style: Theme.of(context).textTheme.titleLarge),
+                  Text(
+                    'Design Document',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
                   IconButton(
                     icon: const Icon(Icons.copy, size: 18),
-                    onPressed: () => _copyToClipboard(_enhancementDesign ?? '', 'Design document'),
+                    onPressed: () => _copyToClipboard(
+                      _enhancementDesign ?? '',
+                      'Design document',
+                    ),
                     tooltip: 'Copy Design Document',
                   ),
                 ],
@@ -1223,12 +1405,13 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               MarkdownBody(
                 data: _enhancementDesign ?? 'No design document provided.',
                 selectable: true,
-                builders: {
-                  'code': CodeElementBuilder(context),
-                },
-                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
-                  code: const TextStyle(backgroundColor: Colors.transparent),
-                ),
+                builders: {'code': CodeElementBuilder(context)},
+                styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context))
+                    .copyWith(
+                      code: const TextStyle(
+                        backgroundColor: Colors.transparent,
+                      ),
+                    ),
               ),
             ],
           ),
@@ -1245,19 +1428,22 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
           appBar: AppBar(
             title: Row(
               mainAxisSize: MainAxisSize.min,
-              children: [
-                const Text('MicroForge'),
-              ],
+              children: [const Text('MicroForge')],
             ),
             actions: [
-              IconButton(icon: const Icon(Icons.add), onPressed: _createNewForge),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: _createNewForge,
+              ),
               IconButton(
                 icon: const Icon(Icons.settings),
                 onPressed: () async {
                   final currentHistory = _provider?.history.toList();
                   await Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const SettingsScreen(),
+                    ),
                   );
                   _initializeAI(
                     enhancementCode: _enhancementCode,
@@ -1274,14 +1460,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                 onPressed: () {
                   BetterFeedback.of(context).show((feedback) async {
                     final directory = await getTemporaryDirectory();
-                    final imagePath = '${directory.path}/feedback_screenshot.png';
+                    final imagePath =
+                        '${directory.path}/feedback_screenshot.png';
                     final imageFile = File(imagePath);
                     await imageFile.writeAsBytes(feedback.screenshot);
 
-                    await Share.shareXFiles(
-                      [XFile(imagePath)],
-                      text: feedback.text,
-                    );
+                    await Share.shareXFiles([
+                      XFile(imagePath),
+                    ], text: feedback.text);
                   });
                 },
               ),
@@ -1296,7 +1482,8 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
               : ListenableBuilder(
                   listenable: _provider!,
                   builder: (context, _) {
-                    final isDark = Theme.of(context).brightness == Brightness.dark;
+                    final isDark =
+                        Theme.of(context).brightness == Brightness.dark;
                     final colorScheme = Theme.of(context).colorScheme;
 
                     return Stack(
@@ -1306,128 +1493,239 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                           removeTop: true,
                           child: Column(
                             children: [
-                              Expanded(child: LlmChatView(
+                              Expanded(
+                                child: LlmChatView(
                                   provider: _provider!,
                                   style: LlmChatViewStyle(
-                                    backgroundColor: isDark ? Colors.black : Colors.transparent,
+                                    backgroundColor: isDark
+                                        ? Colors.black
+                                        : Colors.transparent,
                                     progressIndicatorColor: colorScheme.primary,
-                                  userMessageStyle: UserMessageStyle(
-                                    decoration: BoxDecoration(
-                                      color: colorScheme.primary,
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    textStyle: TextStyle(color: colorScheme.onPrimary),
-                                  ),
-                                  llmMessageStyle: LlmMessageStyle(
-                                    icon: Icons.circle,
-                                    iconColor: Colors.transparent,
-                                    iconDecoration: const BoxDecoration(color: Colors.transparent),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? Colors.black : Colors.transparent,
-                                    ),
-                                    padding: EdgeInsets.zero,
-                                    margin: const EdgeInsets.only(left: 0, top: 4, bottom: 4),
-                                    maxWidth: double.infinity,
-                                    minWidth: 0,
-                                    flex: 100,
-                                  ),
-                                  chatInputStyle: ChatInputStyle(
-                                    backgroundColor: isDark ? Colors.grey[900] : Colors.white,
-                                    textStyle: TextStyle(color: isDark ? Colors.white : Colors.black),
-                                    hintStyle: TextStyle(color: isDark ? Colors.grey[400] : Colors.grey[600]),
-                                    decoration: BoxDecoration(
-                                      color: isDark ? Colors.grey[900] : Colors.white,
-                                      borderRadius: BorderRadius.circular(28),
-                                      border: Border.all(
-                                        color: isDark ? Colors.grey[800]! : Colors.grey[300]!,
+                                    userMessageStyle: UserMessageStyle(
+                                      decoration: BoxDecoration(
+                                        color: colorScheme.primary,
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                      textStyle: TextStyle(
+                                        color: colorScheme.onPrimary,
                                       ),
                                     ),
-                                  ),
-                                  submitButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : Colors.black,
-                                    iconDecoration: BoxDecoration(
-                                      color: isDark ? Colors.black : Colors.white,
-                                      shape: BoxShape.circle,
+                                    llmMessageStyle: LlmMessageStyle(
+                                      icon: Icons.circle,
+                                      iconColor: Colors.transparent,
+                                      iconDecoration: const BoxDecoration(
+                                        color: Colors.transparent,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black
+                                            : Colors.transparent,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      margin: const EdgeInsets.only(
+                                        left: 0,
+                                        top: 4,
+                                        bottom: 4,
+                                      ),
+                                      maxWidth: double.infinity,
+                                      minWidth: 0,
+                                      flex: 100,
                                     ),
-                                  ),
-                                  addButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : Colors.black,
-                                    iconDecoration: BoxDecoration(
-                                      color: isDark ? Colors.black : Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  attachFileButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : Colors.black,
-                                    iconDecoration: BoxDecoration(
-                                      color: isDark ? Colors.black : Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  cameraButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : Colors.black,
-                                    iconDecoration: BoxDecoration(
-                                      color: isDark ? Colors.black : Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  galleryButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : Colors.black,
-                                    iconDecoration: BoxDecoration(
-                                      color: isDark ? Colors.black : Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  recordButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : Colors.black,
-                                    iconDecoration: BoxDecoration(
-                                      color: isDark ? Colors.black : Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  stopButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : colorScheme.error,
-                                  ),
-                                  cancelButtonStyle: ActionButtonStyle(
-                                    iconColor: isDark ? Colors.white : Colors.black,
-                                    iconDecoration: BoxDecoration(
-                                      color: isDark ? Colors.black : Colors.white,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  menuColor: isDark ? Colors.grey[850] : Colors.white,
-                                  actionButtonBarDecoration: BoxDecoration(
-                                    color: isDark ? Colors.grey[900] : Colors.grey[200],
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                                responseBuilder: (context, message) => VibeDetector(
-                                  message: message,
-                                  onViewContext: _showContextDialog,
-                                onDeploy: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, {isTemporary = false}) => 
-                                    onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, isTemporary: isTemporary),
-                                  onOpenApp: _onOpenApp,
-                                  onAutoRefine: (code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon) async {
-                                    if (!_showPreview) {
-                                      onDeploy(code, backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon, isTemporary: true);
-                                      // Give WebView some time to load before attempting to capture logs/screenshot
-                                      await Future.delayed(const Duration(milliseconds: 1500));
-                                    }
-                                    
-                                    if (_previewSheetKey.currentState != null) {
-                                      _previewSheetKey.currentState!.handleAutoRefine();
-                                    } else if (context.mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Failed to start refinement. Please try again.'),
-                                          duration: Duration(seconds: 2),
+                                    chatInputStyle: ChatInputStyle(
+                                      backgroundColor: isDark
+                                          ? Colors.grey[900]
+                                          : Colors.white,
+                                      textStyle: TextStyle(
+                                        color: isDark
+                                            ? Colors.white
+                                            : Colors.black,
+                                      ),
+                                      hintStyle: TextStyle(
+                                        color: isDark
+                                            ? Colors.grey[400]
+                                            : Colors.grey[600],
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.grey[900]
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(28),
+                                        border: Border.all(
+                                          color: isDark
+                                              ? Colors.grey[800]!
+                                              : Colors.grey[300]!,
                                         ),
-                                      );
-                                    }
-                                  },
+                                      ),
+                                    ),
+                                    submitButtonStyle: ActionButtonStyle(
+                                      iconColor: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    addButtonStyle: ActionButtonStyle(
+                                      iconColor: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    attachFileButtonStyle: ActionButtonStyle(
+                                      iconColor: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    cameraButtonStyle: ActionButtonStyle(
+                                      iconColor: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    galleryButtonStyle: ActionButtonStyle(
+                                      iconColor: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    recordButtonStyle: ActionButtonStyle(
+                                      iconColor: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    stopButtonStyle: ActionButtonStyle(
+                                      iconColor: isDark
+                                          ? Colors.white
+                                          : colorScheme.error,
+                                    ),
+                                    cancelButtonStyle: ActionButtonStyle(
+                                      iconColor: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.black
+                                            : Colors.white,
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    menuColor: isDark
+                                        ? Colors.grey[850]
+                                        : Colors.white,
+                                    actionButtonBarDecoration: BoxDecoration(
+                                      color: isDark
+                                          ? Colors.grey[900]
+                                          : Colors.grey[200],
+                                      borderRadius: BorderRadius.circular(20),
+                                    ),
+                                  ),
+                                  responseBuilder: (context, message) => VibeDetector(
+                                    message: message,
+                                    onViewContext: _showContextDialog,
+                                    onDeploy:
+                                        (
+                                          code,
+                                          backendCode,
+                                          periodicBackendCode,
+                                          name,
+                                          designDoc,
+                                          version,
+                                          releaseNotes,
+                                          icon, {
+                                          isTemporary = false,
+                                        }) => onDeploy(
+                                          code,
+                                          backendCode,
+                                          periodicBackendCode,
+                                          name,
+                                          designDoc,
+                                          version,
+                                          releaseNotes,
+                                          icon,
+                                          isTemporary: isTemporary,
+                                        ),
+                                    onOpenApp: _onOpenApp,
+                                    onAutoRefine:
+                                        (
+                                          code,
+                                          backendCode,
+                                          periodicBackendCode,
+                                          name,
+                                          designDoc,
+                                          version,
+                                          releaseNotes,
+                                          icon,
+                                        ) async {
+                                          if (!_showPreview) {
+                                            onDeploy(
+                                              code,
+                                              backendCode,
+                                              periodicBackendCode,
+                                              name,
+                                              designDoc,
+                                              version,
+                                              releaseNotes,
+                                              icon,
+                                              isTemporary: true,
+                                            );
+                                            // Give WebView some time to load before attempting to capture logs/screenshot
+                                            await Future.delayed(
+                                              const Duration(
+                                                milliseconds: 1500,
+                                              ),
+                                            );
+                                          }
+
+                                          if (_previewSheetKey.currentState !=
+                                              null) {
+                                            _previewSheetKey.currentState!
+                                                .handleAutoRefine();
+                                          } else if (context.mounted) {
+                                            ScaffoldMessenger.of(
+                                              context,
+                                            ).showSnackBar(
+                                              const SnackBar(
+                                                content: Text(
+                                                  'Failed to start refinement. Please try again.',
+                                                ),
+                                                duration: Duration(seconds: 2),
+                                              ),
+                                            );
+                                          }
+                                        },
+                                  ),
                                 ),
                               ),
-                            ),
                             ],
                           ),
                         ),
@@ -1437,20 +1735,27 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                             child: Center(
                               child: Consumer<AuthProvider>(
                                 builder: (context, auth, _) {
-                                  final name = auth.user?.displayName ?? 'there';
+                                  final name =
+                                      auth.user?.displayName ?? 'there';
                                   return Column(
                                     mainAxisSize: MainAxisSize.min,
                                     children: [
                                       Text(
                                         'Hello! $name,',
-                                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineMedium
+                                            ?.copyWith(
                                               color: Colors.blueGrey[700],
                                               fontWeight: FontWeight.bold,
                                             ),
                                       ),
                                       const SizedBox(height: 8),
                                       RollingGreeting(
-                                        style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .headlineSmall
+                                            ?.copyWith(
                                               color: Colors.blueGrey[400],
                                             ),
                                       ),
