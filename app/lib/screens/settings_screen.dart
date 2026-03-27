@@ -29,6 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _showOldPassword = false;
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
+  double? _localModelMaxGenLenSliderValue;
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
 
   @override
@@ -464,6 +465,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                               const SizedBox(width: 8),
                               const Text('Model ready', style: TextStyle(fontSize: 12, color: Colors.green)),
                             ],
+                          ),
+                        ],
+                        if (settingsProvider.isModelDownloaded) ...[
+                          const SizedBox(height: 16),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text('Max context length', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+                              Text(
+                                '${(_localModelMaxGenLenSliderValue ?? settingsProvider.localModelMaxGenLen).toInt()} tokens',
+                                style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          Slider(
+                            value: (_localModelMaxGenLenSliderValue ?? settingsProvider.localModelMaxGenLen.toDouble()),
+                            min: 512,
+                            max: 8192,
+                            divisions: 15, // (8192-512)/512 = 15
+                            label: (_localModelMaxGenLenSliderValue ?? settingsProvider.localModelMaxGenLen).toInt().toString(),
+                            onChanged: (v) {
+                              setState(() {
+                                _localModelMaxGenLenSliderValue = v;
+                              });
+                            },
+                            onChangeEnd: (v) {
+                              settingsProvider.setLocalModelMaxGenLen(v.toInt());
+                              setState(() {
+                                _localModelMaxGenLenSliderValue = null;
+                              });
+                            },
+                          ),
+                          Text(
+                            'Higher values allow longer conversations but may slow down responses on some devices.',
+                            style: TextStyle(fontSize: 10, color: theme.hintColor),
                           ),
                         ],
                       ],
