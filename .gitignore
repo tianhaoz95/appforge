@@ -23,3 +23,6 @@ Thumbs.db
 /.venv
 /.firebase
 .aider*
+
+# testing
+/test_assets
