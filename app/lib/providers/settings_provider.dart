@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:snowglobe_openai/snowglobe_openai.dart';
@@ -30,6 +31,9 @@ class SettingsProvider with ChangeNotifier {
   String _systemPrompt = '';
   String _customSystemPrompt = '';
   String _defaultSystemPrompt = '';
+  String _compactSystemPrompt = '';
+  Map<String, String> _savedSystemPrompts = {};
+  bool _useCompactPrompt = false;
   ThemeMode _themeMode = ThemeMode.system;
   ForgeMode _defaultForgeMode = ForgeMode.build;
   int _totalPromptTokens = 0;
@@ -55,6 +59,8 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyRememberedEmail = 'remembered_email';
   static const String _keyLocalAvatarPath = 'local_avatar_path';
   static const String _keyCustomSystemPrompt = 'custom_system_prompt';
+  static const String _keySavedSystemPrompts = 'saved_system_prompts';
+  static const String _keyUseCompactPrompt = 'use_compact_prompt';
   static const String _keyThemeMode = 'theme_mode';
   static const String _keyDefaultForgeMode = 'default_forge_mode';
   static const String _keyTotalPromptTokens = 'total_prompt_tokens';
@@ -86,6 +92,9 @@ class SettingsProvider with ChangeNotifier {
   String get systemPrompt => _systemPrompt;
   String get customSystemPrompt => _customSystemPrompt;
   String get defaultSystemPrompt => _defaultSystemPrompt;
+  String get compactSystemPrompt => _compactSystemPrompt;
+  Map<String, String> get savedSystemPrompts => _savedSystemPrompts;
+  bool get useCompactPrompt => _useCompactPrompt;
   ThemeMode get themeMode => _themeMode;
   ForgeMode get defaultForgeMode => _defaultForgeMode;
   int get totalPromptTokens => _totalPromptTokens;
@@ -113,6 +122,19 @@ class SettingsProvider with ChangeNotifier {
     _rememberedEmail = prefs.getString(_keyRememberedEmail) ?? '';
     _localAvatarPath = prefs.getString(_keyLocalAvatarPath) ?? '';
     _customSystemPrompt = prefs.getString(_keyCustomSystemPrompt) ?? '';
+    _useCompactPrompt = prefs.getBool(_keyUseCompactPrompt) ?? false;
+    
+    final savedPromptsJson = prefs.getString(_keySavedSystemPrompts);
+    if (savedPromptsJson != null) {
+      try {
+        final decoded = json.decode(savedPromptsJson) as Map<String, dynamic>;
+        _savedSystemPrompts = decoded.map((key, value) => MapEntry(key, value as String));
+      } catch (e) {
+        debugPrint('Error decoding saved system prompts: $e');
+        _savedSystemPrompts = {};
+      }
+    }
+
     _totalPromptTokens = prefs.getInt(_keyTotalPromptTokens) ?? 0;
     _totalCandidateTokens = prefs.getInt(_keyTotalCandidateTokens) ?? 0;
     _totalTotalTokens = prefs.getInt(_keyTotalTotalTokens) ?? 0;
@@ -287,12 +309,41 @@ class SettingsProvider with ChangeNotifier {
     _defaultSystemPrompt = value;
   }
 
+  void setCompactSystemPrompt(String value) {
+    _compactSystemPrompt = value;
+  }
+
+  Future<void> saveNamedSystemPrompt(String name, String prompt) async {
+    _savedSystemPrompts[name] = prompt;
+    notifyListeners();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keySavedSystemPrompts, json.encode(_savedSystemPrompts));
+  }
+
+  Future<void> deleteNamedSystemPrompt(String name) async {
+    if (_savedSystemPrompts.containsKey(name)) {
+      _savedSystemPrompts.remove(name);
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(_keySavedSystemPrompts, json.encode(_savedSystemPrompts));
+    }
+  }
+
   Future<void> setCustomSystemPrompt(String value) async {
     if (_customSystemPrompt != value) {
       _customSystemPrompt = value;
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyCustomSystemPrompt, value);
+    }
+  }
+
+  Future<void> setUseCompactPrompt(bool value) async {
+    if (_useCompactPrompt != value) {
+      _useCompactPrompt = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setBool(_keyUseCompactPrompt, value);
     }
   }
 
