@@ -24,6 +24,7 @@ class SettingsProvider with ChangeNotifier {
   bool _isModelDownloaded = false;
   bool _isEngineInitialized = false;
   String _localOpenAiUrl = '';
+  int _localModelMaxGenLen = 2048;
   bool _rememberMe = false;
   bool _halMode = false;
   String _rememberedEmail = '';
@@ -54,6 +55,7 @@ class SettingsProvider with ChangeNotifier {
   static const String _keyUseLocalOpenAi = 'use_local_openai';
   static const String _keyUseSnowglobeLocalModel = 'use_snowglobe_local_model';
   static const String _keyLocalOpenAiUrl = 'local_openai_url';
+  static const String _keyLocalModelMaxGenLen = 'local_model_max_gen_len';
   static const String _keyRememberMe = 'remember_me';
   static const String _keyHalMode = 'hal_mode';
   static const String _keyRememberedEmail = 'remembered_email';
@@ -85,6 +87,7 @@ class SettingsProvider with ChangeNotifier {
   bool get isModelDownloaded => _isModelDownloaded;
   bool get isEngineInitialized => _isEngineInitialized;
   String get localOpenAiUrl => _localOpenAiUrl;
+  int get localModelMaxGenLen => _localModelMaxGenLen;
   bool get rememberMe => _rememberMe;
   bool get halMode => _halMode;
   String get rememberedEmail => _rememberedEmail;
@@ -117,6 +120,7 @@ class SettingsProvider with ChangeNotifier {
     _useLocalOpenAi = prefs.getBool(_keyUseLocalOpenAi) ?? false;
     _useSnowglobeLocalModel = prefs.getBool(_keyUseSnowglobeLocalModel) ?? false;
     _localOpenAiUrl = prefs.getString(_keyLocalOpenAiUrl) ?? '';
+    _localModelMaxGenLen = prefs.getInt(_keyLocalModelMaxGenLen) ?? 2048;
     _rememberMe = prefs.getBool(_keyRememberMe) ?? false;
     _halMode = prefs.getBool(_keyHalMode) ?? false;
     _rememberedEmail = prefs.getString(_keyRememberedEmail) ?? '';
@@ -169,6 +173,34 @@ class SettingsProvider with ChangeNotifier {
     }
 
     notifyListeners();
+  }
+
+  Future<void> initializeSnowglobeEngine() async {
+    if (!_isModelDownloaded) return;
+
+    try {
+      await ensureSnowglobeInitialized();
+      final appDocDir = await getApplicationDocumentsDirectory();
+      debugPrint("Initializing Snowglobe engine with maxGenLen: $_localModelMaxGenLen...");
+      final result = await SnowglobeOpenAI.initEngine(
+        cacheDir: appDocDir.path,
+        config: InitConfig(
+          vocabShards: 1,
+          maxGenLen: _localModelMaxGenLen,
+          useExecutorch: false,
+          backend: BackendType.llamaCpp,
+          speculateTokens: 0,
+        ),
+      );
+      debugPrint("Snowglobe engine initialization result: $result");
+      _isEngineInitialized = true;
+      notifyListeners();
+    } catch (e) {
+      debugPrint("Failed to initialize Snowglobe engine: $e");
+      _isEngineInitialized = false;
+      notifyListeners();
+      rethrow;
+    }
   }
 
   Future<void> downloadModel() async {
@@ -242,27 +274,7 @@ class SettingsProvider with ChangeNotifier {
 
       _isModelDownloaded = true;
       
-      // Initialize engine after download
-      try {
-        await ensureSnowglobeInitialized();
-      } catch (e) {
-        debugPrint("Snowglobe Rust bridge init during download: $e");
-      }
-      
-      debugPrint("Initializing Snowglobe engine after download...");
-      final result = await SnowglobeOpenAI.initEngine(
-        cacheDir: appDocDir.path,
-        config: const InitConfig(
-          vocabShards: 1,
-          maxGenLen: 2048,
-          useExecutorch: false,
-          backend: BackendType.llamaCpp,
-          speculateTokens: 0,
-        ),
-      );
-      debugPrint("Snowglobe engine initialization result after download: $result");
-      _isEngineInitialized = true;
-      notifyListeners();
+      await initializeSnowglobeEngine();
       
     } catch (e) {
       debugPrint("Error downloading model: $e");
@@ -434,26 +446,7 @@ class SettingsProvider with ChangeNotifier {
         // Initialize engine if model is already downloaded
         if (_isModelDownloaded) {
           try {
-            await ensureSnowglobeInitialized();
-            final appDocDir = await getApplicationDocumentsDirectory();
-            final modelFile = File('${appDocDir.path}/model.gguf');
-            final tokenizerFile = File('${appDocDir.path}/tokenizer.json');
-            if (await modelFile.exists() && await tokenizerFile.exists()) {
-              debugPrint("Initializing Snowglobe engine via toggle...");
-              final result = await SnowglobeOpenAI.initEngine(
-                cacheDir: appDocDir.path,
-                config: const InitConfig(
-                  vocabShards: 1,
-                  maxGenLen: 2048,
-                  useExecutorch: false,
-                  backend: BackendType.llamaCpp,
-                  speculateTokens: 0,
-                ),
-              );
-              debugPrint("Snowglobe engine initialization result via toggle: $result");
-              _isEngineInitialized = true;
-              notifyListeners();
-            }
+            await initializeSnowglobeEngine();
           } catch (e) {
             debugPrint("Failed to initialize Snowglobe engine via toggle: $e");
           }
@@ -474,6 +467,20 @@ class SettingsProvider with ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_keyLocalOpenAiUrl, value);
+    }
+  }
+
+  Future<void> setLocalModelMaxGenLen(int value) async {
+    if (_localModelMaxGenLen != value) {
+      _localModelMaxGenLen = value;
+      notifyListeners();
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt(_keyLocalModelMaxGenLen, value);
+      
+      // If we are currently using Snowglobe, re-initialize with new context length
+      if (_useSnowglobeLocalModel && _isModelDownloaded) {
+        await initializeSnowglobeEngine();
+      }
     }
   }
 

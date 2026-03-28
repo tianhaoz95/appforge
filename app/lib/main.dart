@@ -23,6 +23,7 @@ import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
 import 'widgets/preview_sheet.dart';
 import 'widgets/rolling_greeting.dart';
+import 'widgets/chat_greeting.dart';
 import 'widgets/markdown_utils.dart';
 import 'repositories/micro_app_repository.dart';
 import 'repositories/conversation_repository.dart';
@@ -1809,7 +1810,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                             ),
                                       ),
                                       const SizedBox(height: 8),
-                                      RollingGreeting(
+                                      ChatGreeting(
                                         style: Theme.of(context)
                                             .textTheme
                                             .headlineSmall
