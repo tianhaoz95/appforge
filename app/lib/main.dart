@@ -1601,7 +1601,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     chatInputStyle: ChatInputStyle(
                                       backgroundColor: isDark
                                           ? const Color(0xFF1A1A1A)
-                                          : const Color(0xFFF5F5F5),
+                                          : Colors.white,
                                       textStyle: TextStyle(
                                         color: isDark
                                             ? Colors.white
@@ -1615,7 +1615,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                       decoration: BoxDecoration(
                                         color: isDark
                                             ? const Color(0xFF1A1A1A)
-                                            : const Color(0xFFF5F5F5),
+                                            : Colors.white,
                                         borderRadius: BorderRadius.circular(28),
                                       ),
                                     ),
@@ -1633,8 +1633,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                       iconDecoration: BoxDecoration(
                                         color: isDark
                                             ? Colors.white10
-                                            : Colors.black.withValues(alpha: 0.05),
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     attachFileButtonStyle: ActionButtonStyle(
@@ -1644,8 +1647,11 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                       iconDecoration: BoxDecoration(
                                         color: isDark
                                             ? Colors.white10
-                                            : Colors.black.withValues(alpha: 0.05),
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     cameraButtonStyle: ActionButtonStyle(
@@ -1654,9 +1660,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     galleryButtonStyle: ActionButtonStyle(
@@ -1665,9 +1674,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     recordButtonStyle: ActionButtonStyle(
@@ -1676,15 +1688,27 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     stopButtonStyle: ActionButtonStyle(
                                       iconColor: isDark
                                           ? Colors.white
-                                          : colorScheme.error,
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.white10
+                                            : Colors.transparent,
+                                        shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
+                                      ),
                                     ),
                                     cancelButtonStyle: ActionButtonStyle(
                                       iconColor: isDark
@@ -1692,9 +1716,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     menuColor: isDark
@@ -1702,9 +1729,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                         : Colors.white,
                                     actionButtonBarDecoration: BoxDecoration(
                                       color: isDark
-                                          ? Colors.grey[900]
-                                          : Colors.grey[200],
+                                          ? const Color(0xFF1A1A1A)
+                                          : Colors.white,
                                       borderRadius: BorderRadius.circular(20),
+                                      border: isDark 
+                                          ? null 
+                                          : Border.all(color: Colors.black12),
                                     ),
                                   ),
                                   responseBuilder: (context, message) => VibeDetector(

@@ -71,7 +71,7 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: primaryColor, width: 1),
+        borderSide: const BorderSide(color: Colors.black12, width: 1),
       ),
     ),
     switchTheme: SwitchThemeData(
@@ -164,7 +164,7 @@ class AppTheme {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Colors.white, width: 1),
+        borderSide: const BorderSide(color: Colors.white12, width: 1),
       ),
     ),
     switchTheme: SwitchThemeData(
