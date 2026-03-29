@@ -142,7 +142,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
       builder: (context, snap) {
         final data = snap.data?.data() as Map<String, dynamic>? ?? {};
         return AnimatedSwitcher(
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 400),
+          switchInCurve: Curves.easeOutCubic,
+          switchOutCurve: Curves.easeInCubic,
+          transitionBuilder: (child, anim) => FadeTransition(
+            opacity: anim,
+            child: SlideTransition(
+              position: anim.drive(Tween(begin: const Offset(0.02, 0), end: Offset.zero)),
+              child: child,
+            ),
+          ),
           child: KeyedSubtree(
             key: ValueKey(_tab),
             child: _buildTab(context, _tab, data, user),
@@ -179,43 +188,65 @@ class _PlanTab extends StatelessWidget {
     final current = data['plan'] as String? ?? 'Free';
     final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(48),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 900),
+          constraints: const BoxConstraints(maxWidth: 1000),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Subscription Plan', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text('Current plan: $current', style: TextStyle(color: cs.primary, fontWeight: FontWeight.w600)),
-              const SizedBox(height: 32),
-              Wrap(
-                spacing: 20,
-                runSpacing: 20,
-                children: _plans.map((plan) {
-                  final selected = plan == current;
-                  return _PlanCard(
-                    plan: plan,
-                    selected: selected,
-                    onSelect: () async {
-                      await FirebaseFirestore.instance.collection('users').doc(uid).set(
-                        {'plan': plan}, SetOptions(merge: true));
-                      if (context.mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Switched to $plan plan')));
-                      }
-                      
-                      // Navigate to billing information if selecting a paid plan but info is missing
-                      final hasBilling = (data['billing_name'] as String? ?? '').isNotEmpty && 
-                                       (data['billing_email'] as String? ?? '').isNotEmpty;
-                      if (plan != 'Free' && !hasBilling) {
-                        onTabChange(1); // Billing tab index
-                      }
-                    },
-                  );
-                }).toList(),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.primaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(Icons.stars_rounded, color: cs.onPrimaryContainer),
+                  ),
+                  const SizedBox(width: 20),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Subscription Plan', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                      Text('Choose the plan that fits your forging needs.', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6))),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 48),
+              Center(
+                child: Wrap(
+                  spacing: 24,
+                  runSpacing: 24,
+                  children: _plans.map((plan) {
+                    final selected = plan == current;
+                    return _PlanCard(
+                      plan: plan,
+                      selected: selected,
+                      onSelect: () async {
+                        await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                          {'plan': plan}, SetOptions(merge: true));
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text('Switched to $plan plan'),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                            ));
+                        }
+                        
+                        final hasBilling = (data['billing_name'] as String? ?? '').isNotEmpty && 
+                                         (data['billing_email'] as String? ?? '').isNotEmpty;
+                        if (plan != 'Free' && !hasBilling) {
+                          onTabChange(1);
+                        }
+                      },
+                    );
+                  }).toList(),
+                ),
               ),
             ],
           ),
@@ -233,12 +264,22 @@ class _BillingTab extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(48),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
-          child: _BillingSection(uid: uid, data: data),
+          constraints: const BoxConstraints(maxWidth: 700),
+          child: Card(
+            elevation: 0,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(24),
+              side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(32),
+              child: _BillingSection(uid: uid, data: data),
+            ),
+          ),
         ),
       ),
     );
@@ -290,52 +331,71 @@ class _BillingSectionState extends State<_BillingSection> {
       children: [
         Row(
           children: [
-            Text('Billing Information', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: cs.secondaryContainer,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(Icons.receipt_long_rounded, color: cs.onSecondaryContainer),
+            ),
+            const SizedBox(width: 16),
+            Text('Billing Details', style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
             const Spacer(),
             if (!_editing)
-              TextButton.icon(
+              OutlinedButton.icon(
                 icon: const Icon(Icons.edit_outlined, size: 16),
                 label: const Text('Edit'),
                 onPressed: () => setState(() => _editing = true),
+                style: OutlinedButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
               ),
           ],
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 32),
         if (_editing) ...[
-          _field(_nameCtrl, 'Full Name / Company'),
-          _field(_emailCtrl, 'Billing Email', type: TextInputType.emailAddress),
-          _field(_addressCtrl, 'Address'),
+          _field(_nameCtrl, 'Full Name / Company', Icons.business_rounded),
+          _field(_emailCtrl, 'Billing Email', Icons.email_outlined, type: TextInputType.emailAddress),
+          _field(_addressCtrl, 'Address', Icons.location_on_outlined),
           Row(children: [
-            Expanded(child: _field(_cityCtrl, 'City')),
-            const SizedBox(width: 12),
-            Expanded(child: _field(_countryCtrl, 'Country')),
+            Expanded(child: _field(_cityCtrl, 'City', Icons.location_city_rounded)),
+            const SizedBox(width: 16),
+            Expanded(child: _field(_countryCtrl, 'Country', Icons.public_rounded)),
           ]),
-          const SizedBox(height: 8),
+          const SizedBox(height: 24),
           Row(children: [
             FilledButton(
               onPressed: _saving ? null : _save,
-              child: _saving ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+              child: _saving ? const SizedBox(height: 18, width: 18, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save Information'),
             ),
-            const SizedBox(width: 12),
-            TextButton(onPressed: () => setState(() => _editing = false), child: const Text('Cancel')),
+            const SizedBox(width: 16),
+            TextButton(
+              onPressed: () => setState(() => _editing = false),
+              child: const Text('Cancel'),
+            ),
           ]),
-        ] else if (_nameCtrl.text.isEmpty && _emailCtrl.text.isEmpty &&
-            _addressCtrl.text.isEmpty && _cityCtrl.text.isEmpty && _countryCtrl.text.isEmpty) ...[
+        ] else if (_nameCtrl.text.isEmpty && _emailCtrl.text.isEmpty) ...[
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(vertical: 32),
+            padding: const EdgeInsets.symmetric(vertical: 48),
             decoration: BoxDecoration(
-              border: Border.all(color: cs.outlineVariant, style: BorderStyle.solid),
+              color: cs.surfaceContainerHighest.withValues(alpha: 0.3),
               borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: cs.outlineVariant, style: BorderStyle.solid),
             ),
             child: Column(
               children: [
-                Icon(Icons.receipt_long_outlined, size: 40, color: cs.onSurface.withValues(alpha: 0.3)),
-                const SizedBox(height: 12),
-                Text('No billing information yet', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.w500)),
-                const SizedBox(height: 4),
-                Text('Add your details for invoicing and receipts.', style: TextStyle(fontSize: 12, color: cs.onSurface.withValues(alpha: 0.35))),
+                Icon(Icons.add_card_rounded, size: 48, color: cs.onSurface.withValues(alpha: 0.2)),
                 const SizedBox(height: 16),
+                Text('No billing information', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Text('Add details for invoices and tax compliance.', style: TextStyle(fontSize: 13, color: cs.onSurface.withValues(alpha: 0.4))),
+                const SizedBox(height: 24),
                 FilledButton.tonal(
                   onPressed: () => setState(() => _editing = true),
                   child: const Text('Add Billing Info'),
@@ -344,36 +404,54 @@ class _BillingSectionState extends State<_BillingSection> {
             ),
           ),
         ] else ...[
-          _infoRow('Name', _nameCtrl.text.isEmpty ? '—' : _nameCtrl.text, cs),
-          _infoRow('Email', _emailCtrl.text.isEmpty ? '—' : _emailCtrl.text, cs),
-          _infoRow('Address', _addressCtrl.text.isEmpty ? '—' : _addressCtrl.text, cs),
-          _infoRow('City', _cityCtrl.text.isEmpty ? '—' : _cityCtrl.text, cs),
-          _infoRow('Country', _countryCtrl.text.isEmpty ? '—' : _countryCtrl.text, cs),
+          _infoRow(Icons.person_outline, 'Name', _nameCtrl.text.isEmpty ? '—' : _nameCtrl.text, cs),
+          const Divider(height: 32),
+          _infoRow(Icons.email_outlined, 'Email', _emailCtrl.text.isEmpty ? '—' : _emailCtrl.text, cs),
+          const Divider(height: 32),
+          _infoRow(Icons.location_on_outlined, 'Address', _addressCtrl.text.isEmpty ? '—' : _addressCtrl.text, cs),
+          const Divider(height: 32),
+          _infoRow(Icons.location_city_rounded, 'City', _cityCtrl.text.isEmpty ? '—' : _cityCtrl.text, cs),
+          const Divider(height: 32),
+          _infoRow(Icons.public_rounded, 'Country', _countryCtrl.text.isEmpty ? '—' : _countryCtrl.text, cs),
         ],
       ],
     );
   }
 
-  Widget _field(TextEditingController ctrl, String label, {TextInputType? type}) => Padding(
-    padding: const EdgeInsets.only(bottom: 12),
+  Widget _field(TextEditingController ctrl, String label, IconData icon, {TextInputType? type}) => Padding(
+    padding: const EdgeInsets.only(bottom: 16),
     child: TextFormField(
       controller: ctrl,
       keyboardType: type,
       decoration: InputDecoration(
         labelText: label,
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        isDense: true,
+        prefixIcon: Icon(icon, size: 20),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        filled: true,
+        fillColor: Theme.of(context).colorScheme.surface,
       ),
     ),
   );
 
-  Widget _infoRow(String label, String value, ColorScheme cs) => Padding(
-    padding: const EdgeInsets.only(bottom: 8),
-    child: Row(children: [
-      SizedBox(width: 80, child: Text(label, style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6), fontSize: 13))),
-      const SizedBox(width: 12),
-      Text(value, style: const TextStyle(fontSize: 13)),
-    ]),
+  Widget _infoRow(IconData icon, String label, String value, ColorScheme cs) => Row(
+    children: [
+      Icon(icon, size: 20, color: cs.primary),
+      const SizedBox(width: 16),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5), fontSize: 12, fontWeight: FontWeight.w500)),
+            const SizedBox(height: 4),
+            Text(value, style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600)),
+          ],
+        ),
+      ),
+    ],
   );
 }
 
@@ -385,39 +463,79 @@ class _PlanCard extends StatelessWidget {
 
   static const _prices = {'Free': '\$0', 'Pro': '\$19', 'Ultra': '\$79'};
   static const _descs = {
-    'Free': 'Basic forging, community templates, local previews.',
-    'Pro': 'Higher quota, priority generation, saved history.',
-    'Ultra': 'Largest quota, advanced models, team controls.',
+    'Free': 'Perfect for exploring micro-app forging and community templates.',
+    'Pro': 'For creators who need higher quotas and priority generation.',
+    'Ultra': 'Enterprise-grade power with custom models and team tools.',
+  };
+  static const _features = {
+    'Free': ['5 apps/day', 'Standard AI', 'Public links'],
+    'Pro': ['Unlimited apps', 'Fast generation', 'Private history'],
+    'Ultra': ['Team workspaces', 'Custom models', 'API access'],
   };
 
   @override
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
-    return Container(
-      width: 260,
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: selected ? cs.primaryContainer.withValues(alpha: 0.4) : cs.surface,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
+    return Card(
+      elevation: selected ? 8 : 0,
+      shadowColor: selected ? cs.primary.withValues(alpha: 0.3) : null,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(28),
+        side: BorderSide(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(plan, style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Text(_prices[plan]!, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
-          Text(_descs[plan]!, style: TextStyle(color: cs.onSurface.withValues(alpha: 0.7), height: 1.5)),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: FilledButton(
-              onPressed: selected ? null : onSelect,
-              child: Text(selected ? 'Current Plan' : 'Select'),
+      child: Container(
+        width: 300,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (selected)
+              Container(
+                margin: const EdgeInsets.only(bottom: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                decoration: BoxDecoration(
+                  color: cs.primary,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text('CURRENT PLAN', style: TextStyle(color: cs.onPrimary, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 0.5)),
+              ),
+            Text(plan, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 8),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.baseline,
+              textBaseline: TextBaseline.alphabetic,
+              children: [
+                Text(_prices[plan]!, style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w900, color: cs.primary)),
+                Text('/mo', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.5), fontWeight: FontWeight.w500)),
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 20),
+            Text(_descs[plan]!, style: TextStyle(color: cs.onSurface.withValues(alpha: 0.7), height: 1.5, fontSize: 13)),
+            const Divider(height: 48),
+            ...(_features[plan]!.map((f) => Padding(
+              padding: const EdgeInsets.only(bottom: 16),
+              child: Row(
+                children: [
+                  Icon(Icons.check_circle_rounded, size: 20, color: cs.primary),
+                  const SizedBox(width: 12),
+                  Text(f, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+                ],
+              ),
+            ))),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton(
+                onPressed: selected ? null : onSelect,
+                style: FilledButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+                child: Text(selected ? 'Active' : 'Select $plan'),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -433,35 +551,101 @@ class _ModelTab extends StatelessWidget {
     final current = data['model'] as String? ?? _models.first;
     final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(48),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 600),
+          constraints: const BoxConstraints(maxWidth: 800),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('AI Model', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
-              const SizedBox(height: 8),
-              Text('Choose the model used for app generation.', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6))),
-              const SizedBox(height: 32),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: cs.tertiaryContainer,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Icon(Icons.psychology_rounded, color: cs.onTertiaryContainer),
+                  ),
+                  const SizedBox(width: 20),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('AI Intelligence', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                      Text('Configure the brain behind your forged apps.', style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6))),
+                    ],
+                  ),
+                ],
+              ),
+              const SizedBox(height: 48),
               ..._models.map((model) {
                 final selected = model == current;
                 return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: ListTile(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Card(
+                    elevation: selected ? 4 : 0,
+                    shadowColor: cs.primary.withValues(alpha: 0.2),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(20),
                       side: BorderSide(color: selected ? cs.primary : cs.outlineVariant, width: selected ? 2 : 1),
                     ),
-                    tileColor: selected ? cs.primaryContainer.withValues(alpha: 0.3) : null,
-                    leading: Icon(Icons.smart_toy_outlined, color: selected ? cs.primary : null),
-                    title: Text(model, style: TextStyle(fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
-                    trailing: selected ? Icon(Icons.check_circle, color: cs.primary) : null,
-                    onTap: () async {
-                      await FirebaseFirestore.instance.collection('users').doc(uid).set(
-                        {'model': model}, SetOptions(merge: true));
-                    },
+                    color: selected ? cs.primaryContainer.withValues(alpha: 0.1) : cs.surface,
+                    child: InkWell(
+                      onTap: () async {
+                        await FirebaseFirestore.instance.collection('users').doc(uid).set(
+                          {'model': model}, SetOptions(merge: true));
+                      },
+                      borderRadius: BorderRadius.circular(20),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: selected ? cs.primary : cs.surfaceContainerHighest,
+                                borderRadius: BorderRadius.circular(16),
+                              ),
+                              child: Icon(
+                                model.contains('pro') ? Icons.auto_awesome_rounded : Icons.bolt_rounded,
+                                color: selected ? cs.onPrimary : cs.onSurfaceVariant,
+                              ),
+                            ),
+                            const SizedBox(width: 24),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    model, 
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold, 
+                                      fontSize: 17, 
+                                      color: selected ? cs.primary : null,
+                                      letterSpacing: -0.5,
+                                    )
+                                  ),
+                                  const SizedBox(height: 6),
+                                  Text(
+                                    model.contains('flash') 
+                                      ? 'Flash series: High speed, low latency, great for most tasks.' 
+                                      : 'Pro series: Maximum intelligence for complex reasoning.',
+                                    style: TextStyle(color: cs.onSurface.withValues(alpha: 0.6), fontSize: 13, height: 1.4),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            if (selected)
+                              Icon(Icons.check_circle_rounded, color: cs.primary, size: 28)
+                            else
+                              Icon(Icons.radio_button_unchecked_rounded, color: cs.outlineVariant, size: 28),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 );
               }),
@@ -494,7 +678,12 @@ class _ProfileTabState extends State<_ProfileTab> {
     await widget.user.updateDisplayName(_nameCtrl.text.trim());
     if (mounted) {
       setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile updated.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Profile updated successfully'),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        ));
     }
   }
 
@@ -509,7 +698,7 @@ class _ProfileTabState extends State<_ProfileTab> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: const Text('Delete Permanently'),
           ),
         ],
       ),
@@ -527,71 +716,101 @@ class _ProfileTabState extends State<_ProfileTab> {
   Widget build(BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return SingleChildScrollView(
-      padding: const EdgeInsets.all(32),
+      padding: const EdgeInsets.all(48),
       child: Align(
         alignment: Alignment.topCenter,
         child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 480),
+          constraints: const BoxConstraints(maxWidth: 550),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Profile', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+              Text('User Profile', style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 32),
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: cs.primaryContainer,
-                child: Text(
-                  (widget.user.displayName?.isNotEmpty == true ? widget.user.displayName![0] : widget.user.email![0]).toUpperCase(),
-                  style: TextStyle(fontSize: 28, color: cs.onPrimaryContainer, fontWeight: FontWeight.bold),
+              Card(
+                elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(24),
+                  side: BorderSide(color: cs.outlineVariant),
                 ),
-              ),
-              const SizedBox(height: 24),
-              TextFormField(
-                controller: _nameCtrl,
-                decoration: InputDecoration(
-                  labelText: 'Display Name',
-                  prefixIcon: const Icon(Icons.person_outline),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextFormField(
-                initialValue: widget.user.email,
-                readOnly: true,
-                decoration: InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: const Icon(Icons.email_outlined),
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2)) : const Text('Save Changes'),
+                child: Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Column(
+                    children: [
+                      CircleAvatar(
+                        radius: 50,
+                        backgroundColor: cs.primaryContainer,
+                        child: Text(
+                          (widget.user.displayName?.isNotEmpty == true ? widget.user.displayName![0] : widget.user.email![0]).toUpperCase(),
+                          style: TextStyle(fontSize: 36, color: cs.onPrimaryContainer, fontWeight: FontWeight.bold),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      TextFormField(
+                        controller: _nameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Display Name',
+                          prefixIcon: const Icon(Icons.person_outline_rounded),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        initialValue: widget.user.email,
+                        readOnly: true,
+                        decoration: InputDecoration(
+                          labelText: 'Email Address',
+                          prefixIcon: const Icon(Icons.email_outlined),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+                          filled: true,
+                          fillColor: cs.surfaceContainerHighest.withValues(alpha: 0.2),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      SizedBox(
+                        width: double.infinity,
+                        child: FilledButton(
+                          onPressed: _saving ? null : _save,
+                          style: FilledButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                          ),
+                          child: _saving ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Save Profile Changes'),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
               const SizedBox(height: 48),
               const Divider(),
-              const SizedBox(height: 16),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: const Icon(Icons.logout),
-                  label: const Text('Sign Out'),
-                  onPressed: () => FirebaseAuth.instance.signOut(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  icon: Icon(Icons.delete_forever, color: cs.error),
-                  label: Text('Delete Account', style: TextStyle(color: cs.error)),
-                  style: OutlinedButton.styleFrom(side: BorderSide(color: cs.error)),
-                  onPressed: _deleteAccount,
-                ),
+              const SizedBox(height: 24),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text('Sign Out'),
+                      onPressed: () => FirebaseAuth.instance.signOut(),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton.icon(
+                      icon: Icon(Icons.delete_forever_rounded, color: cs.error),
+                      label: Text('Delete Account', style: TextStyle(color: cs.error)),
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: BorderSide(color: cs.error.withValues(alpha: 0.5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      onPressed: _deleteAccount,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
@@ -600,3 +819,4 @@ class _ProfileTabState extends State<_ProfileTab> {
     );
   }
 }
+

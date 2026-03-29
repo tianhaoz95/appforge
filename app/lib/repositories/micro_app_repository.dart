@@ -26,6 +26,7 @@ class MicroAppRepository extends ChangeNotifier {
       'release_notes': appData['release_notes'],
       'version': appData['version'],
       'icon': appData['icon'],
+      'screenshot_blob': appData['screenshot_blob'],
       'created_at': DateTime.now().millisecondsSinceEpoch,
     };
 

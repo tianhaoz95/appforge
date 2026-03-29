@@ -1,17 +1,20 @@
 import 'dart:async';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import '../theme.dart';
 
 class RollingGreeting extends StatefulWidget {
   final TextStyle? style;
   final Duration animationDuration;
   final Duration switchDuration;
+  final bool useGradient;
 
   const RollingGreeting({
     super.key,
     this.style,
     this.animationDuration = const Duration(milliseconds: 500),
     this.switchDuration = const Duration(seconds: 1),
+    this.useGradient = false,
   });
 
   @override
@@ -95,11 +98,17 @@ class _RollingGreetingState extends State<RollingGreeting> {
                   ),
                 );
               },
-              child: Text(
-                _options[_currentIndex],
-                key: ValueKey<String>(_options[_currentIndex]),
-                style: widget.style,
-              ),
+              child: widget.useGradient
+                  ? GradientText(
+                      _options[_currentIndex],
+                      key: ValueKey<String>(_options[_currentIndex]),
+                      style: widget.style,
+                    )
+                  : Text(
+                      _options[_currentIndex],
+                      key: ValueKey<String>(_options[_currentIndex]),
+                      style: widget.style,
+                    ),
             ),
           ),
         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:widgetbook/widgetbook.dart';
 import 'package:widgetbook_annotation/widgetbook_annotation.dart' as widgetbook;
+import 'package:appforge/theme.dart';
 
 // Import the generated file
 import 'main.directories.g.dart';
@@ -22,11 +23,11 @@ class WidgetbookApp extends StatelessWidget {
           themes: [
             WidgetbookTheme(
               name: 'Light',
-              data: ThemeData.light(useMaterial3: true),
+              data: AppTheme.lightTheme,
             ),
             WidgetbookTheme(
               name: 'Dark',
-              data: ThemeData.dark(useMaterial3: true),
+              data: AppTheme.darkTheme,
             ),
           ],
         ),

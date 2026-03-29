@@ -1,14 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_markdown_plus/flutter_markdown_plus.dart';
 import 'mini_app_preview.dart';
 import 'markdown_utils.dart';
+import 'branded_error_view.dart';
+import '../theme.dart';
 
-class VibeDetector extends StatelessWidget {
+class VibeDetector extends StatefulWidget {
   final String message;
   final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon, {bool isTemporary})? onDeploy;
   final Function(String appId)? onOpenApp;
   final Function(String code, String? backendCode, String? periodicBackendCode, String? name, String? designDoc, String? version, String? releaseNotes, String? icon)? onAutoRefine;
   final VoidCallback? onViewContext;
+  final VoidCallback? onRetry;
 
   const VibeDetector({
     super.key,
@@ -17,11 +21,50 @@ class VibeDetector extends StatelessWidget {
     this.onOpenApp,
     this.onAutoRefine,
     this.onViewContext,
+    this.onRetry,
   });
 
   @override
+  State<VibeDetector> createState() => _VibeDetectorState();
+}
+
+class _VibeDetectorState extends State<VibeDetector> {
+  @override
+  void initState() {
+    super.initState();
+    _checkHaptic();
+  }
+
+  @override
+  void didUpdateWidget(VibeDetector oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.message != oldWidget.message) {
+      _checkHaptic();
+    }
+  }
+
+  void _checkHaptic() {
+    if (widget.message.contains('<forge>')) {
+      HapticFeedback.mediumImpact();
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (message.contains('<enhancement_context/>')) {
+    if (widget.message.contains('<error_resting/>')) {
+      return BrandedErrorView.resting(
+        isCompact: true,
+        onRetry: widget.onRetry,
+      );
+    }
+    if (widget.message.contains('<error_offline/>')) {
+      return BrandedErrorView.offline(
+        isCompact: true,
+        onRetry: widget.onRetry,
+      );
+    }
+
+    if (widget.message.contains('<enhancement_context/>')) {
       final colorScheme = Theme.of(context).colorScheme;
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -36,9 +79,9 @@ class VibeDetector extends StatelessWidget {
             ],
           ),
           const Text('You can start customizing.', style: TextStyle(fontSize: 13)),
-          if (onViewContext != null)
+          if (widget.onViewContext != null)
             GestureDetector(
-              onTap: onViewContext,
+              onTap: widget.onViewContext,
               child: Text('View code & design', style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: colorScheme.primary)),
             ),
         ],
@@ -54,18 +97,18 @@ class VibeDetector extends StatelessWidget {
     final releaseNotesRegex = RegExp(r'<release_notes>([\s\S]*?)<\/release_notes>');
     final suggestAppRegex = RegExp(r'<suggest_app id="([^"]+)">([\s\S]*?)<\/suggest_app>');
 
-    final forgeMatch = forgeRegex.firstMatch(message);
-    final backendMatch = backendRegex.firstMatch(message);
-    final periodicBackendMatch = periodicBackendRegex.firstMatch(message);
-    final nameMatch = nameRegex.firstMatch(message);
-    final iconMatch = iconRegex.firstMatch(message);
-    final designMatch = designRegex.firstMatch(message);
-    final versionMatch = versionRegex.firstMatch(message);
-    final releaseNotesMatch = releaseNotesRegex.allMatches(message).lastOrNull;
-    final suggestAppMatches = suggestAppRegex.allMatches(message).toList();
+    final forgeMatch = forgeRegex.firstMatch(widget.message);
+    final backendMatch = backendRegex.firstMatch(widget.message);
+    final periodicBackendMatch = periodicBackendRegex.firstMatch(widget.message);
+    final nameMatch = nameRegex.firstMatch(widget.message);
+    final iconMatch = iconRegex.firstMatch(widget.message);
+    final designMatch = designRegex.firstMatch(widget.message);
+    final versionMatch = versionRegex.firstMatch(widget.message);
+    final releaseNotesMatch = releaseNotesRegex.allMatches(widget.message).lastOrNull;
+    final suggestAppMatches = suggestAppRegex.allMatches(widget.message).toList();
 
     if (forgeMatch != null || suggestAppMatches.isNotEmpty) {
-      String cleanMessage = message.replaceAll(forgeRegex, '');
+      String cleanMessage = widget.message.replaceAll(forgeRegex, '');
       cleanMessage = cleanMessage.replaceAll(backendRegex, '');
       cleanMessage = cleanMessage.replaceAll(periodicBackendRegex, '');
       cleanMessage = cleanMessage.replaceAll(nameRegex, '');
@@ -98,34 +141,45 @@ class VibeDetector extends StatelessWidget {
                       child: Text(icon, style: const TextStyle(fontSize: 20)),
                     )
                   else
-                    const Icon(Icons.auto_awesome, color: Colors.orangeAccent, size: 20),
+                    const GradientIcon(icon: Icons.auto_awesome, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     name != null ? 'Preview: $name' : 'App Preview',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
-              MiniAppPreview(
-                code: forgeCode ?? '',
-                onFullScreen: () => onDeploy?.call(
-                  forgeCode ?? '',
-                  backendCode,
-                  periodicBackendCode,
-                  name,
-                  designDoc,
-                  version,
-                  releaseNotes,
-                  icon,
-                  isTemporary: true,
+              const SizedBox(height: 12),
+              ForgingAnimation(
+                child: MiniAppPreview(
+                  code: forgeCode ?? '',
+                  onFullScreen: () => widget.onDeploy?.call(
+                    forgeCode ?? '',
+                    backendCode,
+                    periodicBackendCode,
+                    name,
+                    designDoc,
+                    version,
+                    releaseNotes,
+                    icon,
+                    isTemporary: true,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Theme(
                 data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
                 child: ExpansionTile(
-                  title: const Text('Details & Description', style: TextStyle(fontSize: 14, color: Colors.blueGrey)),
+                  title: Text(
+                    'Details & Description',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? Colors.white60
+                          : Colors.black54,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   tilePadding: EdgeInsets.zero,
                   children: [
                     if (cleanMessage.isNotEmpty) MarkdownBody(data: cleanMessage),
@@ -177,33 +231,43 @@ class VibeDetector extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 children: [
-                  if (onAutoRefine != null) ...[
+                  if (widget.onAutoRefine != null) ...[
                     Expanded(
                       child: ElevatedButton.icon(
-                        onPressed: () => onAutoRefine?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
+                        onPressed: () => widget.onAutoRefine?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
                         icon: const Icon(Icons.auto_fix_high, size: 18),
                         label: const Text('Refine'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).colorScheme.primary,
-                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.white12 
+                              : Colors.black.withValues(alpha: 0.05),
+                          foregroundColor: Theme.of(context).colorScheme.onSurface,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          side: BorderSide(color: Theme.of(context).colorScheme.outline),
                         ),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 12),
                   ],
                   Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => onDeploy?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
-                      icon: const Icon(Icons.rocket_launch, size: 18),
-                      label: const Text('Deploy'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orangeAccent,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: AppTheme.vibrantGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: ElevatedButton.icon(
+                        onPressed: () => widget.onDeploy?.call(forgeCode ?? '', backendCode, periodicBackendCode, name, designDoc, version, releaseNotes, icon),
+                        icon: const Icon(Icons.rocket_launch, size: 18),
+                        label: const Text('Deploy'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shadowColor: Colors.transparent,
+                        ),
                       ),
                     ),
                   ),
@@ -217,16 +281,17 @@ class VibeDetector extends StatelessWidget {
                 final appId = match.group(1);
                 final appName = match.group(2)?.trim();
                 return Padding(
-                  padding: const EdgeInsets.only(top: 8.0),
+                  padding: const EdgeInsets.only(top: 12.0),
                   child: SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: () => onOpenApp?.call(appId ?? ''),
+                      onPressed: () => widget.onOpenApp?.call(appId ?? ''),
                       icon: const Icon(Icons.open_in_new),
                       label: Text('Open ${appName ?? 'Existing App'}'),
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blueAccent,
-                        foregroundColor: Colors.white,
+                        backgroundColor: Theme.of(context).colorScheme.primary,
+                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                       ),
                     ),
                   ),
@@ -237,6 +302,87 @@ class VibeDetector extends StatelessWidget {
       );
     }
 
-    return MarkdownBody(data: message);
+    return MarkdownBody(data: widget.message);
   }
+}
+
+class ForgingAnimation extends StatefulWidget {
+  final Widget child;
+  const ForgingAnimation({super.key, required this.child});
+
+  @override
+  State<ForgingAnimation> createState() => _ForgingAnimationState();
+}
+
+class _ForgingAnimationState extends State<ForgingAnimation> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return CustomPaint(
+          painter: _ForgingPainter(
+            animationValue: _controller.value,
+            gradient: AppTheme.vibrantGradient,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(4.0),
+            child: child,
+          ),
+        );
+      },
+      child: widget.child,
+    );
+  }
+}
+
+class _ForgingPainter extends CustomPainter {
+  final double animationValue;
+  final Gradient gradient;
+
+  _ForgingPainter({required this.animationValue, required this.gradient});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    final rect = Rect.fromLTWH(0, 0, size.width, size.height);
+    
+    // Draw multiple pulses
+    for (int i = 0; i < 3; i++) {
+      final pulseValue = (animationValue + (i * 0.33)) % 1.0;
+      final opacity = (1.0 - pulseValue).clamp(0.0, 1.0) * 0.6;
+      
+      final pulseRect = rect.inflate(pulseValue * 12.0);
+      final pulseRRect = RRect.fromRectAndRadius(pulseRect, Radius.circular(16 + (pulseValue * 4.0)));
+      
+      paint.shader = gradient.createShader(pulseRect);
+      paint.color = Colors.white.withValues(alpha: opacity);
+      paint.strokeWidth = 1.0 + (pulseValue * 2.0);
+      
+      canvas.drawRRect(pulseRRect, paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_ForgingPainter oldDelegate) => true;
 }

@@ -19,6 +19,22 @@ import '../repositories/micro_app_repository.dart';
 import '../providers/settings_provider.dart';
 import 'markdown_utils.dart';
 
+enum LogLevel { info, warning, error, backend }
+
+class LogEntry {
+  final String source;
+  final String message;
+  final LogLevel level;
+  final DateTime timestamp;
+
+  LogEntry({
+    required this.source,
+    required this.message,
+    required this.level,
+    DateTime? timestamp,
+  }) : timestamp = timestamp ?? DateTime.now();
+}
+
 class PreviewSheet extends StatefulWidget {
   final String code;
   final String? backendCode;
@@ -56,6 +72,7 @@ class PreviewSheet extends StatefulWidget {
 class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderStateMixin {
   WebViewController? _controller;
   final DraggableScrollableController _sheetController = DraggableScrollableController();
+  final ScrollController _logScrollController = ScrollController();
   double _currentExtent = 0.9;
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   final FlutterLocalNotificationsPlugin _notificationsPlugin = FlutterLocalNotificationsPlugin();
@@ -63,8 +80,10 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   
   late TabController _tabController;
   JavascriptRuntime? _jsRuntime;
-  final List<String> _logs = [];
+  final List<LogEntry> _logs = [];
+  LogLevel? _logFilter;
   String? _lastThemeSignature;
+  bool _showBlueprint = false;
 
   // Versioning state
   List<Map<String, dynamic>> _versions = [];
@@ -81,6 +100,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
     _tabController = TabController(length: 4, vsync: this);
     _tabController.addListener(() {
       if (!_tabController.indexIsChanging) {
+        HapticFeedback.selectionClick();
         setState(() {}); // Rebuild dropdown when swipe completes
       }
     });
@@ -138,10 +158,31 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   }
 
   void _addLog(String source, String message) {
+    LogLevel level = LogLevel.info;
+    final lowerMessage = message.toLowerCase();
+    if (lowerMessage.contains('error') || lowerMessage.contains('exception') || lowerMessage.contains('failed')) {
+      level = LogLevel.error;
+    } else if (lowerMessage.contains('warning')) {
+      level = LogLevel.warning;
+    } else if (source.contains('Backend')) {
+      level = LogLevel.backend;
+    }
+
     setState(() {
-      _logs.add('[$source] $message');
+      _logs.add(LogEntry(source: source, message: message, level: level));
     });
     debugPrint('[$source] $message');
+    
+    // Auto-scroll to bottom
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_logScrollController.hasClients) {
+        _logScrollController.animateTo(
+          _logScrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
 
   void _initJsRuntime() {
@@ -246,6 +287,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   void dispose() {
     _sheetController.removeListener(_onSheetChanged);
     _sheetController.dispose();
+    _logScrollController.dispose();
     _accelerometerSubscription?.cancel();
     _jsRuntime?.dispose();
     _tabController.dispose();
@@ -311,12 +353,89 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   }
 
   Widget _buildAppView() {
-    return _controller != null 
-        ? RepaintBoundary(
-            key: _repaintKey,
-            child: WebViewWidget(controller: _controller!),
-          )
-        : const Center(child: Text('WebView Placeholder'));
+    return Stack(
+      children: [
+        _controller != null 
+            ? RepaintBoundary(
+                key: _repaintKey,
+                child: WebViewWidget(controller: _controller!),
+              )
+            : const Center(child: Text('WebView Placeholder')),
+        if (_showBlueprint)
+          Positioned.fill(
+            child: Container(
+              color: Theme.of(context).brightness == Brightness.dark 
+                  ? Colors.black.withValues(alpha: 0.95) 
+                  : Colors.white.withValues(alpha: 0.95),
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        const Icon(Icons.architecture, size: 28),
+                        const SizedBox(width: 12),
+                        Text(
+                          'BLUEPRINT MODE',
+                          style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 2,
+                          ),
+                        ),
+                        const Spacer(),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => setState(() => _showBlueprint = false),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    MarkdownBody(
+                      data: _activeDesignDoc ?? 'No design documentation available.',
+                      styleSheet: MarkdownStyleSheet.fromTheme(Theme.of(context)).copyWith(
+                        p: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface, 
+                          fontSize: 16, 
+                          height: 1.6,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        h1: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface, 
+                          fontWeight: FontWeight.w900,
+                        ),
+                        h2: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface, 
+                          fontWeight: FontWeight.w900,
+                        ),
+                        h3: TextStyle(
+                          color: Theme.of(context).colorScheme.onSurface, 
+                          fontWeight: FontWeight.w900,
+                        ),
+                        listBullet: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                        code: TextStyle(
+                          backgroundColor: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.white10 
+                              : Colors.black.withValues(alpha: 0.1), 
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.amberAccent 
+                              : Colors.indigo,
+                        ),
+                        codeblockDecoration: BoxDecoration(
+                          color: Theme.of(context).brightness == Brightness.dark 
+                              ? Colors.white.withValues(alpha: 0.05) 
+                              : Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   Future<void> handleAutoRefine() async {
@@ -331,7 +450,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
       final screenshot = byteData!.buffer.asUint8List();
       
-      widget.onAutoRefine?.call(List.from(_logs), screenshot);
+      widget.onAutoRefine?.call(_logs.map((l) => '[${l.source}] ${l.message}').toList(), screenshot);
     } catch (e) {
       debugPrint('Error capturing screenshot for Refine: $e');
     }
@@ -391,54 +510,112 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
   }
 
   Widget _buildLogsView() {
+    final filteredLogs = _logFilter == null 
+        ? _logs 
+        : _logs.where((l) => l.level == _logFilter).toList();
+
     return Column(
       children: [
         Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton.icon(
-                icon: const Icon(Icons.copy_outlined, size: 18),
-                label: const Text('Copy Errors'),
-                onPressed: _copyErrorLogs,
-              ),
-              const SizedBox(width: 8),
-              TextButton.icon(
-                icon: const Icon(Icons.delete_sweep_outlined, size: 18),
-                label: const Text('Clear Logs'),
-                onPressed: () => setState(() => _logs.clear()),
-              ),
-            ],
+          padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 4.0),
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildFilterChip(null, 'All'),
+                const SizedBox(width: 4),
+                _buildFilterChip(LogLevel.info, 'Info'),
+                const SizedBox(width: 4),
+                _buildFilterChip(LogLevel.backend, 'Backend'),
+                const SizedBox(width: 4),
+                _buildFilterChip(LogLevel.warning, 'Warning'),
+                const SizedBox(width: 4),
+                _buildFilterChip(LogLevel.error, 'Error'),
+                const SizedBox(width: 16),
+                TextButton.icon(
+                  icon: const Icon(Icons.copy_outlined, size: 16),
+                  label: const Text('Copy Errors', style: TextStyle(fontSize: 12)),
+                  onPressed: _copyErrorLogs,
+                ),
+                TextButton.icon(
+                  icon: const Icon(Icons.delete_sweep_outlined, size: 16),
+                  label: const Text('Clear', style: TextStyle(fontSize: 12)),
+                  onPressed: () => setState(() => _logs.clear()),
+                ),
+              ],
+            ),
           ),
         ),
         const Divider(height: 1),
         Expanded(
-          child: _logs.isEmpty 
+          child: filteredLogs.isEmpty 
             ? Center(
                 child: Text(
-                  'No logs yet.', 
+                  'No logs found.', 
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
                 ),
               )
             : ListView.builder(
+                controller: _logScrollController,
                 padding: const EdgeInsets.all(16),
-                itemCount: _logs.length,
+                itemCount: filteredLogs.length,
                 itemBuilder: (context, index) {
-                  final log = _logs[index];
-                  Color textColor = Theme.of(context).colorScheme.onSurface;
-                  if (log.contains('Error')) textColor = Theme.of(context).colorScheme.error;
-                  if (log.contains('Backend')) textColor = Theme.of(context).colorScheme.primary;
+                  final log = filteredLogs[index];
+                  Color levelColor = Colors.grey;
+                  IconData levelIcon = Icons.info_outline;
+
+                  switch (log.level) {
+                    case LogLevel.error:
+                      levelColor = Theme.of(context).colorScheme.error;
+                      levelIcon = Icons.error_outline;
+                      break;
+                    case LogLevel.warning:
+                      levelColor = Colors.orange;
+                      levelIcon = Icons.warning_amber_outlined;
+                      break;
+                    case LogLevel.backend:
+                      levelColor = Theme.of(context).colorScheme.primary;
+                      levelIcon = Icons.settings_ethernet;
+                      break;
+                    case LogLevel.info:
+                      levelColor = Colors.blue;
+                      levelIcon = Icons.info_outline;
+                      break;
+                  }
                   
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Text(
-                      log,
-                      style: TextStyle(
-                        fontFamily: 'monospace',
-                        fontSize: 12,
-                        color: textColor,
-                      ),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${log.timestamp.hour.toString().padLeft(2, '0')}:${log.timestamp.minute.toString().padLeft(2, '0')}:${log.timestamp.second.toString().padLeft(2, '0')}',
+                          style: const TextStyle(fontFamily: 'monospace', fontSize: 10, color: Colors.grey),
+                        ),
+                        const SizedBox(width: 8),
+                        Icon(levelIcon, size: 12, color: levelColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          '[${log.source}]',
+                          style: TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: levelColor.withValues(alpha: 0.8),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: SelectableText(
+                            log.message,
+                            style: TextStyle(
+                              fontFamily: 'monospace',
+                              fontSize: 12,
+                              color: log.level == LogLevel.error ? levelColor : Theme.of(context).colorScheme.onSurface,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -448,8 +625,23 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
     );
   }
 
+  Widget _buildFilterChip(LogLevel? level, String label) {
+    final isSelected = _logFilter == level;
+    return ChoiceChip(
+      label: Text(label, style: const TextStyle(fontSize: 11)),
+      selected: isSelected,
+      onSelected: (selected) {
+        setState(() {
+          _logFilter = selected ? level : null;
+        });
+      },
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
+    );
+  }
+
   void _copyErrorLogs() {
-    final errorLogs = _logs.where((log) => log.contains('Error')).toList();
+    final errorLogs = _logs.where((log) => log.level == LogLevel.error).toList();
     if (errorLogs.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No error logs to copy.')),
@@ -457,7 +649,7 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
       return;
     }
 
-    Clipboard.setData(ClipboardData(text: errorLogs.join('\n')));
+    Clipboard.setData(ClipboardData(text: errorLogs.map((l) => l.message).join('\n')));
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Error logs copied to clipboard.')),
     );
@@ -1175,6 +1367,20 @@ class PreviewSheetState extends State<PreviewSheet> with SingleTickerProviderSta
                                       padding: EdgeInsets.zero,
                                       constraints: const BoxConstraints(),
                                     ),
+                                  const SizedBox(width: 8),
+                                  IconButton(
+                                    icon: Icon(_showBlueprint ? Icons.architecture : Icons.architecture_outlined, 
+                                      size: 18, 
+                                      color: _showBlueprint ? Colors.blue : null
+                                    ),
+                                    onPressed: () {
+                                      HapticFeedback.lightImpact();
+                                      setState(() => _showBlueprint = !_showBlueprint);
+                                    },
+                                    tooltip: 'Blueprint Mode',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
                                   const SizedBox(width: 8),
                                   if (widget.onFeedback != null)
                                     IconButton(

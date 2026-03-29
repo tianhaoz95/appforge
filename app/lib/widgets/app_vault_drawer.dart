@@ -5,7 +5,9 @@ import '../repositories/conversation_repository.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import 'dart:io';
+import 'dart:convert';
 import 'app_vault_title.dart';
+import '../theme.dart';
 
 class AppVaultDrawer extends StatefulWidget {
   final Function(Map<String, dynamic> app)? onAppSelected;
@@ -66,90 +68,73 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
                 ),
               ),
             ),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+            padding: const EdgeInsets.fromLTRB(16, 24, 16, 16),
             child: Consumer2<AuthProvider, SettingsProvider>(
               builder: (context, auth, settings, _) {
                 final isDark = Theme.of(context).brightness == Brightness.dark;
-                final logoBackground = isDark ? Colors.black : Colors.white;
-                final logoColor = isDark ? Colors.white : Colors.black;
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: logoBackground,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Image.asset(
-                          'brand/logo.png',
-                          height: 32,
-                          color: logoColor,
-                          colorBlendMode: BlendMode.srcIn,
-                          errorBuilder: (context, error, stackTrace) => Icon(
-                            Icons.auto_awesome_motion, 
-                            size: 32, 
-                            color: Theme.of(context).colorScheme.primary
+                    Row(
+                      children: [
+                        const GradientIcon(icon: Icons.auto_awesome_motion, size: 28),
+                        const SizedBox(width: 10),
+                        const GradientText(
+                          'AppVault',
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: -0.5,
                           ),
                         ),
+                      ],
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.03),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Theme.of(context).colorScheme.outline),
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'AppVault',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Spacer(),
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                        radius: 16,
-                        backgroundImage: settings.localAvatarPath.isNotEmpty
-                            ? FileImage(File(settings.localAvatarPath))
-                            : null,
-                        child: settings.localAvatarPath.isEmpty
-                            ? Text(auth.user?.displayName?.substring(0, 1).toUpperCase() ?? 'U')
-                            : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              auth.user?.displayName ?? 'User',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Theme.of(context).colorScheme.primary,
+                            foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                            radius: 14,
+                            backgroundImage: settings.localAvatarPath.isNotEmpty
+                                ? FileImage(File(settings.localAvatarPath))
+                                : null,
+                            child: settings.localAvatarPath.isEmpty
+                                ? Text(
+                                    auth.user?.displayName?.substring(0, 1).toUpperCase() ?? 'U',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                                  )
+                                : null,
+                          ),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  auth.user?.displayName ?? 'User',
+                                  style: TextStyle(
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 13,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
                             ),
-                            Text(
-                              auth.user?.email ?? '',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                fontSize: 11,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
+                    ),
                   ],
                 );
               },
@@ -341,111 +326,174 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     final String id = app['appId'];
     final bool isSelected = _selectedAppIds.contains(id);
     final bool isPinned = (app['is_pinned'] ?? 0) == 1;
+    final String? screenshot = app['screenshot_blob'];
 
-    return ListTile(
-      dense: true,
-      leading: _isAppSelectionMode
-          ? Checkbox(
-              value: isSelected,
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _selectedAppIds.add(id);
-                  } else {
-                    _selectedAppIds.remove(id);
-                  }
-                });
-              },
-            )
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isPinned)
-                  Icon(Icons.push_pin, size: 12, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 4),
-                _buildIcon(app['icon']),
-              ],
-            ),
-      title: Text(
-        app['name'] ?? 'Unnamed App',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      subtitle: Text('v${app['version']}', style: const TextStyle(fontSize: 11)),
-      trailing: _isAppSelectionMode
-          ? null
-          : PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, size: 18),
-              onSelected: (value) async {
-                final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
-                switch (value) {
-                  case 'pin':
-                    await appRepository.pinApp(id, !isPinned);
-                    break;
-                  case 'rename':
-                    await _showRenameDialog(context, app);
-                    break;
-                  case 'delete':
-                    await _confirmDelete(context, app);
-                    break;
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 6.0),
+      child: Card(
+        clipBehavior: Clip.antiAlias,
+        elevation: isSelected ? 4 : 1,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: isSelected
+              ? BorderSide(color: Theme.of(context).colorScheme.primary, width: 2)
+              : BorderSide(color: Theme.of(context).dividerTheme.color ?? Colors.transparent, width: 0.5),
+        ),
+        child: InkWell(
+          onTap: () {
+            if (_isAppSelectionMode) {
+              setState(() {
+                if (isSelected) {
+                  _selectedAppIds.remove(id);
+                } else {
+                  _selectedAppIds.add(id);
                 }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'pin',
-                  child: ListTile(
-                    leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin),
-                    title: Text(isPinned ? 'Unpin' : 'Pin'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'rename',
-                  child: ListTile(
-                    leading: Icon(Icons.edit_outlined),
-                    title: Text('Rename'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: ListTile(
-                    leading: Icon(Icons.delete_outline, color: Colors.red),
-                    title: Text('Delete', style: TextStyle(color: Colors.red)),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
-      onTap: () {
-        if (_isAppSelectionMode) {
-          setState(() {
-            if (isSelected) {
-              _selectedAppIds.remove(id);
+              });
             } else {
-              _selectedAppIds.add(id);
+              widget.onAppSelected?.call(app);
+              Navigator.pop(context);
             }
-          });
-        } else {
-          widget.onAppSelected?.call(app);
-          Navigator.pop(context);
-        }
-      },
-      onLongPress: () {
-        if (!_isAppSelectionMode) {
-          setState(() {
-            _isAppSelectionMode = true;
-            _selectedAppIds.add(id);
-          });
-        } else {
-          _confirmDelete(context, app);
-        }
-      },
-      selected: isSelected,
-      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+          },
+          onLongPress: () {
+            if (!_isAppSelectionMode) {
+              setState(() {
+                _isAppSelectionMode = true;
+                _selectedAppIds.add(id);
+              });
+            }
+          },
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                children: [
+                  AspectRatio(
+                    aspectRatio: 16 / 9,
+                    child: screenshot != null && screenshot.isNotEmpty
+                        ? Image.memory(
+                            base64Decode(screenshot),
+                            fit: BoxFit.cover,
+                            errorBuilder: (context, error, stackTrace) => _buildFallbackThumbnail(app),
+                          )
+                        : _buildFallbackThumbnail(app),
+                  ),
+                  if (_isAppSelectionMode)
+                    Positioned(
+                      top: 4,
+                      left: 4,
+                      child: Checkbox(
+                        value: isSelected,
+                        onChanged: (val) {
+                          setState(() {
+                            if (val == true) {
+                              _selectedAppIds.add(id);
+                            } else {
+                              _selectedAppIds.remove(id);
+                            }
+                          });
+                        },
+                      ),
+                    ),
+                  if (isPinned)
+                    Positioned(
+                      top: 8,
+                      right: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Theme.of(context).colorScheme.primary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.push_pin, size: 12, color: Colors.white),
+                      ),
+                    ),
+                ],
+              ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            app['name'] ?? 'Unnamed App',
+                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          Text(
+                            'v${app['version']}',
+                            style: TextStyle(fontSize: 10, color: Theme.of(context).hintColor),
+                          ),
+                        ],
+                      ),
+                    ),
+                    if (!_isAppSelectionMode)
+                      PopupMenuButton<String>(
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.more_vert, size: 18),
+                        onSelected: (value) async {
+                          final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
+                          switch (value) {
+                            case 'pin':
+                              await appRepository.pinApp(id, !isPinned);
+                              break;
+                            case 'rename':
+                              await _showRenameDialog(context, app);
+                              break;
+                            case 'delete':
+                              await _confirmDelete(context, app);
+                              break;
+                          }
+                        },
+                        itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'pin',
+                            child: ListTile(
+                              leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin),
+                              title: Text(isPinned ? 'Unpin' : 'Pin'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'rename',
+                            child: ListTile(
+                              leading: Icon(Icons.edit_outlined),
+                              title: Text('Rename'),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                          const PopupMenuItem(
+                            value: 'delete',
+                            child: ListTile(
+                              leading: Icon(Icons.delete_outline, color: Colors.red),
+                              title: Text('Delete', style: TextStyle(color: Colors.red)),
+                              dense: true,
+                              contentPadding: EdgeInsets.zero,
+                            ),
+                          ),
+                        ],
+                      ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFallbackThumbnail(Map<String, dynamic> app) {
+    return Container(
+      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      child: Center(
+        child: _buildIcon(app['icon'], size: 40),
+      ),
     );
   }
 
@@ -629,13 +677,13 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     }
   }
 
-  Widget _buildIcon(String? icon) {
-    if (icon == null || icon.isEmpty) return const Icon(Icons.apps, size: 20);
+  Widget _buildIcon(String? icon, {double size = 20}) {
+    if (icon == null || icon.isEmpty) return Icon(Icons.apps, size: size);
     switch (icon) {
-      case 'rocket': return const Icon(Icons.rocket_launch, size: 20);
-      case 'speed': return const Icon(Icons.speed, size: 20);
-      case 'bolt': return const Icon(Icons.bolt, size: 20);
-      default: return Text(icon, style: const TextStyle(fontSize: 20));
+      case 'rocket': return Icon(Icons.rocket_launch, size: size);
+      case 'speed': return Icon(Icons.speed, size: size);
+      case 'bolt': return Icon(Icons.bolt, size: size);
+      default: return Text(icon, style: TextStyle(fontSize: size));
     }
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/settings_provider.dart';
+import '../../theme.dart';
 import 'register_screen.dart';
 import 'forgot_password_screen.dart';
 
@@ -103,19 +104,23 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Text(
+                    const GradientText(
                       'MicroForge',
-                      style: Theme.of(context).textTheme.headlineLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                            color: Theme.of(context).colorScheme.primary,
-                          ),
+                      style: TextStyle(
+                        fontWeight: FontWeight.w900,
+                        fontSize: 40,
+                        letterSpacing: -1.5,
+                      ),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Forge your ideas into reality.',
                       style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Colors.blueGrey[400],
+                            color: Theme.of(context).brightness == Brightness.dark
+                                ? Colors.white54
+                                : Colors.black54,
+                            fontWeight: FontWeight.w500,
                           ),
                       textAlign: TextAlign.center,
                     ),
@@ -127,7 +132,6 @@ class _LoginScreenState extends State<LoginScreen> {
                       decoration: const InputDecoration(
                         labelText: 'Email',
                         prefixIcon: Icon(Icons.email_outlined),
-                        border: OutlineInputBorder(),
                       ),
                       keyboardType: TextInputType.emailAddress,
                       autofillHints: const [AutofillHints.email],
@@ -151,7 +155,6 @@ class _LoginScreenState extends State<LoginScreen> {
                             });
                           },
                         ),
-                        border: const OutlineInputBorder(),
                       ),
                       obscureText: !_isPasswordVisible,
                       autofillHints: const [AutofillHints.password],
@@ -225,10 +228,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       onPressed: _isLoading ? null : _signIn,
                       style: ElevatedButton.styleFrom(
                         padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
                       child: _isLoading
