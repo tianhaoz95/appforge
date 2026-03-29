@@ -1545,7 +1545,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                   builder: (context, _) {
                     final isDark =
                         Theme.of(context).brightness == Brightness.dark;
-                    final colorScheme = Theme.of(context).colorScheme;
 
                     return Stack(
                       children: [
