@@ -5,7 +5,6 @@ import '../repositories/conversation_repository.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import 'dart:io';
-import 'dart:convert';
 import '../theme.dart';
 
 class AppVaultDrawer extends StatefulWidget {
@@ -374,14 +373,32 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
       padding: EdgeInsets.zero,
       icon: Icon(Icons.more_horiz, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
       onSelected: (value) async {
+        final microAppRepo = Provider.of<MicroAppRepository>(context, listen: false);
+        final convRepo = Provider.of<ConversationRepository>(context, listen: false);
+        
         if (type == 'app') {
-          final repo = Provider.of<MicroAppRepository>(context, listen: false);
-          if (value == 'pin') await repo.pinApp(id, !isPinned);
+          if (value == 'pin') await microAppRepo.pinApp(id, !isPinned);
           if (value == 'rename') await _showRenameDialog(context, item);
           if (value == 'delete') await _confirmDelete(context, item);
         } else {
-          final repo = Provider.of<ConversationRepository>(context, listen: false);
-          if (value == 'delete') await _confirmDeleteConversation(context, item);
+          if (value == 'delete') {
+            final shouldDelete = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Delete Chat?', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                content: Text('Delete "${item['title'] ?? 'Untitled'}"?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+            if (shouldDelete == true) await convRepo.deleteConversation(id);
+          }
         }
       },
       itemBuilder: (context) => [

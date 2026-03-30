@@ -105,6 +105,14 @@ class AppTheme {
       backgroundColor: Colors.white,
       surfaceTintColor: Colors.transparent,
     ),
+    popupMenuTheme: const PopupMenuThemeData(
+      color: Colors.white,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
+      backgroundColor: Colors.white,
+      surfaceTintColor: Colors.transparent,
+    ),
   );
 
   static ThemeData darkTheme = ThemeData(
@@ -195,6 +203,14 @@ class AppTheme {
       textColor: Colors.white,
     ),
     drawerTheme: const DrawerThemeData(
+      backgroundColor: Colors.black,
+      surfaceTintColor: Colors.transparent,
+    ),
+    popupMenuTheme: const PopupMenuThemeData(
+      color: Colors.black,
+      surfaceTintColor: Colors.transparent,
+    ),
+    dialogTheme: const DialogThemeData(
       backgroundColor: Colors.black,
       surfaceTintColor: Colors.transparent,
     ),
