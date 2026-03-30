@@ -5,7 +5,7 @@ import '../repositories/conversation_repository.dart';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
 import 'dart:io';
-import 'app_vault_title.dart';
+import '../theme.dart';
 
 class AppVaultDrawer extends StatefulWidget {
   final Function(Map<String, dynamic> app)? onAppSelected;
@@ -24,13 +24,12 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
   bool _isAppSelectionMode = false;
   final Set<String> _selectedConversationIds = {};
   final Set<String> _selectedAppIds = {};
-  bool _isOlderExpanded = false;
+  bool _isOlderChatsExpanded = false;
+  bool _isOlderAppsExpanded = false;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Refresh futures when dependencies change (including repository notifications)
-    // We use context.watch to trigger didChangeDependencies on notifyListeners()
     Provider.of<MicroAppRepository>(context);
     Provider.of<ConversationRepository>(context);
     Provider.of<AuthProvider>(context);
@@ -52,383 +51,304 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Drawer(
-      child: ListView(
-        padding: EdgeInsets.zero,
-        children: [
-          DrawerHeader(
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              border: Border(
-                bottom: BorderSide(
-                  color: Theme.of(context).dividerColor.withValues(alpha: 0.1),
-                  width: 1,
-                ),
-              ),
-            ),
-            padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-            child: Consumer2<AuthProvider, SettingsProvider>(
-              builder: (context, auth, settings, _) {
-                final isDark = Theme.of(context).brightness == Brightness.dark;
-                final logoBackground = isDark ? Colors.black : Colors.white;
-                final logoColor = isDark ? Colors.white : Colors.black;
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: logoBackground,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Image.asset(
-                          'brand/logo.png',
-                          height: 32,
-                          color: logoColor,
-                          colorBlendMode: BlendMode.srcIn,
-                          errorBuilder: (context, error, stackTrace) => Icon(
-                            Icons.auto_awesome_motion, 
-                            size: 32, 
-                            color: Theme.of(context).colorScheme.primary
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        'AppVault',
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+      backgroundColor: isDark ? Colors.black : Colors.white,
+      child: SafeArea(
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(24, 20, 24, 20),
+              child: Row(
+                children: [
+                  const GradientIcon(icon: Icons.auto_awesome_motion, size: 24),
+                  const SizedBox(width: 12),
+                  const GradientText(
+                    'Vault',
+                    style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                   const Spacer(),
-                  Row(
-                    children: [
-                      CircleAvatar(
-                        backgroundColor: Theme.of(context).colorScheme.primary,
-                        foregroundColor: Theme.of(context).colorScheme.onPrimary,
-                        radius: 16,
+                  Consumer2<AuthProvider, SettingsProvider>(
+                    builder: (context, auth, settings, _) {
+                      return CircleAvatar(
+                        radius: 14,
+                        backgroundColor: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
                         backgroundImage: settings.localAvatarPath.isNotEmpty
                             ? FileImage(File(settings.localAvatarPath))
                             : null,
                         child: settings.localAvatarPath.isEmpty
-                            ? Text(auth.user?.displayName?.substring(0, 1).toUpperCase() ?? 'U')
+                            ? Text(
+                                auth.user?.displayName?.substring(0, 1).toUpperCase() ?? 'U',
+                                style: TextStyle(
+                                  fontSize: 10, 
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
+                              )
                             : null,
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              auth.user?.displayName ?? 'User',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 14,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            Text(
-                              auth.user?.email ?? '',
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                                fontSize: 11,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                      );
+                    },
                   ),
-                  ],
-                );
-              },
-            ),
-          ),
-          _buildSectionHeader(
-            title: const Text(
-              'Recent Chats',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            isSelectionMode: _isChatSelectionMode,
-            selectedCount: _selectedConversationIds.length,
-            onCancel: () => setState(() {
-              _isChatSelectionMode = false;
-              _selectedConversationIds.clear();
-              _isOlderExpanded = false;
-            }),
-            onSelectAll: (allIds) => setState(() {
-              if (_selectedConversationIds.length == allIds.length) {
-                _selectedConversationIds.clear();
-              } else {
-                _selectedConversationIds.addAll(allIds);
-              }
-            }),
-            onDelete: () => _confirmBulkDelete(context, 'chats'),
-            allItemsFuture: _convsFuture,
-            idKey: 'conversationId',
-          ),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _convsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                return const SizedBox.shrink();
-              }
-              final convs = snapshot.data ?? [];
-              if (convs.isEmpty) {
-                return const ListTile(title: Text('No history yet.', style: TextStyle(fontSize: 12)));
-              }
-
-              final recent = convs.take(3).toList();
-              final older = convs.skip(3).toList();
-
-              return Column(
-                children: [
-                  ...recent.map((conv) => _buildConversationTile(conv)),
-                  if (older.isNotEmpty)
-                    Theme(
-                      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                      child: ExpansionTile(
-                        dense: true,
-                        initiallyExpanded: _isOlderExpanded || _isChatSelectionMode,
-                        onExpansionChanged: (val) {
-                          if (!_isChatSelectionMode) {
-                            setState(() => _isOlderExpanded = val);
-                          }
-                        },
-                        visualDensity: VisualDensity.compact,
-                        title: Text(
-                          'Older Chats (${older.length})',
-                          style: TextStyle(
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                            color: Theme.of(context).colorScheme.secondary,
-                          ),
-                        ),
-                        leading: const Icon(Icons.history, size: 18),
-                        children: older.map((conv) => _buildConversationTile(conv)).toList(),
-                      ),
-                    ),
                 ],
-              );
-            },
+              ),
+            ),
+            
+            Expanded(
+              child: ListView(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                children: [
+                  // CHATS SECTION
+                  _buildMinimalSectionHeader(
+                    'CHATS', 
+                    _isChatSelectionMode, 
+                    _selectedConversationIds.length, 
+                    _convsFuture,
+                    'conversationId',
+                    (allIds) => setState(() {
+                      if (_selectedConversationIds.length == allIds.length) {
+                        _selectedConversationIds.clear();
+                      } else {
+                        _selectedConversationIds.addAll(allIds);
+                      }
+                    }),
+                    () => setState(() {
+                      _isChatSelectionMode = false;
+                      _selectedConversationIds.clear();
+                    }), 
+                    () => _confirmBulkDelete(context, 'chats')
+                  ),
+                  
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _convsFuture,
+                    builder: (context, snapshot) {
+                      final convs = snapshot.data ?? [];
+                      if (convs.isEmpty && snapshot.connectionState == ConnectionState.done) {
+                        return _buildEmptyState('No history');
+                      }
+                      
+                      final recent = convs.take(5).toList();
+                      final older = convs.skip(5).toList();
+
+                      return Column(
+                        children: [
+                          ...recent.map((c) => _buildMinimalConvTile(c)),
+                          if (older.isNotEmpty)
+                            _buildCollapsibleSection(
+                              'Older Chats', 
+                              older.map((c) => _buildMinimalConvTile(c)).toList(),
+                              _isOlderChatsExpanded || _isChatSelectionMode,
+                              (val) => setState(() => _isOlderChatsExpanded = val),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                  
+                  const SizedBox(height: 24),
+                  
+                  // APPS SECTION
+                  _buildMinimalSectionHeader(
+                    'APPS', 
+                    _isAppSelectionMode, 
+                    _selectedAppIds.length, 
+                    _appsFuture,
+                    'appId',
+                    (allIds) => setState(() {
+                      if (_selectedAppIds.length == allIds.length) {
+                        _selectedAppIds.clear();
+                      } else {
+                        _selectedAppIds.addAll(allIds);
+                      }
+                    }),
+                    () => setState(() {
+                      _isAppSelectionMode = false;
+                      _selectedAppIds.clear();
+                    }), 
+                    () => _confirmBulkDelete(context, 'apps')
+                  ),
+                  
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _appsFuture,
+                    builder: (context, snapshot) {
+                      final apps = snapshot.data ?? [];
+                      if (apps.isEmpty && snapshot.connectionState == ConnectionState.done) {
+                        return _buildEmptyState('No apps forged');
+                      }
+
+                      final recent = apps.take(10).toList();
+                      final older = apps.skip(10).toList();
+
+                      return Column(
+                        children: [
+                          ...recent.map((a) => _buildMinimalAppTile(a)),
+                          if (older.isNotEmpty)
+                            _buildCollapsibleSection(
+                              'More Apps', 
+                              older.map((a) => _buildMinimalAppTile(a)).toList(),
+                              _isOlderAppsExpanded || _isAppSelectionMode,
+                              (val) => setState(() => _isOlderAppsExpanded = val),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCollapsibleSection(String title, List<Widget> children, bool expanded, Function(bool) onToggle) {
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        dense: true,
+        initiallyExpanded: expanded,
+        onExpansionChanged: onToggle,
+        visualDensity: VisualDensity.compact,
+        title: Text(
+          '$title (${children.length})',
+          style: TextStyle(
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
           ),
-          const Divider(),
-          _buildSectionHeader(
-            title: const AppVaultTitle(),
-            isSelectionMode: _isAppSelectionMode,
-            selectedCount: _selectedAppIds.length,
-            onCancel: () => setState(() {
-              _isAppSelectionMode = false;
-              _selectedAppIds.clear();
-            }),
-            onSelectAll: (allIds) => setState(() {
-              if (_selectedAppIds.length == allIds.length) {
-                _selectedAppIds.clear();
-              } else {
-                _selectedAppIds.addAll(allIds);
-              }
-            }),
-            onDelete: () => _confirmBulkDelete(context, 'apps'),
-            allItemsFuture: _appsFuture,
-            idKey: 'appId',
+        ),
+        children: children,
+      ),
+    );
+  }
+
+  Widget _buildMinimalSectionHeader(
+    String title, 
+    bool isSelection, 
+    int count, 
+    Future<List<Map<String, dynamic>>>? itemsFuture,
+    String idKey,
+    Function(Set<String>) onSelectAll,
+    VoidCallback onCancel, 
+    VoidCallback onDelete
+  ) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 8, 8),
+      child: Row(
+        children: [
+          Text(
+            isSelection ? '$count SELECTED' : title,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1.2,
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+            ),
           ),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _appsFuture,
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-                return const Center(child: CircularProgressIndicator());
+          const Spacer(),
+          if (isSelection) ...[
+            FutureBuilder<List<Map<String, dynamic>>>(
+              future: itemsFuture,
+              builder: (context, snapshot) {
+                final allIds = (snapshot.data ?? []).map((i) => i[idKey] as String).toSet();
+                final isAllSelected = count == allIds.length && allIds.isNotEmpty;
+                return IconButton(
+                  icon: Icon(isAllSelected ? Icons.deselect_outlined : Icons.select_all_rounded, size: 16),
+                  onPressed: () => onSelectAll(allIds),
+                  visualDensity: VisualDensity.compact,
+                  tooltip: isAllSelected ? 'Deselect All' : 'Select All',
+                );
               }
-              if (snapshot.hasError) {
-                return ListTile(title: Text('Error: ${snapshot.error}'));
-              }
-              final apps = snapshot.data ?? [];
-              if (apps.isEmpty) {
-                return const ListTile(title: Text('No apps forged yet.'));
-              }
-              return Column(
-                children: apps.map((app) => _buildAppTile(app)).toList(),
-              );
-            },
-          ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, size: 16),
+              onPressed: onCancel,
+              visualDensity: VisualDensity.compact,
+            ),
+            IconButton(
+              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+              onPressed: count == 0 ? null : onDelete,
+              visualDensity: VisualDensity.compact,
+            ),
+          ],
         ],
       ),
     );
   }
 
-  Widget _buildSectionHeader({
-    required Widget title,
-    required bool isSelectionMode,
-    required int selectedCount,
-    required VoidCallback onCancel,
-    required Function(Set<String>) onSelectAll,
-    required VoidCallback onDelete,
-    required Future<List<Map<String, dynamic>>>? allItemsFuture,
-    required String idKey,
-  }) {
-    if (!isSelectionMode) {
-      return ListTile(
-        title: title,
-      );
-    }
+  Widget _buildMinimalConvTile(Map<String, dynamic> conv) {
+    final id = conv['conversationId'] as String;
+    final isSelected = _selectedConversationIds.contains(id);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return FutureBuilder<List<Map<String, dynamic>>>(
-      future: allItemsFuture,
-      builder: (context, snapshot) {
-        final items = snapshot.data ?? [];
-        final allIds = items.map((i) => i[idKey] as String).toSet();
-        final isAllSelected = selectedCount == allIds.length && allIds.isNotEmpty;
-
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              dense: true,
-              leading: IconButton(
-                icon: const Icon(Icons.close),
-                onPressed: onCancel,
-              ),
-              title: Text(
-                '$selectedCount Selected',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-              ),
-              trailing: IconButton(
-                icon: const Icon(Icons.delete_outline, color: Colors.red, size: 20),
-                onPressed: selectedCount == 0 ? null : onDelete,
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        visualDensity: VisualDensity.compact,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      ),
-                      onPressed: () => onSelectAll(allIds),
-                      icon: Icon(isAllSelected ? Icons.deselect : Icons.select_all, size: 16),
-                      label: Text(
-                        isAllSelected ? 'Deselect All' : 'Select All',
-                        style: const TextStyle(fontSize: 11),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            const Divider(height: 1),
-          ],
-        );
+    return ListTile(
+      dense: true,
+      visualDensity: const VisualDensity(vertical: -2),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      selected: isSelected,
+      selectedTileColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+      leading: _isChatSelectionMode 
+        ? _buildTinyCheckbox(isSelected)
+        : Icon(Icons.chat_bubble_outline_rounded, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5)),
+      title: Text(
+        conv['title'] ?? 'Untitled',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: isSelected ? 1.0 : 0.8),
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+      ),
+      trailing: _isChatSelectionMode ? null : _buildItemMenu(conv, 'chat'),
+      onTap: () {
+        if (_isChatSelectionMode) {
+          setState(() => isSelected ? _selectedConversationIds.remove(id) : _selectedConversationIds.add(id));
+        } else {
+          widget.onConversationSelected?.call(id, conv['title'] ?? 'Untitled');
+          Navigator.pop(context);
+        }
+      },
+      onLongPress: () {
+        if (!_isChatSelectionMode) {
+          setState(() {
+            _isChatSelectionMode = true;
+            _selectedConversationIds.add(id);
+          });
+        }
       },
     );
   }
 
-  Widget _buildAppTile(Map<String, dynamic> app) {
-    final String id = app['appId'];
-    final bool isSelected = _selectedAppIds.contains(id);
-    final bool isPinned = (app['is_pinned'] ?? 0) == 1;
+  Widget _buildMinimalAppTile(Map<String, dynamic> app) {
+    final id = app['appId'] as String;
+    final isSelected = _selectedAppIds.contains(id);
+    final isPinned = (app['is_pinned'] ?? 0) == 1;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return ListTile(
       dense: true,
-      leading: _isAppSelectionMode
-          ? Checkbox(
-              value: isSelected,
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _selectedAppIds.add(id);
-                  } else {
-                    _selectedAppIds.remove(id);
-                  }
-                });
-              },
-            )
-          : Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isPinned)
-                  Icon(Icons.push_pin, size: 12, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 4),
-                _buildIcon(app['icon']),
-              ],
-            ),
+      visualDensity: const VisualDensity(vertical: -1),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      selected: isSelected,
+      selectedTileColor: isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05),
+      leading: _isAppSelectionMode 
+        ? _buildTinyCheckbox(isSelected)
+        : _buildAppIcon(app['icon'], isPinned),
       title: Text(
-        app['name'] ?? 'Unnamed App',
+        app['name'] ?? 'Unnamed',
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: isSelected ? FontWeight.w900 : FontWeight.w500,
+        ),
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      subtitle: Text('v${app['version']}', style: const TextStyle(fontSize: 11)),
-      trailing: _isAppSelectionMode
-          ? null
-          : PopupMenuButton<String>(
-              icon: const Icon(Icons.more_vert, size: 18),
-              onSelected: (value) async {
-                final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
-                switch (value) {
-                  case 'pin':
-                    await appRepository.pinApp(id, !isPinned);
-                    break;
-                  case 'rename':
-                    await _showRenameDialog(context, app);
-                    break;
-                  case 'delete':
-                    await _confirmDelete(context, app);
-                    break;
-                }
-              },
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'pin',
-                  child: ListTile(
-                    leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin),
-                    title: Text(isPinned ? 'Unpin' : 'Pin'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'rename',
-                  child: ListTile(
-                    leading: Icon(Icons.edit_outlined),
-                    title: Text('Rename'),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'delete',
-                  child: ListTile(
-                    leading: Icon(Icons.delete_outline, color: Colors.red),
-                    title: Text('Delete', style: TextStyle(color: Colors.red)),
-                    dense: true,
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
-            ),
+      trailing: _isAppSelectionMode ? null : _buildItemMenu(app, 'app'),
       onTap: () {
         if (_isAppSelectionMode) {
-          setState(() {
-            if (isSelected) {
-              _selectedAppIds.remove(id);
-            } else {
-              _selectedAppIds.add(id);
-            }
-          });
+          setState(() => isSelected ? _selectedAppIds.remove(id) : _selectedAppIds.add(id));
         } else {
           widget.onAppSelected?.call(app);
           Navigator.pop(context);
@@ -440,12 +360,147 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
             _isAppSelectionMode = true;
             _selectedAppIds.add(id);
           });
-        } else {
-          _confirmDelete(context, app);
         }
       },
-      selected: isSelected,
-      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+    );
+  }
+
+  Widget _buildItemMenu(Map<String, dynamic> item, String type) {
+    final isPinned = (item['is_pinned'] ?? 0) == 1;
+    final id = type == 'chat' ? item['conversationId'] : item['appId'];
+
+    return PopupMenuButton<String>(
+      padding: EdgeInsets.zero,
+      icon: Icon(Icons.more_horiz, size: 16, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3)),
+      onSelected: (value) async {
+        final microAppRepo = Provider.of<MicroAppRepository>(context, listen: false);
+        final convRepo = Provider.of<ConversationRepository>(context, listen: false);
+        
+        if (type == 'app') {
+          if (value == 'pin') await microAppRepo.pinApp(id, !isPinned);
+          if (value == 'rename') await _showRenameDialog(context, item);
+          if (value == 'delete') await _confirmDelete(context, item);
+        } else {
+          if (value == 'delete') {
+            final shouldDelete = await showDialog<bool>(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Delete Chat?', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                content: Text('Delete "${item['title'] ?? 'Untitled'}"?'),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context, true),
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Delete'),
+                  ),
+                ],
+              ),
+            );
+            if (shouldDelete == true) await convRepo.deleteConversation(id);
+          }
+        }
+      },
+      itemBuilder: (context) => [
+        if (type == 'app') ...[
+          PopupMenuItem(
+            value: 'pin',
+            child: ListTile(
+              leading: Icon(isPinned ? Icons.push_pin_outlined : Icons.push_pin, size: 16),
+              title: Text(isPinned ? 'Unpin' : 'Pin', style: const TextStyle(fontSize: 13)),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'rename',
+            child: ListTile(
+              leading: Icon(Icons.edit_outlined, size: 16),
+              title: Text('Rename', style: TextStyle(fontSize: 13)),
+              dense: true,
+              contentPadding: EdgeInsets.zero,
+            ),
+          ),
+        ],
+        const PopupMenuItem(
+          value: 'delete',
+          child: ListTile(
+            leading: Icon(Icons.delete_outline, color: Colors.red, size: 16),
+            title: Text('Delete', style: TextStyle(color: Colors.red, fontSize: 13)),
+            dense: true,
+            contentPadding: EdgeInsets.zero,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppIcon(String? icon, bool isPinned) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          _getIconWidget(icon, size: 14),
+          if (isPinned)
+            Positioned(
+              right: 0,
+              top: 0,
+              child: Container(
+                width: 6,
+                height: 6,
+                decoration: const BoxDecoration(
+                  gradient: AppTheme.vibrantGradient,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _getIconWidget(String? icon, {double size = 16}) {
+    if (icon == null || icon.isEmpty) return Icon(Icons.layers_outlined, size: size);
+    if (icon.length > 2) {
+       switch (icon) {
+        case 'rocket': return Icon(Icons.rocket_launch_outlined, size: size);
+        case 'speed': return Icon(Icons.speed_outlined, size: size);
+        case 'bolt': return Icon(Icons.bolt_outlined, size: size);
+        default: return Icon(Icons.layers_outlined, size: size);
+      }
+    }
+    return Text(icon, style: TextStyle(fontSize: size));
+  }
+
+  Widget _buildTinyCheckbox(bool checked) {
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(
+          color: checked ? Colors.transparent : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+          width: 1.5,
+        ),
+        gradient: checked ? AppTheme.vibrantGradient : null,
+      ),
+      child: checked ? const Icon(Icons.check, size: 10, color: Colors.white) : null,
+    );
+  }
+
+  Widget _buildEmptyState(String msg) {
+    return Padding(
+      padding: const EdgeInsets.all(12),
+      child: Text(
+        msg,
+        style: TextStyle(fontSize: 11, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3), fontStyle: FontStyle.italic),
+      ),
     );
   }
 
@@ -454,20 +509,17 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     final bool? shouldRename = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Rename Micro App'),
+        title: const Text('Rename', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(labelText: 'App Name'),
           autofocus: true,
         ),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Rename'),
+            onPressed: () => Navigator.pop(context, true), 
+            child: const Text('Rename', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
@@ -479,100 +531,31 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     }
   }
 
-  Widget _buildConversationTile(Map<String, dynamic> conv) {
-    final String id = conv['conversationId'];
-    final bool isSelected = _selectedConversationIds.contains(id);
-
-    return ListTile(
-      dense: true,
-      leading: _isChatSelectionMode
-          ? Checkbox(
-              value: isSelected,
-              onChanged: (val) {
-                setState(() {
-                  if (val == true) {
-                    _selectedConversationIds.add(id);
-                  } else {
-                    _selectedConversationIds.remove(id);
-                  }
-                });
-              },
-            )
-          : const Icon(Icons.chat_bubble_outline, size: 20),
-      title: Text(
-        conv['title'] ?? 'Untitled Chat',
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
-      onTap: () {
-        if (_isChatSelectionMode) {
-          setState(() {
-            if (isSelected) {
-              _selectedConversationIds.remove(id);
-            } else {
-              _selectedConversationIds.add(id);
-            }
-          });
-        } else {
-          widget.onConversationSelected?.call(
-            id,
-            conv['title'] ?? 'Untitled Chat',
-          );
-          Navigator.pop(context);
-        }
-      },
-      onLongPress: () {
-        if (!_isChatSelectionMode) {
-          setState(() {
-            _isChatSelectionMode = true;
-            _selectedConversationIds.add(id);
-            _isOlderExpanded = true;
-          });
-        } else {
-          _confirmDeleteConversation(context, conv);
-        }
-      },
-      selected: isSelected,
-      selectedTileColor: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
-    );
-  }
-
   Future<void> _confirmBulkDelete(BuildContext context, String type) async {
-    final int count = type == 'chats' ? _selectedConversationIds.length : _selectedAppIds.length;
-    final bool? shouldDelete = await showDialog<bool>(
+    final count = type == 'chats' ? _selectedConversationIds.length : _selectedAppIds.length;
+    final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Delete $count $type?'),
-        content: Text('Are you sure you want to delete the selected $type? This action cannot be undone.'),
+        title: Text('Delete $count items?', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+        content: const Text('This action cannot be undone.', style: TextStyle(fontSize: 14)),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.pop(context, true), 
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            child: const Text('Delete', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
 
     if (shouldDelete == true && context.mounted) {
-      if (type == 'chats' && _selectedConversationIds.isNotEmpty) {
-        final convRepository = Provider.of<ConversationRepository>(context, listen: false);
-        await convRepository.deleteConversations(_selectedConversationIds.toList());
-        setState(() {
-          _isChatSelectionMode = false;
-          _selectedConversationIds.clear();
-        });
-      } else if (type == 'apps' && _selectedAppIds.isNotEmpty) {
-        final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
-        await appRepository.deleteApps(_selectedAppIds.toList());
-        setState(() {
-          _isAppSelectionMode = false;
-          _selectedAppIds.clear();
-        });
+      if (type == 'chats') {
+        await Provider.of<ConversationRepository>(context, listen: false).deleteConversations(_selectedConversationIds.toList());
+        setState(() { _isChatSelectionMode = false; _selectedConversationIds.clear(); });
+      } else {
+        await Provider.of<MicroAppRepository>(context, listen: false).deleteApps(_selectedAppIds.toList());
+        setState(() { _isAppSelectionMode = false; _selectedAppIds.clear(); });
       }
     }
   }
@@ -581,13 +564,10 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Micro App?'),
-        content: Text('Are you sure you want to delete "${app['name']}"? This action cannot be undone.'),
+        title: const Text('Delete App?', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+        content: Text('Delete "${app['name']}"?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -596,10 +576,8 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         ],
       ),
     );
-
     if (shouldDelete == true && context.mounted) {
-      final appRepository = Provider.of<MicroAppRepository>(context, listen: false);
-      await appRepository.deleteApp(app['appId']);
+      await Provider.of<MicroAppRepository>(context, listen: false).deleteApp(app['appId']);
     }
   }
 
@@ -607,13 +585,10 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
     final bool? shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete Conversation?'),
-        content: Text('Are you sure you want to delete "${conv['title'] ?? 'Untitled Chat'}"? This action cannot be undone.'),
+        title: const Text('Delete Chat?', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+        content: Text('Delete "${conv['title'] ?? 'Untitled'}"?'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -622,20 +597,8 @@ class _AppVaultDrawerState extends State<AppVaultDrawer> {
         ],
       ),
     );
-
     if (shouldDelete == true && context.mounted) {
-      final convRepository = Provider.of<ConversationRepository>(context, listen: false);
-      await convRepository.deleteConversation(conv['conversationId']);
-    }
-  }
-
-  Widget _buildIcon(String? icon) {
-    if (icon == null || icon.isEmpty) return const Icon(Icons.apps, size: 20);
-    switch (icon) {
-      case 'rocket': return const Icon(Icons.rocket_launch, size: 20);
-      case 'speed': return const Icon(Icons.speed, size: 20);
-      case 'bolt': return const Icon(Icons.bolt, size: 20);
-      default: return Text(icon, style: const TextStyle(fontSize: 20));
+      await Provider.of<ConversationRepository>(context, listen: false).deleteConversation(conv['conversationId']);
     }
   }
 }

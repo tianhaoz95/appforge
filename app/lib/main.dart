@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:device_preview_screenshot/device_preview_screenshot.dart';
 import 'dart:convert';
 import 'dart:io';
 import 'package:firebase_core/firebase_core.dart';
@@ -22,7 +23,6 @@ import 'firebase_options.dart';
 import 'widgets/app_vault_drawer.dart';
 import 'widgets/vibe_detector.dart';
 import 'widgets/preview_sheet.dart';
-import 'widgets/rolling_greeting.dart';
 import 'widgets/chat_greeting.dart';
 import 'widgets/markdown_utils.dart';
 import 'repositories/micro_app_repository.dart';
@@ -39,6 +39,7 @@ import 'providers/settings_provider.dart';
 import 'providers/forge_mode.dart';
 import 'screens/settings_screen.dart';
 import 'screens/auth/login_screen.dart';
+import 'theme.dart';
 import 'package:snowglobe_openai/snowglobe_openai.dart';
 
 @pragma('vm:entry-point')
@@ -260,22 +261,45 @@ Future<void> main() async {
     }
   }
 
+  bool isTablet = false;
+  final view = WidgetsBinding.instance.platformDispatcher.implicitView;
+  if (view != null) {
+    final size = view.physicalSize / view.devicePixelRatio;
+    isTablet = size.shortestSide >= 600;
+  }
+
   runApp(
-    MultiProvider(
-      providers: [
-        ChangeNotifierProvider.value(value: settingsProvider),
-        ChangeNotifierProvider(
-          create: (_) => MicroAppRepository(dbHelper: dbHelper),
+    DevicePreview(
+      enabled: !kReleaseMode && isTablet,
+      tools: [
+        ...DevicePreview.defaultTools,
+        DevicePreviewScreenshot(
+          onScreenshot: (context, screenshot) async {
+            final xFile = XFile.fromData(
+              screenshot.bytes,
+              mimeType: 'image/png',
+              name: 'screenshot.png',
+            );
+            await Share.shareXFiles([xFile]);
+          },
         ),
-        Provider(create: (_) => MicroAppDataRepository(dbHelper: dbHelper)),
-        ChangeNotifierProvider(
-          create: (_) => ConversationRepository(dbHelper: dbHelper),
-        ),
-        ChangeNotifierProvider(
-          create: (_) => AuthProvider(),
-        ), // Kept for potential UI needs, but not for auth
       ],
-      child: const MyApp(),
+      builder: (context) => MultiProvider(
+        providers: [
+          ChangeNotifierProvider.value(value: settingsProvider),
+          ChangeNotifierProvider(
+            create: (_) => MicroAppRepository(dbHelper: dbHelper),
+          ),
+          Provider(create: (_) => MicroAppDataRepository(dbHelper: dbHelper)),
+          ChangeNotifierProvider(
+            create: (_) => ConversationRepository(dbHelper: dbHelper),
+          ),
+          ChangeNotifierProvider(
+            create: (_) => AuthProvider(),
+          ), // Kept for potential UI needs, but not for auth
+        ],
+        child: const MyApp(),
+      ),
     ),
   );
 }
@@ -292,51 +316,24 @@ class MyApp extends StatelessWidget {
             settings.themeMode == ThemeMode.dark ||
             (settings.themeMode == ThemeMode.system &&
                 platformBrightness == Brightness.dark);
-        final colorScheme = ColorScheme.fromSeed(
-          seedColor: Colors.blueGrey,
-          brightness: isDark ? Brightness.dark : Brightness.light,
-        );
 
         return BetterFeedback(
           theme: FeedbackThemeData(
-            background: isDark ? Colors.grey[900]! : Colors.grey[300]!,
-            feedbackSheetColor: isDark ? Colors.black : Colors.white,
-            activeFeedbackModeColor: colorScheme.primary,
+            background: isDark ? Colors.black : Colors.white,
+            feedbackSheetColor: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+            activeFeedbackModeColor: isDark ? Colors.white : Colors.black,
             bottomSheetDescriptionStyle: TextStyle(
               color: isDark ? Colors.white : Colors.black,
             ),
           ),
           child: MaterialApp(
+            locale: DevicePreview.locale(context),
+            builder: DevicePreview.appBuilder,
+            navigatorKey: FallbackLlmProvider.navigatorKey,
             title: 'MicroForge',
             debugShowCheckedModeBanner: false,
-            theme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.blueGrey,
-                brightness: Brightness.light,
-              ),
-              scaffoldBackgroundColor: Colors.white,
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.white,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                surfaceTintColor: Colors.transparent,
-              ),
-              useMaterial3: true,
-            ),
-            darkTheme: ThemeData(
-              colorScheme: ColorScheme.fromSeed(
-                seedColor: Colors.blueGrey,
-                brightness: Brightness.dark,
-              ),
-              scaffoldBackgroundColor: Colors.black,
-              appBarTheme: const AppBarTheme(
-                backgroundColor: Colors.black,
-                elevation: 0,
-                scrolledUnderElevation: 0,
-                surfaceTintColor: Colors.transparent,
-              ),
-              useMaterial3: true,
-            ),
+            theme: AppTheme.lightTheme,
+            darkTheme: AppTheme.darkTheme,
             themeMode: settings.themeMode,
             home: const AuthWrapper(),
           ),
@@ -1485,9 +1482,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       children: [
         Scaffold(
           appBar: AppBar(
-            title: Row(
+            title: const Row(
               mainAxisSize: MainAxisSize.min,
-              children: [const Text('MicroForge')],
+              children: [
+                GradientText(
+                  'MicroForge',
+                  style: TextStyle(fontWeight: FontWeight.w900, fontSize: 24),
+                ),
+              ],
             ),
             actions: [
               IconButton(
@@ -1543,7 +1545,6 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                   builder: (context, _) {
                     final isDark =
                         Theme.of(context).brightness == Brightness.dark;
-                    final colorScheme = Theme.of(context).colorScheme;
 
                     return Stack(
                       children: [
@@ -1558,15 +1559,21 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                   style: LlmChatViewStyle(
                                     backgroundColor: isDark
                                         ? Colors.black
-                                        : Colors.transparent,
-                                    progressIndicatorColor: colorScheme.primary,
+                                        : Colors.white,
+                                    progressIndicatorColor: Colors.black,
                                     userMessageStyle: UserMessageStyle(
                                       decoration: BoxDecoration(
-                                        color: colorScheme.primary,
-                                        borderRadius: BorderRadius.circular(16),
+                                        color: isDark ? Colors.white : Colors.black,
+                                        borderRadius: const BorderRadius.only(
+                                          topLeft: Radius.circular(20),
+                                          topRight: Radius.circular(20),
+                                          bottomLeft: Radius.circular(20),
+                                          bottomRight: Radius.circular(4),
+                                        ),
                                       ),
                                       textStyle: TextStyle(
-                                        color: colorScheme.onPrimary,
+                                        color: isDark ? Colors.black : Colors.white,
+                                        fontWeight: FontWeight.w500,
                                       ),
                                     ),
                                     llmMessageStyle: LlmMessageStyle(
@@ -1577,14 +1584,14 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                       ),
                                       decoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.transparent,
+                                            ? Colors.white.withValues(alpha: 0.05)
+                                            : Colors.black.withValues(alpha: 0.03),
+                                        borderRadius: BorderRadius.circular(20),
                                       ),
-                                      padding: EdgeInsets.zero,
-                                      margin: const EdgeInsets.only(
-                                        left: 0,
-                                        top: 4,
-                                        bottom: 4,
+                                      padding: const EdgeInsets.all(16),
+                                      margin: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 8,
                                       ),
                                       maxWidth: double.infinity,
                                       minWidth: 0,
@@ -1592,7 +1599,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                     ),
                                     chatInputStyle: ChatInputStyle(
                                       backgroundColor: isDark
-                                          ? Colors.grey[900]
+                                          ? const Color(0xFF1A1A1A)
                                           : Colors.white,
                                       textStyle: TextStyle(
                                         color: isDark
@@ -1601,29 +1608,20 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                       ),
                                       hintStyle: TextStyle(
                                         color: isDark
-                                            ? Colors.grey[400]
-                                            : Colors.grey[600],
+                                            ? Colors.white38
+                                            : Colors.black38,
                                       ),
                                       decoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.grey[900]
+                                            ? const Color(0xFF1A1A1A)
                                             : Colors.white,
                                         borderRadius: BorderRadius.circular(28),
-                                        border: Border.all(
-                                          color: isDark
-                                              ? Colors.grey[800]!
-                                              : Colors.grey[300]!,
-                                        ),
                                       ),
                                     ),
                                     submitButtonStyle: ActionButtonStyle(
-                                      iconColor: isDark
-                                          ? Colors.white
-                                          : Colors.black,
-                                      iconDecoration: BoxDecoration(
-                                        color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                      iconColor: Colors.white,
+                                      iconDecoration: const BoxDecoration(
+                                        gradient: AppTheme.vibrantGradient,
                                         shape: BoxShape.circle,
                                       ),
                                     ),
@@ -1633,9 +1631,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     attachFileButtonStyle: ActionButtonStyle(
@@ -1644,9 +1645,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     cameraButtonStyle: ActionButtonStyle(
@@ -1655,9 +1659,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     galleryButtonStyle: ActionButtonStyle(
@@ -1666,9 +1673,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     recordButtonStyle: ActionButtonStyle(
@@ -1677,15 +1687,27 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     stopButtonStyle: ActionButtonStyle(
                                       iconColor: isDark
                                           ? Colors.white
-                                          : colorScheme.error,
+                                          : Colors.black,
+                                      iconDecoration: BoxDecoration(
+                                        color: isDark
+                                            ? Colors.white10
+                                            : Colors.transparent,
+                                        shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
+                                      ),
                                     ),
                                     cancelButtonStyle: ActionButtonStyle(
                                       iconColor: isDark
@@ -1693,9 +1715,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                           : Colors.black,
                                       iconDecoration: BoxDecoration(
                                         color: isDark
-                                            ? Colors.black
-                                            : Colors.white,
+                                            ? Colors.white10
+                                            : Colors.transparent,
                                         shape: BoxShape.circle,
+                                        border: isDark 
+                                            ? null 
+                                            : Border.all(color: Colors.black12),
                                       ),
                                     ),
                                     menuColor: isDark
@@ -1703,14 +1728,29 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                         : Colors.white,
                                     actionButtonBarDecoration: BoxDecoration(
                                       color: isDark
-                                          ? Colors.grey[900]
-                                          : Colors.grey[200],
+                                          ? const Color(0xFF1A1A1A)
+                                          : Colors.white,
                                       borderRadius: BorderRadius.circular(20),
+                                      border: isDark 
+                                          ? null 
+                                          : Border.all(color: Colors.black12),
                                     ),
                                   ),
                                   responseBuilder: (context, message) => VibeDetector(
                                     message: message,
                                     onViewContext: _showContextDialog,
+                                    onRetry: () {
+                                      final history = _provider?.history.toList() ?? [];
+                                      if (history.isNotEmpty) {
+                                        final lastUserMessage = history.reversed.firstWhere(
+                                          (m) => m.origin.isUser,
+                                          orElse: () => ChatMessage.user('', []),
+                                        );
+                                        if (lastUserMessage.text != null && lastUserMessage.text!.isNotEmpty) {
+                                          _provider?.sendMessageStream(lastUserMessage.text!).listen((_) {});
+                                        }
+                                      }
+                                    },
                                     onDeploy:
                                         (
                                           code,
@@ -1805,20 +1845,21 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
                                             .textTheme
                                             .headlineMedium
                                             ?.copyWith(
-                                              color: Colors.blueGrey[700],
-                                              fontWeight: FontWeight.bold,
+                                              color: isDark ? Colors.white70 : Colors.black87,
+                                              fontWeight: FontWeight.w900,
+                                              letterSpacing: -1,
                                             ),
                                       ),
                                       const SizedBox(height: 8),
                                       ChatGreeting(
+                                        useGradient: true,
                                         style: Theme.of(context)
                                             .textTheme
                                             .headlineSmall
                                             ?.copyWith(
-                                              color: Colors.blueGrey[400],
+                                              fontWeight: FontWeight.bold,
                                             ),
-                                      ),
-                                    ],
+                                      ),                                    ],
                                   );
                                 },
                               ),

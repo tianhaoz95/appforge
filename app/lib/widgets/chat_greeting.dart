@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'rolling_greeting.dart';
+import '../theme.dart';
 
 class ChatGreeting extends StatelessWidget {
   final TextStyle? style;
+  final bool useGradient;
 
   const ChatGreeting({
     super.key,
     this.style,
+    this.useGradient = false,
   });
 
   @override
@@ -16,6 +19,12 @@ class ChatGreeting extends StatelessWidget {
                     defaultTargetPlatform == TargetPlatform.macOS;
 
     if (isApple) {
+      if (useGradient) {
+        return GradientText(
+          "Let's chat!",
+          style: style,
+        );
+      }
       return Text(
         "Let's chat!",
         style: style,
@@ -24,6 +33,7 @@ class ChatGreeting extends StatelessWidget {
 
     return RollingGreeting(
       style: style,
+      useGradient: useGradient,
     );
   }
 }

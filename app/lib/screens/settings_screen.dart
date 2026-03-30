@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:firebase_auth/firebase_auth.dart' hide AuthProvider;
 import 'dart:io';
 import '../providers/auth_provider.dart';
 import '../providers/settings_provider.dart';
@@ -25,7 +28,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
   final _confirmPasswordController = TextEditingController();
   bool _isLoading = false;
   bool _isEditingProfile = false;
-  bool _isChangingPassword = false;
   bool _showOldPassword = false;
   bool _showNewPassword = false;
   bool _showConfirmPassword = false;
@@ -76,7 +78,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error updating profile: ${e.toString()}'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Theme.of(context).colorScheme.error,
             behavior: SnackBarBehavior.floating,
           ),
         );
@@ -119,7 +121,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
         _oldPasswordController.clear();
         _newPasswordController.clear();
         _confirmPasswordController.clear();
-        setState(() => _isChangingPassword = false);
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Password updated successfully')),
         );
@@ -129,7 +130,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error updating password: ${e.toString()}'),
-            backgroundColor: Colors.redAccent,
+            backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
       }
@@ -154,7 +155,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(
-              backgroundColor: Colors.redAccent,
+              backgroundColor: Theme.of(context).colorScheme.error,
               foregroundColor: Colors.white,
             ),
             child: const Text('Delete'),
@@ -176,7 +177,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Error: ${e.toString()}'),
-              backgroundColor: Colors.redAccent,
+              backgroundColor: Theme.of(context).colorScheme.error,
             ),
           );
         }
@@ -261,405 +262,222 @@ class _SettingsScreenState extends State<SettingsScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
               children: [
-                _buildProfileHeader(user, theme, settingsProvider),
-                if (user?.email != null) ...[
-                  const SizedBox(height: 24),
-                  _buildPasswordSection(theme),
-                ],
-                const SizedBox(height: 32),
-                _buildSectionHeader('App preferences'),
-                const SizedBox(height: 12),
-                if (settingsProvider.halMode)
-                  _buildPreferenceItem(
-                    icon: Icons.memory,
-                    title: 'HAL Mode',
-                    subtitle: 'Enable experimental AI features',
-                    trailing: Switch(
-                      value: settingsProvider.halMode,
-                      onChanged: (v) {
-                        if (!v) {
-                          settingsProvider.setHalMode(false);
-                        }
+                _buildCategoryCard(
+                  'Account',
+                  [
+                    _buildProfileHeader(user, theme, settingsProvider),
+                    if (user?.email != null) ...[
+                      const SizedBox(height: 16),
+                      _buildPasswordSection(theme),
+                    ],
+                    const Divider(height: 32),
+                    _buildAccountAction(
+                      icon: Icons.logout_rounded,
+                      title: 'Sign Out',
+                      onTap: () async {
+                        HapticFeedback.mediumImpact();
+                        await authProvider.signOut();
+                        if (context.mounted) Navigator.pop(context);
                       },
                     ),
-                  ),
-                _buildPreferenceItem(
-                  icon: Icons.palette_outlined,
-                  title: 'App Theme',
-                  subtitle: 'Choose your preferred look',
-                  trailing: SegmentedButton<ThemeMode>(
-                    segments: const [
-                      ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto, size: 18)),
-                      ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode, size: 18)),
-                      ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode, size: 18)),
-                    ],
-                    selected: {settingsProvider.themeMode},
-                    onSelectionChanged: (Set<ThemeMode> newSelection) {
-                      settingsProvider.setThemeMode(newSelection.first);
-                    },
-                    showSelectedIcon: false,
-                    style: SegmentedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      visualDensity: VisualDensity.compact,
+                    _buildAccountAction(
+                      icon: Icons.delete_outline_rounded,
+                      title: 'Delete Account',
+                      color: theme.colorScheme.error,
+                      onTap: () {
+                        HapticFeedback.mediumImpact();
+                        _deleteAccount();
+                      },
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Token Usage'),
-                const SizedBox(height: 12),
-                Theme(
-                  data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                const SizedBox(height: 16),
+                _buildCategoryCard(
+                  'AI Model',
+                  [
+                    _buildPreferenceItem(
+                      icon: Icons.computer_outlined,
+                      title: 'Use Local LLM (On-device)',
+                      subtitle: 'Snowglobe engine running locally',
+                      trailing: Switch(
+                        value: settingsProvider.useSnowglobeLocalModel,
+                        onChanged: (v) {
+                          HapticFeedback.lightImpact();
+                          settingsProvider.setUseSnowglobeLocalModel(v);
+                        },
+                      ),
                     ),
-                    child: ExpansionTile(
-                      title: const Text('View Token Usage Details', style: TextStyle(fontSize: 14)),
-                      initiallyExpanded: false,
-                      childrenPadding: const EdgeInsets.only(left: 16, right: 16, bottom: 16),
-                      children: [
-                      _buildTokenRow('Prompt Tokens', settingsProvider.totalPromptTokens, theme),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
-                        child: Divider(height: 1),
-                      ),
-                      _buildTokenRow('Candidate Tokens', settingsProvider.totalCandidateTokens, theme),
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8.0),
-                        child: Divider(height: 1),
-                      ),
-                      if (settingsProvider.totalThoughtsTokens > 0) ...[
-                        _buildTokenRow('Thoughts Tokens', settingsProvider.totalThoughtsTokens, theme),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Divider(height: 1),
-                        ),
-                      ],
-                      if (settingsProvider.totalCachedTokens > 0) ...[
-                        _buildTokenRow('Cached Tokens', settingsProvider.totalCachedTokens, theme),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Divider(height: 1),
-                        ),
-                      ],
-                      if (settingsProvider.totalToolUseTokens > 0) ...[
-                        _buildTokenRow('Tool Use Tokens', settingsProvider.totalToolUseTokens, theme),
-                        const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 8.0),
-                          child: Divider(height: 1),
-                        ),
-                      ],
-                        _buildTokenRow('Total Tokens', settingsProvider.totalTotalTokens, theme, isBold: true),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildSectionHeader('AI agent preferences'),
-                const SizedBox(height: 12),
-                _buildPreferenceItem(
-                  icon: Icons.lightbulb_outline,
-                  title: 'Suggest Existing Apps',
-                  subtitle: 'AI will look for similar apps before forging new ones',
-                  trailing: Switch(
-                    value: settingsProvider.suggestExistingApps,
-                    onChanged: (v) => settingsProvider.setSuggestExistingApps(v),
-                  ),
-                ),
-                _buildPreferenceItem(
-                  icon: Icons.auto_fix_high_outlined,
-                  title: 'Default Mode',
-                  subtitle: 'Initial mode for new conversations',
-                  trailing: SegmentedButton<ForgeMode>(
-                    segments: const [
-                      ButtonSegment<ForgeMode>(
-                        value: ForgeMode.plan,
-                        label: Text('Plan'),
-                        icon: Icon(Icons.architecture_outlined, size: 18),
-                      ),
-                      ButtonSegment<ForgeMode>(
-                        value: ForgeMode.build,
-                        label: Text('Build'),
-                        icon: Icon(Icons.bolt, size: 18),
+                    if (settingsProvider.useSnowglobeLocalModel) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(left: 48, right: 16, bottom: 16),
+                        child: _buildLocalModelSettings(theme, settingsProvider),
                       ),
                     ],
-                    selected: {settingsProvider.defaultForgeMode},
-                    onSelectionChanged: (Set<ForgeMode> newSelection) {
-                      settingsProvider.setDefaultForgeMode(newSelection.first);
-                    },
-                    showSelectedIcon: false,
-                    style: SegmentedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      visualDensity: VisualDensity.compact,
-                    ),
-                  ),
-                ),
-                _buildPreferenceItem(
-                  icon: Icons.terminal_outlined,
-                  title: 'View and Edit System Instructions',
-                  subtitle: 'Inspect or customize the instructions sent to the AI',
-                  trailing: IconButton(
-                    icon: const Icon(Icons.edit_document),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const SystemPromptScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Model Provider'),
-                const SizedBox(height: 12),
-                _buildPreferenceItem(
-                  icon: Icons.computer_outlined,
-                  title: 'Use Local LLM (On-device)',
-                  subtitle: 'Use a model running directly on this device (Snowglobe)',
-                  trailing: Switch(
-                    value: settingsProvider.useSnowglobeLocalModel,
-                    onChanged: (v) => settingsProvider.setUseSnowglobeLocalModel(v),
-                  ),
-                ),
-                if (settingsProvider.useSnowglobeLocalModel) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(left: 48, right: 16, top: 0, bottom: 16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (settingsProvider.isDownloadingModel) ...[
-                          const Text('Downloading model...', style: TextStyle(fontSize: 12)),
-                          const SizedBox(height: 8),
-                          LinearProgressIndicator(
-                            value: settingsProvider.modelDownloadProgress,
-                            backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            '${(settingsProvider.modelDownloadProgress * 100).toStringAsFixed(1)}%',
-                            style: TextStyle(fontSize: 10, color: theme.hintColor),
-                          ),
-                        ] else if (!settingsProvider.isModelDownloaded) ...[
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton.icon(
-                              onPressed: () => settingsProvider.downloadModel(),
-                              icon: const Icon(Icons.download, size: 18),
-                              label: const Text('Download Qwen 3.5 (0.8B)'),
-                              style: OutlinedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                              ),
-                            ),
-                          ),
-                        ] else ...[
-                          Row(
-                            children: [
-                              Icon(Icons.check_circle, size: 16, color: Colors.green[600]),
-                              const SizedBox(width: 8),
-                              const Text('Model ready', style: TextStyle(fontSize: 12, color: Colors.green)),
-                            ],
-                          ),
-                        ],
-                        if (settingsProvider.isModelDownloaded) ...[
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              const Text('Max context length', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
-                              Text(
-                                '${(_localModelMaxGenLenSliderValue ?? settingsProvider.localModelMaxGenLen).toInt()} tokens',
-                                style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
-                              ),
-                            ],
-                          ),
-                          Slider(
-                            value: (_localModelMaxGenLenSliderValue ?? settingsProvider.localModelMaxGenLen.toDouble()),
-                            min: 512,
-                            max: 8192,
-                            divisions: 15, // (8192-512)/512 = 15
-                            label: (_localModelMaxGenLenSliderValue ?? settingsProvider.localModelMaxGenLen).toInt().toString(),
-                            onChanged: (v) {
-                              setState(() {
-                                _localModelMaxGenLenSliderValue = v;
-                              });
-                            },
-                            onChangeEnd: (v) {
-                              settingsProvider.setLocalModelMaxGenLen(v.toInt());
-                              setState(() {
-                                _localModelMaxGenLenSliderValue = null;
-                              });
-                            },
-                          ),
-                          Text(
-                            'Higher values allow longer conversations but may slow down responses on some devices.',
-                            style: TextStyle(fontSize: 10, color: theme.hintColor),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                ],
-                _buildPreferenceItem(
-                  icon: Icons.hub_outlined,
-                  title: 'Use Local OpenAI API (Remote)',
-                  subtitle: 'Use an OpenAI compatible local backend (e.g. Ollama, LM Studio)',
-                  trailing: Switch(
-                    value: settingsProvider.useLocalOpenAi,
-                    onChanged: (v) => settingsProvider.setUseLocalOpenAi(v),
-                  ),
-                ),
-                if (settingsProvider.useLocalOpenAi) ...[
-                  Padding(
-                    padding: const EdgeInsets.only(left: 48, right: 0, top: 8, bottom: 16),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        labelText: 'OpenAI API URL',
-                        hintText: 'http://localhost:11434/v1/chat/completions',
-                        helperText: 'Full endpoint URL for chat completions',
-                        isDense: true,
-                        filled: true,
-                        fillColor: theme.brightness == Brightness.light
-                            ? Colors.grey[100]
-                            : Colors.grey[900],
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          borderSide: BorderSide(color: theme.colorScheme.outlineVariant),
-                        ),
+                    _buildPreferenceItem(
+                      icon: Icons.hub_outlined,
+                      title: 'Use Remote OpenAI API',
+                      subtitle: 'Ollama, LM Studio, etc.',
+                      trailing: Switch(
+                        value: settingsProvider.useLocalOpenAi,
+                        onChanged: (v) {
+                          HapticFeedback.lightImpact();
+                          settingsProvider.setUseLocalOpenAi(v);
+                        },
                       ),
-                      controller: TextEditingController(text: settingsProvider.localOpenAiUrl)
-                        ..selection = TextSelection.fromPosition(
-                          TextPosition(offset: settingsProvider.localOpenAiUrl.length),
-                        ),
-                      onChanged: (v) => settingsProvider.setLocalOpenAiUrl(v),
                     ),
-                  ),
-                ],
-                const SizedBox(height: 32),
-                _buildSectionHeader('App access control'),
-                const SizedBox(height: 12),
-                _buildPreferenceItem(
-                  icon: Icons.location_on_outlined,
-                  title: 'Allow Geolocation',
-                  subtitle: 'Enable geolocation access for your micro-apps',
-                  trailing: Switch(
-                    value: settingsProvider.allowGeolocation,
-                    onChanged: (v) async {
-                      if (v) {
-                        final permission = await Geolocator.requestPermission();
-                        if (permission == LocationPermission.denied ||
-                            permission == LocationPermission.deniedForever) {
-                          if (!context.mounted) return;
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Location permission denied'),
-                              backgroundColor: Colors.redAccent,
-                            ),
+                    if (settingsProvider.useLocalOpenAi) ...[
+                      Padding(
+                        padding: const EdgeInsets.only(left: 48, right: 16, bottom: 16),
+                        child: _buildRemoteModelSettings(theme, settingsProvider),
+                      ),
+                    ],
+                    _buildPreferenceItem(
+                      icon: Icons.lightbulb_outline,
+                      title: 'Suggest Existing Apps',
+                      subtitle: 'Avoid duplicate forgings',
+                      trailing: Switch(
+                        value: settingsProvider.suggestExistingApps,
+                        onChanged: (v) {
+                          HapticFeedback.lightImpact();
+                          settingsProvider.setSuggestExistingApps(v);
+                        },
+                      ),
+                    ),
+                    _buildPreferenceItem(
+                      icon: Icons.auto_fix_high_outlined,
+                      title: 'Default Forge Mode',
+                      trailing: SegmentedButton<ForgeMode>(
+                        segments: const [
+                          ButtonSegment(value: ForgeMode.plan, label: Text('Plan'), icon: Icon(Icons.architecture_outlined, size: 16)),
+                          ButtonSegment(value: ForgeMode.build, label: Text('Build'), icon: Icon(Icons.bolt, size: 16)),
+                        ],
+                        selected: {settingsProvider.defaultForgeMode},
+                        onSelectionChanged: (Set<ForgeMode> newSelection) {
+                          HapticFeedback.selectionClick();
+                          settingsProvider.setDefaultForgeMode(newSelection.first);
+                        },
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(visualDensity: VisualDensity.compact),
+                      ),
+                    ),
+                    const Divider(height: 32),
+                    _buildTokenUsageTile(theme, settingsProvider),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildCategoryCard(
+                  'Appearance',
+                  [
+                    _buildPreferenceItem(
+                      icon: Icons.palette_outlined,
+                      title: 'App Theme',
+                      trailing: SegmentedButton<ThemeMode>(
+                        segments: const [
+                          ButtonSegment(value: ThemeMode.system, icon: Icon(Icons.brightness_auto, size: 18)),
+                          ButtonSegment(value: ThemeMode.light, icon: Icon(Icons.light_mode, size: 18)),
+                          ButtonSegment(value: ThemeMode.dark, icon: Icon(Icons.dark_mode, size: 18)),
+                        ],
+                        selected: {settingsProvider.themeMode},
+                        onSelectionChanged: (Set<ThemeMode> newSelection) {
+                          HapticFeedback.selectionClick();
+                          settingsProvider.setThemeMode(newSelection.first);
+                        },
+                        showSelectedIcon: false,
+                        style: SegmentedButton.styleFrom(visualDensity: VisualDensity.compact),
+                      ),
+                    ),
+                    _buildPreferenceItem(
+                      icon: Icons.terminal_outlined,
+                      title: 'System Instructions',
+                      subtitle: 'Customize AI behavior',
+                      trailing: IconButton(
+                        icon: const Icon(Icons.edit_document),
+                        onPressed: () {
+                          HapticFeedback.lightImpact();
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const SystemPromptScreen()),
                           );
-                          return;
-                        }
-                      }
-                      settingsProvider.setAllowGeolocation(v);
-                    },
-                  ),
+                        },
+                      ),
+                    ),
+                  ],
                 ),
-                _buildPreferenceItem(
-                  icon: Icons.vibration_outlined,
-                  title: 'Allow Accelerometer',
-                  subtitle: 'Enable motion and tilt data for your micro-apps',
-                  trailing: Switch(
-                    value: settingsProvider.allowAccelerometer,
-                    onChanged: (v) async {
-                      // Note: On most platforms, sensors_plus doesn't require explicit runtime permission
-                      // but some newer iOS/Android versions or Web might need it.
-                      // For now, we simply update the provider.
-                      settingsProvider.setAllowAccelerometer(v);
-                    },
-                  ),
-                ),
-                _buildPreferenceItem(
-                  icon: Icons.notifications_active_outlined,
-                  title: 'Allow Notifications',
-                  subtitle: 'Enable local notifications for your micro-apps',
-                  trailing: Switch(
-                    value: settingsProvider.allowNotifications,
-                    onChanged: (v) async {
-                      if (v) {
-                        await _requestNotificationPermissions();
-                      }
-                      settingsProvider.setAllowNotifications(v);
-                    },
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Server access control'),
-                const SizedBox(height: 12),
-                _buildPreferenceItem(
-                  icon: Icons.storage_outlined,
-                  title: 'Allow database access',
-                  subtitle: 'Enable database access for the backend engine',
-                  trailing: Switch(
-                    value: settingsProvider.allowBackendDatabase,
-                    onChanged: (v) => settingsProvider.setAllowBackendDatabase(v),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Background task access control'),
-                const SizedBox(height: 12),
-                _buildPreferenceItem(
-                  icon: Icons.running_with_errors_outlined,
-                  title: 'Allow Background Execution',
-                  subtitle: 'Run periodic micro-app tasks in the background',
-                  trailing: Switch(
-                    value: settingsProvider.allowBackgroundExecution,
-                    onChanged: (v) => settingsProvider.setAllowBackgroundExecution(v),
-                  ),
-                ),
-                _buildPreferenceItem(
-                  icon: Icons.notification_important_outlined,
-                  title: 'Allow notifications toggles',
-                  subtitle: 'Allow background tasks to show notifications',
-                  trailing: Switch(
-                    value: settingsProvider.allowBackgroundNotifications,
-                    onChanged: (v) async {
-                      if (v) {
-                        await _requestNotificationPermissions();
-                      }
-                      settingsProvider.setAllowBackgroundNotifications(v);
-                    },
-                  ),
-                ),
-                _buildPreferenceItem(
-                  icon: Icons.cloud_done_outlined,
-                  title: 'Allow database access',
-                  subtitle: 'Allow background tasks to access the database',
-                  trailing: Switch(
-                    value: settingsProvider.allowBackgroundDatabase,
-                    onChanged: (v) => settingsProvider.setAllowBackgroundDatabase(v),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                _buildSectionHeader('Account'),
-                const SizedBox(height: 12),
-                _buildAccountAction(
-                  icon: Icons.logout_rounded,
-                  title: 'Sign Out',
-                  onTap: () async {
-                    await authProvider.signOut();
-                    if (context.mounted) Navigator.pop(context);
-                  },
-                ),
-                _buildAccountAction(
-                  icon: Icons.delete_outline_rounded,
-                  title: 'Delete Account',
-                  color: Colors.redAccent,
-                  onTap: _deleteAccount,
+                const SizedBox(height: 16),
+                _buildCategoryCard(
+                  'System',
+                  [
+                    _buildPreferenceItem(
+                      icon: Icons.location_on_outlined,
+                      title: 'Allow Geolocation',
+                      trailing: Switch(
+                        value: settingsProvider.allowGeolocation,
+                        onChanged: (v) async {
+                          HapticFeedback.lightImpact();
+                          if (v) {
+                            final permission = await Geolocator.requestPermission();
+                            if (permission == LocationPermission.denied ||
+                                permission == LocationPermission.deniedForever) {
+                              if (!context.mounted) return;
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Location permission denied')),
+                              );
+                              return;
+                            }
+                          }
+                          settingsProvider.setAllowGeolocation(v);
+                        },
+                      ),
+                    ),
+                    _buildPreferenceItem(
+                      icon: Icons.vibration_outlined,
+                      title: 'Allow Accelerometer',
+                      trailing: Switch(
+                        value: settingsProvider.allowAccelerometer,
+                        onChanged: (v) {
+                          HapticFeedback.lightImpact();
+                          settingsProvider.setAllowAccelerometer(v);
+                        },
+                      ),
+                    ),
+                    _buildPreferenceItem(
+                      icon: Icons.notifications_active_outlined,
+                      title: 'Allow Notifications',
+                      trailing: Switch(
+                        value: settingsProvider.allowNotifications,
+                        onChanged: (v) async {
+                          HapticFeedback.lightImpact();
+                          if (v) await _requestNotificationPermissions();
+                          settingsProvider.setAllowNotifications(v);
+                        },
+                      ),
+                    ),
+                    const Divider(height: 32),
+                    _buildPreferenceItem(
+                      icon: Icons.storage_outlined,
+                      title: 'Backend Database Access',
+                      trailing: Switch(
+                        value: settingsProvider.allowBackendDatabase,
+                        onChanged: (v) {
+                          HapticFeedback.lightImpact();
+                          settingsProvider.setAllowBackendDatabase(v);
+                        },
+                      ),
+                    ),
+                    _buildPreferenceItem(
+                      icon: Icons.running_with_errors_outlined,
+                      title: 'Background Execution',
+                      trailing: Switch(
+                        value: settingsProvider.allowBackgroundExecution,
+                        onChanged: (v) {
+                          HapticFeedback.lightImpact();
+                          settingsProvider.setAllowBackgroundExecution(v);
+                        },
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 48),
                 _buildAppInfo(theme),
@@ -670,40 +488,83 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildLegalLinks(BuildContext context, ThemeData theme) {
+  Widget _buildProfileHeader(User? user, ThemeData theme, SettingsProvider settingsProvider) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        TextButton(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const LegalNoticeScreen(
-                type: LegalNoticeType.privacyNotice,
-              ),
-            ),
-          ),
-          child: Text(
-            'Privacy Notice',
-            style: TextStyle(fontSize: 12, color: theme.colorScheme.primary),
+        GestureDetector(
+          onTap: () {
+            HapticFeedback.lightImpact();
+            _pickAvatar();
+          },
+          child: CircleAvatar(
+            radius: 36,
+            backgroundColor: theme.colorScheme.primaryContainer,
+            backgroundImage: settingsProvider.localAvatarPath.isNotEmpty
+                ? FileImage(File(settingsProvider.localAvatarPath))
+                : null,
+            child: settingsProvider.localAvatarPath.isEmpty
+                ? Text(
+                    (user?.displayName?[0] ?? user?.email?[0] ?? 'U').toUpperCase(),
+                    style: TextStyle(
+                      fontSize: 24, 
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.onPrimaryContainer,
+                    ),
+                  )
+                : null,
           ),
         ),
-        Text(
-          '•',
-          style: TextStyle(fontSize: 12, color: theme.hintColor),
-        ),
-        TextButton(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const LegalNoticeScreen(
-                type: LegalNoticeType.userAgreement,
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (_isEditingProfile)
+                TextField(
+                  controller: _nameController,
+                  autofocus: true,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.check, size: 20),
+                      onPressed: () {
+                        HapticFeedback.mediumImpact();
+                        _updateProfile();
+                        setState(() => _isEditingProfile = false);
+                      },
+                    ),
+                  ),
+                  onSubmitted: (_) {
+                    HapticFeedback.mediumImpact();
+                    _updateProfile();
+                    setState(() => _isEditingProfile = false);
+                  },
+                )
+              else
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        user?.displayName ?? 'Anonymous User',
+                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.edit, size: 16),
+                      visualDensity: VisualDensity.compact,
+                      onPressed: () {
+                        HapticFeedback.lightImpact();
+                        setState(() => _isEditingProfile = true);
+                      },
+                    ),
+                  ],
+                ),
+              Text(
+                user?.email ?? 'Not signed in',
+                style: theme.textTheme.bodySmall?.copyWith(color: theme.hintColor),
               ),
-            ),
-          ),
-          child: Text(
-            'User Agreement',
-            style: TextStyle(fontSize: 12, color: theme.colorScheme.primary),
+            ],
           ),
         ),
       ],
@@ -711,356 +572,60 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildPasswordSection(ThemeData theme) {
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 300),
-      transitionBuilder: (Widget child, Animation<double> animation) {
-        return FadeTransition(
-          opacity: animation,
-          child: SizeTransition(
-            sizeFactor: animation,
-            axisAlignment: -1.0,
-            child: child,
-          ),
-        );
-      },
-      child: !_isChangingPassword
-          ? Row(
-              key: const ValueKey('password_button'),
+    return Theme(
+      data: theme.copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        title: const Text('Security & Password', style: TextStyle(fontSize: 14)),
+        leading: const Icon(Icons.password_rounded),
+        tilePadding: EdgeInsets.zero,
+        onExpansionChanged: (v) {
+          if (v) HapticFeedback.lightImpact();
+        },
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
               children: [
-                const Icon(Icons.lock_outline, size: 20, color: Colors.blueGrey),
-                const SizedBox(width: 12),
-                TextButton.icon(
-                  onPressed: () => setState(() => _isChangingPassword = true),
-                  icon: const Icon(Icons.lock_reset, size: 18),
-                  label: const Text('Change Password'),
-                  style: TextButton.styleFrom(
-                    padding: EdgeInsets.zero,
-                    visualDensity: VisualDensity.compact,
+                _buildPasswordField(_oldPasswordController, 'Old Password', _showOldPassword, (v) => setState(() => _showOldPassword = v)),
+                const SizedBox(height: 8),
+                _buildPasswordField(_newPasswordController, 'New Password', _showNewPassword, (v) => setState(() => _showNewPassword = v)),
+                const SizedBox(height: 8),
+                _buildPasswordField(_confirmPasswordController, 'Confirm New Password', _showConfirmPassword, (v) => setState(() => _showConfirmPassword = v)),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      HapticFeedback.mediumImpact();
+                      _changePassword();
+                    },
+                    child: const Text('Update Password'),
                   ),
                 ),
               ],
-            )
-          : Container(
-              key: const ValueKey('password_form'),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: theme.scaffoldBackgroundColor,
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.lock_reset, size: 20, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Change Password',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: theme.colorScheme.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  TextField(
-                    controller: _oldPasswordController,
-                    decoration: InputDecoration(
-                      labelText: 'Old Password',
-                      isDense: true,
-                      prefixIcon: const Icon(Icons.password, size: 18),
-                      filled: true,
-                      fillColor: theme.brightness == Brightness.light
-                          ? Colors.grey[200]
-                          : Colors.grey[800],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _showOldPassword ? Icons.visibility : Icons.visibility_off,
-                          size: 18,
-                        ),
-                        onPressed: () => setState(() => _showOldPassword = !_showOldPassword),
-                      ),
-                    ),
-                    obscureText: !_showOldPassword,
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _newPasswordController,
-                    decoration: InputDecoration(
-                      labelText: 'New Password',
-                      isDense: true,
-                      prefixIcon: const Icon(Icons.lock_outline, size: 18),
-                      filled: true,
-                      fillColor: theme.brightness == Brightness.light
-                          ? Colors.grey[200]
-                          : Colors.grey[800],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _showNewPassword ? Icons.visibility : Icons.visibility_off,
-                          size: 18,
-                        ),
-                        onPressed: () => setState(() => _showNewPassword = !_showNewPassword),
-                      ),
-                    ),
-                    obscureText: !_showNewPassword,
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _confirmPasswordController,
-                    decoration: InputDecoration(
-                      labelText: 'Confirm New Password',
-                      isDense: true,
-                      prefixIcon: const Icon(Icons.lock_outline, size: 18),
-                      filled: true,
-                      fillColor: theme.brightness == Brightness.light
-                          ? Colors.grey[200]
-                          : Colors.grey[800],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide.none,
-                      ),
-                      suffixIcon: IconButton(
-                        icon: Icon(
-                          _showConfirmPassword ? Icons.visibility : Icons.visibility_off,
-                          size: 18,
-                        ),
-                        onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
-                      ),
-                    ),
-                    obscureText: !_showConfirmPassword,
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _isChangingPassword = false;
-                            _oldPasswordController.clear();
-                            _newPasswordController.clear();
-                            _confirmPasswordController.clear();
-                            _showOldPassword = false;
-                            _showNewPassword = false;
-                            _showConfirmPassword = false;
-                          });
-                        },
-                        child: const Text('Cancel'),
-                      ),
-                      const Spacer(),
-                      FilledButton.tonal(
-                        onPressed: _changePassword,
-                        style: FilledButton.styleFrom(
-                          visualDensity: VisualDensity.compact,
-                        ),
-                        child: const Text('Update Password'),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
             ),
-    );
-  }
-
-  Widget _buildProfileHeader(dynamic user, ThemeData theme, SettingsProvider settingsProvider) {
-    final initials = (user?.displayName ?? user?.email ?? 'U')
-        .toString()
-        .substring(0, 1)
-        .toUpperCase();
-
-    return Row(
-      crossAxisAlignment: _isEditingProfile ? CrossAxisAlignment.start : CrossAxisAlignment.center,
-      children: [
-        GestureDetector(
-          onTap: _pickAvatar,
-          child: Stack(
-            children: [
-              CircleAvatar(
-                radius: 36,
-                backgroundColor: theme.colorScheme.primaryContainer,
-                backgroundImage: settingsProvider.localAvatarPath.isNotEmpty
-                    ? FileImage(File(settingsProvider.localAvatarPath))
-                    : null,
-                child: settingsProvider.localAvatarPath.isEmpty
-                    ? Text(
-                        initials,
-                        style: theme.textTheme.headlineMedium?.copyWith(
-                          color: theme.colorScheme.onPrimaryContainer,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
-                    : null,
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: theme.colorScheme.primary,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: theme.scaffoldBackgroundColor, width: 2),
-                  ),
-                  child: Icon(
-                    Icons.camera_alt,
-                    size: 14,
-                    color: theme.colorScheme.onPrimary,
-                  ),
-                ),
-              ),
-            ],
           ),
-        ),
-        const SizedBox(width: 20),
-        Expanded(
-          child: _isEditingProfile
-              ? Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    TextField(
-                      controller: _nameController,
-                      decoration: const InputDecoration(
-                        labelText: 'Display Name',
-                        hintText: 'Enter your name',
-                        isDense: true,
-                        contentPadding: EdgeInsets.symmetric(vertical: 8),
-                      ),
-                      autofocus: true,
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () {
-                            setState(() {
-                              _isEditingProfile = false;
-                              _nameController.text = user?.displayName ?? '';
-                            });
-                          },
-                          child: const Text('Cancel'),
-                        ),
-                        const SizedBox(width: 8),
-                        FilledButton.tonal(
-                          onPressed: () async {
-                            await _updateProfile();
-                            setState(() => _isEditingProfile = false);
-                          },
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 0),
-                            visualDensity: VisualDensity.compact,
-                          ),
-                          child: const Text('Save'),
-                        ),
-                      ],
-                    ),
-                  ],
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Text(
-                          user?.displayName ?? 'Forgemaster',
-                          style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                        if (settingsProvider.halMode) ...[
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                            decoration: BoxDecoration(
-                              color: Colors.redAccent,
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: const Text(
-                              'HAL 9000',
-                              style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      user?.email ?? 'anonymous@microforge.ai',
-                      style: theme.textTheme.bodyMedium?.copyWith(color: theme.hintColor),
-                    ),
-                  ],
-                ),
-        ),
-        if (!_isEditingProfile)
-          IconButton(
-            onPressed: () => setState(() => _isEditingProfile = true),
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: 'Edit Profile',
-          ),
-      ],
-    );
-  }
-
-  Widget _buildSectionHeader(String title) {
-    return Text(
-      title.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        letterSpacing: 1.2,
-        color: Colors.blueGrey,
+        ],
       ),
     );
   }
 
-  Widget _buildPreferenceItem({
-    required IconData icon,
-    required String title,
-    String? subtitle,
-    required Widget trailing,
-  }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: Colors.blueGrey[700]),
-      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
-      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
-      trailing: trailing,
-    );
-  }
-
-  Widget _buildTokenRow(String label, int value, ThemeData theme, {bool isBold = false}) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          label,
-          style: theme.textTheme.bodyMedium?.copyWith(
-            fontWeight: isBold ? FontWeight.bold : FontWeight.normal,
-            color: theme.colorScheme.onSurfaceVariant,
-          ),
+  Widget _buildPasswordField(TextEditingController controller, String label, bool visible, Function(bool) toggle) {
+    return TextField(
+      controller: controller,
+      obscureText: !visible,
+      decoration: InputDecoration(
+        labelText: label,
+        isDense: true,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        suffixIcon: IconButton(
+          icon: Icon(visible ? Icons.visibility_off : Icons.visibility, size: 20),
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            toggle(!visible);
+          },
         ),
-        Text(
-          value.toString().replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]},'),
-          style: theme.textTheme.bodyLarge?.copyWith(
-            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
-            fontFamily: 'monospace',
-            color: isBold ? theme.colorScheme.primary : theme.colorScheme.onSurface,
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -1071,33 +636,238 @@ class _SettingsScreenState extends State<SettingsScreen> {
     Color? color,
   }) {
     return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icon, color: color ?? Colors.blueGrey[700]),
-      title: Text(
-        title,
-        style: TextStyle(
-          fontWeight: FontWeight.w500,
-          color: color,
-        ),
-      ),
-      trailing: const Icon(Icons.chevron_right, size: 20),
+      leading: Icon(icon, color: color),
+      title: Text(title, style: TextStyle(color: color, fontSize: 14)),
       onTap: onTap,
+      contentPadding: EdgeInsets.zero,
+      visualDensity: VisualDensity.compact,
+    );
+  }
+
+  Widget _buildPreferenceItem({
+    required IconData icon,
+    required String title,
+    String? subtitle,
+    required Widget trailing,
+  }) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
+      subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(fontSize: 12)) : null,
+      trailing: trailing,
+      contentPadding: EdgeInsets.zero,
+    );
+  }
+
+  Widget _buildTokenRow(String label, int value, ThemeData theme, {bool isBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: TextStyle(fontSize: 12, fontWeight: isBold ? FontWeight.bold : FontWeight.normal)),
+        Text(
+          value.toString(),
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: isBold ? FontWeight.bold : FontWeight.w600,
+            color: isBold ? theme.colorScheme.primary : null,
+          ),
+        ),
+      ],
     );
   }
 
   Widget _buildAppInfo(ThemeData theme) {
-    return Column(
+    return Center(
+      child: Column(
+        children: [
+          Image.asset('assets/brand/logo.png', height: 48, errorBuilder: (_, _, _) => const Icon(Icons.auto_awesome, size: 48)),
+          const SizedBox(height: 12),
+          const Text('MicroForge', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+          FutureBuilder<PackageInfo>(
+            future: PackageInfo.fromPlatform(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                final info = snapshot.data!;
+                return Text('Version ${info.version} (Build ${info.buildNumber})', style: TextStyle(fontSize: 12, color: theme.hintColor));
+              }
+              return Text('Version ...', style: TextStyle(fontSize: 12, color: theme.hintColor));
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegalLinks(BuildContext context, ThemeData theme) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'MicroForge v1.2.32',
-          style: TextStyle(color: Colors.grey, fontSize: 12),
+        TextButton(
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const LegalNoticeScreen(type: LegalNoticeType.privacyNotice)));
+          },
+          child: const Text('Privacy Policy', style: TextStyle(fontSize: 12)),
         ),
-        const SizedBox(height: 4),
-        Text(
-          'Forged with Flutter AI Toolkit',
-          style: TextStyle(color: theme.hintColor, fontSize: 11),
+        const Text('•'),
+        TextButton(
+          onPressed: () {
+            HapticFeedback.lightImpact();
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const LegalNoticeScreen(type: LegalNoticeType.userAgreement)));
+          },
+          child: const Text('Terms of Service', style: TextStyle(fontSize: 12)),
         ),
       ],
+    );
+  }
+
+  Widget _buildCategoryCard(String title, List<Widget> children) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8, bottom: 8),
+          child: Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 1.2,
+              color: Theme.of(context).colorScheme.secondary,
+            ),
+          ),
+        ),
+        Card(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+            side: BorderSide(color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.5)),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: children,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLocalModelSettings(ThemeData theme, SettingsProvider settingsProvider) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (settingsProvider.isDownloadingModel) ...[
+          const Text('Downloading model...', style: TextStyle(fontSize: 12)),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(
+            value: settingsProvider.modelDownloadProgress,
+            backgroundColor: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(4),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${(settingsProvider.modelDownloadProgress * 100).toStringAsFixed(1)}%',
+            style: TextStyle(fontSize: 10, color: theme.hintColor),
+          ),
+        ] else if (!settingsProvider.isModelDownloaded) ...[
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () {
+                HapticFeedback.lightImpact();
+                settingsProvider.downloadModel();
+              },
+              icon: const Icon(Icons.download, size: 18),
+              label: const Text('Download Model (0.8B)'),
+              style: OutlinedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+        ] else ...[
+          Row(
+            children: [
+              Icon(Icons.check_circle, size: 16, color: Colors.green[600]),
+              const SizedBox(width: 8),
+              const Text('Model ready', style: TextStyle(fontSize: 12, color: Colors.green)),
+            ],
+          ),
+        ],
+        if (settingsProvider.isModelDownloaded) ...[
+          const SizedBox(height: 16),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Max context length', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500)),
+              Text(
+                '${(_localModelMaxGenLenSliderValue ?? settingsProvider.localModelMaxGenLen).toInt()} tokens',
+                style: TextStyle(fontSize: 12, color: theme.colorScheme.primary, fontWeight: FontWeight.bold),
+              ),
+            ],
+          ),
+          Slider(
+            value: (_localModelMaxGenLenSliderValue ?? settingsProvider.localModelMaxGenLen.toDouble()),
+            min: 512,
+            max: 8192,
+            divisions: 15,
+            onChanged: (v) => setState(() => _localModelMaxGenLenSliderValue = v),
+            onChangeEnd: (v) {
+              HapticFeedback.selectionClick();
+              settingsProvider.setLocalModelMaxGenLen(v.toInt());
+              setState(() => _localModelMaxGenLenSliderValue = null);
+            },
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildRemoteModelSettings(ThemeData theme, SettingsProvider settingsProvider) {
+    return TextField(
+      decoration: InputDecoration(
+        labelText: 'OpenAI API URL',
+        hintText: 'http://localhost:11434/v1',
+        isDense: true,
+        filled: true,
+        fillColor: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide.none,
+        ),
+      ),
+      controller: TextEditingController(text: settingsProvider.localOpenAiUrl)
+        ..selection = TextSelection.fromPosition(
+          TextPosition(offset: settingsProvider.localOpenAiUrl.length),
+        ),
+      onChanged: (v) => settingsProvider.setLocalOpenAiUrl(v),
+    );
+  }
+
+  Widget _buildTokenUsageTile(ThemeData theme, SettingsProvider settingsProvider) {
+    return Theme(
+      data: theme.copyWith(dividerColor: Colors.transparent),
+      child: ExpansionTile(
+        title: const Text('Token Usage Details', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+        leading: Icon(Icons.analytics_outlined, color: theme.colorScheme.primary),
+        tilePadding: EdgeInsets.zero,
+        childrenPadding: const EdgeInsets.only(bottom: 16),
+        children: [
+          _buildTokenRow('Prompt Tokens', settingsProvider.totalPromptTokens, theme),
+          const SizedBox(height: 8),
+          _buildTokenRow('Candidate Tokens', settingsProvider.totalCandidateTokens, theme),
+          const SizedBox(height: 8),
+          if (settingsProvider.totalThoughtsTokens > 0) ...[
+            _buildTokenRow('Thoughts Tokens', settingsProvider.totalThoughtsTokens, theme),
+            const SizedBox(height: 8),
+          ],
+          const Divider(),
+          _buildTokenRow('Total Tokens', settingsProvider.totalTotalTokens, theme, isBold: true),
+        ],
+      ),
     );
   }
 

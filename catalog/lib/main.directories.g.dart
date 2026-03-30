@@ -10,6 +10,8 @@
 // **************************************************************************
 
 // ignore_for_file: no_leading_underscores_for_library_prefixes
+import 'package:appforge_catalog/widgets/branded_error_view_use_case.dart'
+    as _appforge_catalog_widgets_branded_error_view_use_case;
 import 'package:appforge_catalog/widgets/mini_app_preview_use_case.dart'
     as _appforge_catalog_widgets_mini_app_preview_use_case;
 import 'package:appforge_catalog/widgets/rolling_greeting_use_case.dart'
@@ -20,6 +22,31 @@ final directories = <_widgetbook.WidgetbookNode>[
   _widgetbook.WidgetbookFolder(
     name: 'widgets',
     children: [
+      _widgetbook.WidgetbookComponent(
+        name: 'BrandedErrorView',
+        useCases: [
+          _widgetbook.WidgetbookUseCase(
+            name: 'Custom Error',
+            builder: _appforge_catalog_widgets_branded_error_view_use_case
+                .buildBrandedErrorViewCustomUseCase,
+          ),
+          _widgetbook.WidgetbookUseCase(
+            name: 'Forbidden (Full)',
+            builder: _appforge_catalog_widgets_branded_error_view_use_case
+                .buildBrandedErrorViewForbiddenFullUseCase,
+          ),
+          _widgetbook.WidgetbookUseCase(
+            name: 'Offline (Compact)',
+            builder: _appforge_catalog_widgets_branded_error_view_use_case
+                .buildBrandedErrorViewOfflineCompactUseCase,
+          ),
+          _widgetbook.WidgetbookUseCase(
+            name: 'Resting (Compact)',
+            builder: _appforge_catalog_widgets_branded_error_view_use_case
+                .buildBrandedErrorViewRestingCompactUseCase,
+          ),
+        ],
+      ),
       _widgetbook.WidgetbookComponent(
         name: 'MiniAppPreview',
         useCases: [
