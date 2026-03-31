@@ -9,6 +9,7 @@ import 'forge_mode.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider with ChangeNotifier {
+  bool _isSilent = false;
   bool _suggestExistingApps = true;
   bool _allowGeolocation = false;
   bool _allowAccelerometer = false;
@@ -157,6 +158,25 @@ class SettingsProvider with ChangeNotifier {
         final tokenizerFile = File('${appDocDir.path}/tokenizer.json');
         debugPrint('Checking for model at: ${modelFile.path}');
         _isModelDownloaded = await modelFile.exists() && await tokenizerFile.exists();
+
+        // BACKUP CHECK: Look in shared Download directory for faster testing
+        if (!_isModelDownloaded && Platform.isAndroid) {
+          final backupModel = File('/sdcard/Download/appforge_model/model.gguf');
+          final backupTokenizer = File('/sdcard/Download/appforge_model/tokenizer.json');
+          
+          if (await backupModel.exists() && await backupTokenizer.exists()) {
+             debugPrint('Found model in backup location, copying to app internal storage...');
+             try {
+               await modelFile.parent.create(recursive: true);
+               await backupModel.copy(modelFile.path);
+               await backupTokenizer.copy(tokenizerFile.path);
+               _isModelDownloaded = true;
+               debugPrint('Model copy successful!');
+             } catch (e) {
+               debugPrint('Failed to copy model from external storage: $e');
+             }
+          }
+        }
         
         // Try to see if engine is already initialized
         if (_isModelDownloaded) {
@@ -219,7 +239,7 @@ class SettingsProvider with ChangeNotifier {
       
       // Download Model
       debugPrint("Downloading model...");
-      final modelRequest = http.Request('GET', Uri.parse('https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/Qwen3.5-0.8B-Q4_K_M.gguf'));
+      final modelRequest = http.Request('GET', Uri.parse('https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct-GGUF/resolve/main/qwen2.5-1.5b-instruct-q4_k_m.gguf'));
       final modelResponse = await client.send(modelRequest);
 
       if (modelResponse.statusCode != 200) {
@@ -235,14 +255,14 @@ class SettingsProvider with ChangeNotifier {
         receivedModelBytes += chunk.length;
         if (totalModelBytes > 0) {
           _modelDownloadProgress = (receivedModelBytes / totalModelBytes) * 0.9; // 90% for model
-          notifyListeners();
+          if (!_isSilent) notifyListeners();
         }
       });
       await modelSink.close();
 
       // Download Tokenizer
       debugPrint("Downloading tokenizer...");
-      final tokenizerRequest = http.Request('GET', Uri.parse('https://huggingface.co/unsloth/Qwen3.5-0.8B-GGUF/resolve/main/tokenizer.json'));
+      final tokenizerRequest = http.Request('GET', Uri.parse('https://huggingface.co/Qwen/Qwen2.5-1.5B-Instruct/resolve/main/tokenizer.json'));
       final tokenizerResponse = await client.send(tokenizerRequest);
 
       // If not in GGUF repo, try the base repo
@@ -262,7 +282,7 @@ class SettingsProvider with ChangeNotifier {
           receivedTokenizerBytes += chunk.length;
           if (totalTokenizerBytes > 0) {
             _modelDownloadProgress = 0.9 + (receivedTokenizerBytes / totalTokenizerBytes) * 0.1; // last 10%
-            notifyListeners();
+            if (!_isSilent) notifyListeners();
           }
         });
         await tokenizerSink.close();
@@ -281,7 +301,7 @@ class SettingsProvider with ChangeNotifier {
       rethrow;
     } finally {
       _isDownloadingModel = false;
-      notifyListeners();
+      if (!_isSilent) notifyListeners();
     }
   }
 
@@ -544,6 +564,18 @@ class SettingsProvider with ChangeNotifier {
       notifyListeners();
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_keyAllowBackgroundDatabase, value);
+    }
+  }
+
+  void setSilent(bool silent) {
+    _isSilent = silent;
+  }
+
+  @override
+  void notifyListeners() {
+    if (!_isSilent) {
+      debugPrint("DEBUG: notifyListeners called from: ${StackTrace.current.toString().split('\n')[1]}");
+      super.notifyListeners();
     }
   }
 }
