@@ -92,10 +92,27 @@ class SnowglobeOpenAiHandler implements OpenAiHandler {
   ) async* {
     await _ensureEngineInitialized();
 
+    debugPrint("DEBUG: Executing snowglobe chat completion with ${request.messages.length} messages");
+    for (var i = 0; i < request.messages.length; i++) {
+      final msg = request.messages[i];
+      debugPrint("  Msg $i: $msg");
+    }
+
     try {
-      yield* SnowglobeOpenAI.createChatCompletionStream(request);
+      final stream = SnowglobeOpenAI.createChatCompletionStream(request);
+      await for (final chunk in stream) {
+        debugPrint("DEBUG: Raw chunk: $chunk");
+        if (chunk.choices.isNotEmpty) {
+          final content = chunk.choices.first.delta.content;
+          if (content != null) {
+            debugPrint("DEBUG: Snowglobe content: $content");
+          }
+        }
+        yield chunk;
+      }
     } catch (e) {
       final errorStr = e.toString();
+      debugPrint("DEBUG: Snowglobe stream error: $errorStr");
       if (errorStr.contains("Global model not initialized")) {
         debugPrint("Detected uninitialized model in stream, forcing re-init and retrying...");
         // Reset local flag to force re-init

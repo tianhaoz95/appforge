@@ -370,6 +370,7 @@ class MicroForgeHomePage extends StatefulWidget {
 }
 
 class MicroForgeHomePageState extends State<MicroForgeHomePage> {
+  bool _isInitializingAI = false;
   LlmProvider? _provider;
   String? _activeForgeCode;
   String? _activeBackendCode;
@@ -419,6 +420,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
   void _onSettingsChanged() {
     if (!mounted) return;
+    debugPrint("DEBUG: _onSettingsChanged triggered");
 
     // Check if we are busy to avoid interrupting a generation
     if (_provider is FallbackLlmProvider &&
@@ -499,7 +501,13 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     List<ChatMessage>? history,
     ForgeMode? mode,
   }) async {
-    final settings = context.read<SettingsProvider>();
+    debugPrint("DEBUG: _initializeAI called (isInitializing: $_isInitializingAI)");
+    if (_isInitializingAI) return;
+    _isInitializingAI = true;
+    try {
+      final settings = context.read<SettingsProvider>();
+      settings.removeListener(_onSettingsChanged);
+      settings.setSilent(true);
     final repository = context.read<MicroAppRepository>();
 
     if (mode != null) {
@@ -741,23 +749,32 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
 
     settings.setDefaultSystemPrompt(systemPrompt);
 
-    String compactSystemPrompt =
-        'You are MicroForge AI. [MODE: ${_currentMode == ForgeMode.plan ? "PLAN" : "BUILD"}] '
-        'Forge micro-apps with HTML/Alpine.js/Tailwind. '
-        'REQUIRED: <forge>, <name>, <icon>, <design>, <version>, <release_notes>. '
-        'OPTIONAL: <backend>, <periodic_backend>. '
-        'UI: Responsive, light/dark themes via CSS vars: --mf-bg, --mf-text, --mf-primary, etc. '
-        'API (window.MicroForge): getTheme, onThemeChange, saveData, getData, listAll, promptAi, pickFiles, callBackend, closeApp';
+    String compactSystemPrompt = settings.useSnowglobeLocalModel
+        ? 'You are MicroForge AI. Build minimalist apps with Alpine.js and Tailwind. '
+            'Output MUST follow this template: '
+            '<name>App Name</name> <icon>Emoji</icon> <design>Brief design doc</design> '
+            '<version>1.0.0</version> <release_notes>Initial release</release_notes> '
+            '<forge><!-- HTML/Alpine.js code --></forge>. '
+            'Keep code ultra-concise. Use theme vars: --mf-bg, --mf-text, --mf-primary.'
+        : 'You are MicroForge AI. [MODE: ${_currentMode == ForgeMode.plan ? "PLAN" : "BUILD"}] '
+            'Forge micro-apps with HTML/Alpine.js/Tailwind. '
+            'REQUIRED: <forge>, <name>, <icon>, <design>, <version>, <release_notes>. '
+            'OPTIONAL: <backend>, <periodic_backend>. '
+            'UI: Responsive, light/dark themes via CSS vars: --mf-bg, --mf-text, --mf-primary, etc. '
+            'API (window.MicroForge): getTheme, onThemeChange, saveData, getData, listAll, promptAi, pickFiles, callBackend, closeApp';
 
-    if (settings.allowGeolocation) compactSystemPrompt += ', getLocation';
-    if (settings.allowAccelerometer) compactSystemPrompt += ', getAccelerometer, watchAccelerometer';
-    if (settings.allowNotifications) compactSystemPrompt += ', showNotification';
-    
-    compactSystemPrompt += '. REFINE: Use logs/screenshot to fix code.';
+    if (!settings.useSnowglobeLocalModel) {
+      if (settings.allowGeolocation) compactSystemPrompt += ', getLocation';
+      if (settings.allowAccelerometer) {
+        compactSystemPrompt += ', getAccelerometer, watchAccelerometer';
+      }
+      if (settings.allowNotifications) compactSystemPrompt += ', showNotification';
+
+      compactSystemPrompt += '. REFINE: Use logs/screenshot to fix code.';
+    }
 
     if (includesEnhancementContext) {
-      compactSystemPrompt +=
-          '\n\nCONTEXT FOR ENHANCEMENT:\n'
+      compactSystemPrompt += '\n\nCONTEXT FOR ENHANCEMENT:\n'
           'Enhancing: <forge>$enhancementCode</forge>\n'
           'Backend: <backend>${enhancementBackend ?? 'None'}</backend>\n'
           'Version: <version>${enhancementVersion ?? '1.0.0'}</version>';
@@ -768,7 +785,7 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
     String actualPrompt;
     if (settings.customSystemPrompt.isNotEmpty) {
       actualPrompt = settings.customSystemPrompt;
-    } else if (settings.useCompactPrompt) {
+    } else if (settings.useCompactPrompt || settings.useSnowglobeLocalModel) {
       actualPrompt = compactSystemPrompt;
     } else {
       actualPrompt = systemPrompt;
@@ -853,6 +870,12 @@ class MicroForgeHomePageState extends State<MicroForgeHomePage> {
       _enhancementVersion = enhancementVersion;
       _enhancementContextInPrompt = includesEnhancementContext;
     });
+    settings.setSilent(false);
+    settings.notifyListeners();
+    } finally {
+      _isInitializingAI = false;
+      context.read<SettingsProvider>().addListener(_onSettingsChanged);
+    }
   }
 
   void _onHistoryChanged() {
